@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS user_settings (
     -- Diving preferences
     show_buddy_reminders BOOLEAN NOT NULL DEFAULT true,
     auto_calculate_nitrox BOOLEAN NOT NULL DEFAULT false,
-    default_gas_mix VARCHAR(50) NOT NULL DEFAULT 'Air (21% O‚)',
+    default_gas_mix VARCHAR(50) NOT NULL DEFAULT 'Air (21% O2)',
     max_depth_warning INTEGER NOT NULL DEFAULT 40,
     
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -59,6 +59,11 @@ CREATE TABLE IF NOT EXISTS dives (
     max_depth DECIMAL(5, 2) NOT NULL, -- stored in meters
     duration INTEGER NOT NULL, -- stored in minutes
     buddy VARCHAR(255),
+    
+    -- Location data (for dives without specific dive sites)
+    latitude DECIMAL(10, 8),
+    longitude DECIMAL(11, 8),
+    location VARCHAR(255),
     
     -- Additional dive data
     water_temperature DECIMAL(5, 2), -- stored in celsius

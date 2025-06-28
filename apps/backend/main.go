@@ -58,6 +58,13 @@ func main() {
 		// Settings endpoints
 		api.GET("/settings", handlers.GetSettings)
 		api.PUT("/settings", handlers.UpdateSettings)
+		
+		// Dive endpoints
+		api.GET("/dives", handlers.GetDives)
+		api.POST("/dives", handlers.CreateDive)
+		api.POST("/dives/batch", handlers.CreateMultipleDives)
+		api.PUT("/dives/:id", handlers.UpdateDive)
+		api.DELETE("/dives/:id", handlers.DeleteDive)
 	}
 
 	// Start server
