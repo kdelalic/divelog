@@ -27,8 +27,7 @@ const DiveLog = () => {
   const [selectedDive, setSelectedDive] = useState<Dive | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showImport, setShowImport] = useState(false);
-  
-  console.log('showImport state:', showImport);
+
 
   const handleRowClick = (dive: Dive) => {
     setSelectedDive(dive);
@@ -53,7 +52,6 @@ const DiveLog = () => {
           <Button 
             variant="outline" 
             onClick={() => {
-              console.log('Import button clicked');
               setShowImport(true);
             }}
             className="bg-white border-gray-300 text-gray-700 hover:bg-gray-50"

@@ -1,12 +1,31 @@
-import { Settings as SettingsIcon } from 'lucide-react';
+import { Settings as SettingsIcon, CloudOff, Cloud, Loader2, RefreshCw, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import useSettingsStore from '../store/settingsStore';
 import type { DepthUnit, TemperatureUnit, DistanceUnit, WeightUnit, PressureUnit } from '../lib/settings';
+import { useEffect } from 'react';
 
 const Settings = () => {
-  const { settings, updateUnitSettings, updatePreferences, updateDiveSettings, resetToDefaults } = useSettingsStore();
+  const { 
+    settings, 
+    updateUnitSettings, 
+    updatePreferences, 
+    updateDiveSettings, 
+    resetToDefaults,
+    isLoading,
+    isOnline,
+    lastSyncedAt,
+    error,
+    syncWithBackend,
+    loadFromBackend,
+    setOfflineMode
+  } = useSettingsStore();
+
+  // Load settings from backend on component mount
+  useEffect(() => {
+    loadFromBackend();
+  }, [loadFromBackend]);
 
   const handleUnitChange = (unitType: keyof typeof settings.units, value: string) => {
     updateUnitSettings({ [unitType]: value });
@@ -27,12 +46,53 @@ const Settings = () => {
           <h2 className="text-3xl font-bold tracking-tight flex items-center gap-2">
             <SettingsIcon className="h-8 w-8" />
             Settings
+            {isLoading && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />}
           </h2>
-          <p className="text-muted-foreground">Customize your dive log preferences and units</p>
+          <div className="space-y-1">
+            <p className="text-muted-foreground">Customize your dive log preferences and units</p>
+            <div className="flex items-center gap-2 text-sm">
+              {isOnline ? (
+                <div className="flex items-center gap-1 text-green-600">
+                  <Cloud className="h-4 w-4" />
+                  <span>Online</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1 text-orange-600">
+                  <CloudOff className="h-4 w-4" />
+                  <span>Offline</span>
+                </div>
+              )}
+              {lastSyncedAt && (
+                <span className="text-muted-foreground">
+                  Last synced: {new Date(lastSyncedAt).toLocaleTimeString()}
+                </span>
+              )}
+            </div>
+            {error && (
+              <div className="flex items-center gap-1 text-sm text-red-600">
+                <AlertCircle className="h-4 w-4" />
+                <span>{error}</span>
+              </div>
+            )}
+          </div>
         </div>
-        <Button variant="outline" onClick={resetToDefaults}>
-          Reset to Defaults
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={syncWithBackend}
+            disabled={isLoading || !isOnline}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Sync
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={resetToDefaults}
+            disabled={isLoading}
+          >
+            Reset to Defaults
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="units" className="w-full">
