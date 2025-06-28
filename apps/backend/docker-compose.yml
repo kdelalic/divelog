@@ -16,14 +16,14 @@ services:
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@admin.com
       PGADMIN_DEFAULT_PASSWORD: admin
-      PGADMIN_CONFIG_SERVER_MODE: 'False'  # Required to enable server definitions
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
     ports:
       - "8888:80"
     depends_on:
       - postgres
     volumes:
       - pgadmin_data:/var/lib/pgadmin
-      - ./servers.json:/pgadmin4/servers.json:ro  # Mount as read-only
+      - ./servers.json:/pgadmin4/servers.json:ro
 
 volumes:
   postgres_data:
