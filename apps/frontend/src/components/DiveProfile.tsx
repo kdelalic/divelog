@@ -65,15 +65,53 @@ const DiveProfile: React.FC<DiveProfileProps> = ({
       return -depthInUserUnits; // Negative for inverted Y-axis
     });
 
-    // Temperature data (if available) - sparse data aligned with time labels
+    // Temperature data (if available) - interpolate sparse data to connect all points
     const temperatureData = new Array(samples.length).fill(null);
+    
+    // First, collect actual temperature readings with their converted values
+    const tempReadings: { index: number; value: number }[] = [];
     samples.forEach((sample, index) => {
       if (sample.temperature !== undefined) {
-        temperatureData[index] = settings.units.temperature === 'fahrenheit' 
-          ? (sample.temperature * 9/5) + 32 
-          : sample.temperature;
+        // Temperature in UDDF is often in Kelvin, convert to Celsius first
+        let tempCelsius = sample.temperature;
+        if (sample.temperature > 100) { // Assume Kelvin if > 100 (reasonable threshold)
+          tempCelsius = sample.temperature - 273.15;
+        }
+        
+        const convertedTemp = settings.units.temperature === 'fahrenheit' 
+          ? (tempCelsius * 9/5) + 32 
+          : tempCelsius;
+        tempReadings.push({ index, value: convertedTemp });
       }
     });
+
+    // Interpolate between temperature readings to create a continuous line
+    if (tempReadings.length > 1) {
+      for (let i = 0; i < tempReadings.length - 1; i++) {
+        const currentReading = tempReadings[i];
+        const nextReading = tempReadings[i + 1];
+        
+        // Set the actual reading
+        temperatureData[currentReading.index] = currentReading.value;
+        
+        // Interpolate between this reading and the next
+        const indexDiff = nextReading.index - currentReading.index;
+        const tempDiff = nextReading.value - currentReading.value;
+        
+        for (let j = 1; j < indexDiff; j++) {
+          const interpolationRatio = j / indexDiff;
+          const interpolatedTemp = currentReading.value + (tempDiff * interpolationRatio);
+          temperatureData[currentReading.index + j] = interpolatedTemp;
+        }
+      }
+      
+      // Set the last reading
+      const lastReading = tempReadings[tempReadings.length - 1];
+      temperatureData[lastReading.index] = lastReading.value;
+    } else if (tempReadings.length === 1) {
+      // Single temperature reading - just set that one point
+      temperatureData[tempReadings[0].index] = tempReadings[0].value;
+    }
 
     // Pressure data (if available) - sparse data aligned with time labels
     const pressureData = new Array(samples.length).fill(null);
@@ -113,12 +151,12 @@ const DiveProfile: React.FC<DiveProfileProps> = ({
         borderColor: 'rgb(239, 68, 68)', // Red
         backgroundColor: 'rgba(239, 68, 68, 0.1)',
         fill: false,
-        tension: 0.2,
-        pointRadius: 2,
+        tension: 0.3, // Smooth interpolation
+        pointRadius: 1, // Smaller points since we have more data now
         pointHoverRadius: 6,
         pointBackgroundColor: 'rgb(239, 68, 68)',
         pointBorderColor: 'white',
-        pointBorderWidth: 2,
+        pointBorderWidth: 1,
         pointHoverBackgroundColor: 'rgb(239, 68, 68)',
         pointHoverBorderColor: 'white',
         pointHoverBorderWidth: 3,
@@ -157,6 +195,33 @@ const DiveProfile: React.FC<DiveProfileProps> = ({
     const maxDepthInUserUnits = settings.units.depth === 'feet' 
       ? maxDepth * 3.28084 
       : maxDepth;
+
+    // Calculate temperature range for better scaling
+    const hasTemperature = chartData?.datasets.some(d => d.yAxisID === 'temperature');
+    const hasPressure = chartData?.datasets.some(d => d.yAxisID === 'pressure');
+    
+    let tempMin, tempMax;
+    if (hasTemperature && samples) {
+      const temps = samples
+        .filter(s => s.temperature !== undefined)
+        .map(s => {
+          // Temperature in UDDF is often in Kelvin, convert to Celsius first
+          let tempCelsius = s.temperature!;
+          if (s.temperature! > 100) { // Assume Kelvin if > 100 (reasonable threshold)
+            tempCelsius = s.temperature! - 273.15;
+          }
+          
+          const temp = settings.units.temperature === 'fahrenheit' 
+            ? (tempCelsius * 9/5) + 32 
+            : tempCelsius;
+          return temp;
+        });
+      
+      if (temps.length > 0) {
+        tempMin = Math.min(...temps) - 2; // Add 2 degree padding
+        tempMax = Math.max(...temps) + 2;
+      }
+    }
 
     return {
       responsive: true,
@@ -289,12 +354,14 @@ const DiveProfile: React.FC<DiveProfileProps> = ({
         },
         temperature: {
           type: 'linear' as const,
-          display: chartData?.datasets.some(d => d.yAxisID === 'temperature') || false,
+          display: hasTemperature,
           position: 'right' as const,
           title: {
             display: true,
             text: `Temperature (${settings.units.temperature === 'celsius' ? '°C' : '°F'})`,
           },
+          min: tempMin,
+          max: tempMax,
           grid: {
             drawOnChartArea: false,
           },
@@ -304,7 +371,7 @@ const DiveProfile: React.FC<DiveProfileProps> = ({
         },
         pressure: {
           type: 'linear' as const,
-          display: chartData?.datasets.some(d => d.yAxisID === 'pressure') || false,
+          display: hasPressure && !hasTemperature, // Only show pressure if no temperature
           position: 'right' as const,
           title: {
             display: true,

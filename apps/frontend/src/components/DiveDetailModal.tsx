@@ -30,7 +30,7 @@ const DiveDetailModal = ({ dive, isOpen, onClose }: DiveDetailModalProps) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[85vh] overflow-y-auto w-[95vw] xl:w-auto">
+      <DialogContent className="max-w-[95vw] xl:max-w-[90vw] 2xl:max-w-[85vw] max-h-[90vh] overflow-y-auto w-[95vw]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl">
             <MapPin className="h-5 w-5 text-blue-600" />
@@ -158,7 +158,7 @@ const DiveDetailModal = ({ dive, isOpen, onClose }: DiveDetailModalProps) => {
               <DiveProfile 
                 samples={dive.samples}
                 maxDepth={dive.depth}
-                className="h-96 lg:h-[500px] xl:h-[600px]"
+                className="h-[500px] lg:h-[600px] xl:h-[700px] 2xl:h-[800px]"
               />
             ) : (
               <div className="text-center py-12">
