@@ -1,14 +1,20 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import type { Dive } from '../lib/dives';
 import { divesApi } from '../lib/api';
+
+interface OfflineOperation {
+  id: string;
+  type: 'create' | 'update' | 'delete' | 'import';
+  data: any;
+  timestamp: number;
+}
 
 interface DiveState {
   dives: Dive[];
   isLoading: boolean;
   isOnline: boolean;
-  lastSyncedAt: string | null;
   error: string | null;
+  offlineQueue: OfflineOperation[];
   
   // Actions
   addDive: (dive: Omit<Dive, 'id'>) => Promise<void>;
@@ -16,183 +22,223 @@ interface DiveState {
   deleteDive: (id: number) => Promise<void>;
   importDives: (dives: Dive[]) => Promise<void>;
   loadFromBackend: () => Promise<void>;
-  syncWithBackend: () => Promise<void>;
-  setOfflineMode: (offline: boolean) => void;
+  processOfflineQueue: () => Promise<void>;
+  setOnlineStatus: (online: boolean) => void;
 }
 
-const useDiveStore = create<DiveState>()(
-  persist(
-    (set, get) => ({
-      dives: [],
-      isLoading: false,
-      isOnline: true,
-      lastSyncedAt: null,
-      error: null,
+const useDiveStore = create<DiveState>()((set, get) => ({
+  dives: [],
+  isLoading: false,
+  isOnline: navigator.onLine,
+  error: null,
+  offlineQueue: [],
 
-      addDive: async (dive) => {
-        set({ isLoading: true, error: null });
+  addDive: async (dive) => {
+    set({ isLoading: true, error: null });
 
-        // Add to local state immediately with temporary ID
-        const tempId = Date.now();
-        const diveWithTempId = { ...dive, id: tempId };
-        set((state) => ({ dives: [...state.dives, diveWithTempId] }));
-
-        // Try to sync with backend
-        if (get().isOnline) {
-          const result = await divesApi.createDive(dive);
-          if (result.error) {
-            set({ error: result.error, isLoading: false });
-            console.warn('Failed to sync dive to backend, keeping local changes');
-          } else if (result.data) {
-            // Replace temporary dive with backend dive
-            set((state) => ({
-              dives: state.dives.map(d => d.id === tempId ? result.data! : d),
-              lastSyncedAt: new Date().toISOString(),
-              isLoading: false,
-              error: null
-            }));
-          }
-        } else {
-          set({ isLoading: false });
-        }
-      },
-
-      editDive: async (updatedDive) => {
-        set({ isLoading: true, error: null });
-
-        // Update local state immediately
-        set((state) => ({
-          dives: state.dives.map((dive) =>
-            dive.id === updatedDive.id ? updatedDive : dive
-          ),
+    if (get().isOnline) {
+      const result = await divesApi.createDive(dive);
+      if (result.error) {
+        // Add to offline queue and update online status
+        const operation: OfflineOperation = {
+          id: crypto.randomUUID(),
+          type: 'create',
+          data: dive,
+          timestamp: Date.now()
+        };
+        set((state) => ({ 
+          offlineQueue: [...state.offlineQueue, operation],
+          isOnline: false,
+          error: 'Network error - operation queued for retry',
+          isLoading: false
         }));
-
-        // Try to sync with backend
-        if (get().isOnline) {
-          const result = await divesApi.updateDive(updatedDive);
-          if (result.error) {
-            set({ error: result.error, isLoading: false });
-            console.warn('Failed to sync dive update to backend, keeping local changes');
-          } else {
-            set({ 
-              lastSyncedAt: new Date().toISOString(),
-              isLoading: false,
-              error: null 
-            });
-          }
-        } else {
-          set({ isLoading: false });
-        }
-      },
-
-      deleteDive: async (id) => {
-        set({ isLoading: true, error: null });
-
-        // Remove from local state immediately
-        set((state) => ({
-          dives: state.dives.filter((dive) => dive.id !== id),
-        }));
-
-        // Try to sync with backend
-        if (get().isOnline) {
-          const result = await divesApi.deleteDive(id);
-          if (result.error) {
-            set({ error: result.error, isLoading: false });
-            console.warn('Failed to sync dive deletion to backend, keeping local changes');
-          } else {
-            set({ 
-              lastSyncedAt: new Date().toISOString(),
-              isLoading: false,
-              error: null 
-            });
-          }
-        } else {
-          set({ isLoading: false });
-        }
-      },
-
-      importDives: async (importedDives) => {
-        set({ isLoading: true, error: null });
-
-        // Add to local state immediately with temporary IDs
-        const tempDives = importedDives.map((dive, index) => ({
-          ...dive,
-          id: Date.now() + index,
-        }));
-        set((state) => ({ dives: [...state.dives, ...tempDives] }));
-
-        // Try to sync with backend
-        if (get().isOnline) {
-          const result = await divesApi.createMultipleDives(importedDives);
-          if (result.error) {
-            set({ error: result.error, isLoading: false });
-            console.warn('Failed to sync imported dives to backend, keeping local changes');
-          } else if (result.data) {
-            // Replace temporary dives with backend dives
-            set((state) => {
-              const nonTempDives = state.dives.filter(d => !tempDives.some(td => td.id === d.id));
-              return {
-                dives: [...nonTempDives, ...result.data!],
-                lastSyncedAt: new Date().toISOString(),
-                isLoading: false,
-                error: null
-              };
-            });
-          }
-        } else {
-          set({ isLoading: false });
-        }
-      },
-
-      loadFromBackend: async () => {
-        set({ isLoading: true, error: null });
-
-        const result = await divesApi.fetchDives();
-        if (result.error) {
-          set({ error: result.error, isLoading: false, isOnline: false });
-          console.warn('Failed to load dives from backend, using local dives');
-        } else {
-          set({ 
-            dives: result.data || [],
-            lastSyncedAt: new Date().toISOString(),
-            isLoading: false,
-            error: null,
-            isOnline: true 
-          });
-        }
-      },
-
-      syncWithBackend: async () => {
-        const currentDives = get().dives;
-        set({ isLoading: true, error: null });
-
-        // For now, just fetch from backend (full sync implementation would be more complex)
-        const result = await divesApi.fetchDives();
-        if (result.error) {
-          set({ error: result.error, isLoading: false });
-        } else {
-          set({ 
-            dives: result.data || currentDives,
-            lastSyncedAt: new Date().toISOString(),
-            isLoading: false,
-            error: null 
-          });
-        }
-      },
-
-      setOfflineMode: (offline) => {
-        set({ isOnline: !offline });
-      },
-    }),
-    {
-      name: 'dive-log-dives',
-      version: 2, // Increment version for new state structure
-      partialize: (state) => ({
-        dives: state.dives,
-        lastSyncedAt: state.lastSyncedAt,
-      }), // Only persist dives and sync time, not loading states
+      } else if (result.data) {
+        // Success - reload from backend to get fresh data
+        await get().loadFromBackend();
+      }
+    } else {
+      // Add to offline queue
+      const operation: OfflineOperation = {
+        id: crypto.randomUUID(),
+        type: 'create',
+        data: dive,
+        timestamp: Date.now()
+      };
+      set((state) => ({ 
+        offlineQueue: [...state.offlineQueue, operation],
+        isLoading: false
+      }));
     }
-  )
-);
+  },
+
+  editDive: async (updatedDive) => {
+    set({ isLoading: true, error: null });
+
+    if (get().isOnline) {
+      const result = await divesApi.updateDive(updatedDive);
+      if (result.error) {
+        const operation: OfflineOperation = {
+          id: crypto.randomUUID(),
+          type: 'update',
+          data: updatedDive,
+          timestamp: Date.now()
+        };
+        set((state) => ({ 
+          offlineQueue: [...state.offlineQueue, operation],
+          isOnline: false,
+          error: 'Network error - operation queued for retry',
+          isLoading: false
+        }));
+      } else {
+        await get().loadFromBackend();
+      }
+    } else {
+      const operation: OfflineOperation = {
+        id: crypto.randomUUID(),
+        type: 'update',
+        data: updatedDive,
+        timestamp: Date.now()
+      };
+      set((state) => ({ 
+        offlineQueue: [...state.offlineQueue, operation],
+        isLoading: false
+      }));
+    }
+  },
+
+  deleteDive: async (id) => {
+    set({ isLoading: true, error: null });
+
+    if (get().isOnline) {
+      const result = await divesApi.deleteDive(id);
+      if (result.error) {
+        const operation: OfflineOperation = {
+          id: crypto.randomUUID(),
+          type: 'delete',
+          data: { id },
+          timestamp: Date.now()
+        };
+        set((state) => ({ 
+          offlineQueue: [...state.offlineQueue, operation],
+          isOnline: false,
+          error: 'Network error - operation queued for retry',
+          isLoading: false
+        }));
+      } else {
+        await get().loadFromBackend();
+      }
+    } else {
+      const operation: OfflineOperation = {
+        id: crypto.randomUUID(),
+        type: 'delete',
+        data: { id },
+        timestamp: Date.now()
+      };
+      set((state) => ({ 
+        offlineQueue: [...state.offlineQueue, operation],
+        isLoading: false
+      }));
+    }
+  },
+
+  importDives: async (importedDives) => {
+    set({ isLoading: true, error: null });
+
+    if (get().isOnline) {
+      const result = await divesApi.createMultipleDives(importedDives);
+      if (result.error) {
+        const operation: OfflineOperation = {
+          id: crypto.randomUUID(),
+          type: 'import',
+          data: importedDives,
+          timestamp: Date.now()
+        };
+        set((state) => ({ 
+          offlineQueue: [...state.offlineQueue, operation],
+          isOnline: false,
+          error: 'Network error - operation queued for retry',
+          isLoading: false
+        }));
+      } else {
+        await get().loadFromBackend();
+      }
+    } else {
+      const operation: OfflineOperation = {
+        id: crypto.randomUUID(),
+        type: 'import',
+        data: importedDives,
+        timestamp: Date.now()
+      };
+      set((state) => ({ 
+        offlineQueue: [...state.offlineQueue, operation],
+        isLoading: false
+      }));
+    }
+  },
+
+  loadFromBackend: async () => {
+    set({ isLoading: true, error: null });
+
+    const result = await divesApi.fetchDives();
+    if (result.error) {
+      set({ error: result.error, isLoading: false, isOnline: false });
+    } else {
+      set({ 
+        dives: result.data || [],
+        isLoading: false,
+        error: null,
+        isOnline: true 
+      });
+      // Process any queued operations now that we're back online
+      if (get().offlineQueue.length > 0) {
+        await get().processOfflineQueue();
+      }
+    }
+  },
+
+  processOfflineQueue: async () => {
+    const queue = get().offlineQueue;
+    if (queue.length === 0) return;
+
+    set({ isLoading: true });
+    
+    for (const operation of queue) {
+      try {
+        switch (operation.type) {
+          case 'create':
+            await divesApi.createDive(operation.data);
+            break;
+          case 'update':
+            await divesApi.updateDive(operation.data);
+            break;
+          case 'delete':
+            await divesApi.deleteDive(operation.data.id);
+            break;
+          case 'import':
+            await divesApi.createMultipleDives(operation.data);
+            break;
+        }
+        
+        // Remove successful operation from queue
+        set((state) => ({
+          offlineQueue: state.offlineQueue.filter(op => op.id !== operation.id)
+        }));
+      } catch (error) {
+        console.warn('Failed to process offline operation:', operation, error);
+        break; // Stop processing on first failure
+      }
+    }
+    
+    // Reload data from backend after processing queue
+    await get().loadFromBackend();
+  },
+
+  setOnlineStatus: (online) => {
+    set({ isOnline: online });
+    if (online && get().offlineQueue.length > 0) {
+      get().processOfflineQueue();
+    }
+  },
+}));
 
 export default useDiveStore; 

@@ -97,17 +97,47 @@ func CreateDive(c *gin.Context) {
 	dive := diveReq.ToDive(userID)
 	db := database.DB
 
-	// Insert the dive
+	// Find or create dive site
+	diveSite, err := FindOrCreateDiveSite(diveReq.Location, diveReq.Lat, diveReq.Lng)
+	if err != nil {
+		log.Printf("Error finding/creating dive site: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process dive site"})
+		return
+	}
+
+	// Set the dive site ID
+	dive.DiveSiteID = &diveSite.ID
+
+	// Check for duplicate dive
+	isDuplicate, err := CheckDuplicateDive(userID, diveSite.ID, diveReq.Date)
+	if err != nil {
+		log.Printf("Error checking duplicate dive: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check for duplicate dive"})
+		return
+	}
+
+	if isDuplicate {
+		c.JSON(http.StatusConflict, gin.H{
+			"error": "A dive already exists for this date and location",
+			"details": map[string]interface{}{
+				"date": diveReq.Date,
+				"location": diveReq.Location,
+			},
+		})
+		return
+	}
+
+	// Insert the dive with dive site reference
 	query := `
-		INSERT INTO dives (user_id, dive_date, max_depth, duration, buddy, latitude, longitude, location, water_temperature, visibility, notes, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+		INSERT INTO dives (user_id, dive_site_id, dive_date, max_depth, duration, buddy, latitude, longitude, location, water_temperature, visibility, notes, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 		RETURNING id, created_at, updated_at
 	`
 
 	now := time.Now()
 	err = db.QueryRow(
 		query,
-		dive.UserID, dive.Date, dive.MaxDepth, dive.Duration,
+		dive.UserID, dive.DiveSiteID, dive.Date, dive.MaxDepth, dive.Duration,
 		dive.Buddy, dive.Latitude, dive.Longitude, dive.Location,
 		dive.WaterTemp, dive.Visibility, dive.Notes,
 		now, now,
@@ -161,20 +191,50 @@ func CreateMultipleDives(c *gin.Context) {
 	defer tx.Rollback()
 
 	var createdDives []models.Dive
+	var skippedDives []map[string]interface{}
 	now := time.Now()
 
 	for _, diveReq := range diveReqs {
 		dive := diveReq.ToDive(userID)
 		
+		// Find or create dive site
+		diveSite, err := FindOrCreateDiveSite(diveReq.Location, diveReq.Lat, diveReq.Lng)
+		if err != nil {
+			log.Printf("Error finding/creating dive site in batch: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process dive site"})
+			return
+		}
+
+		// Set the dive site ID
+		dive.DiveSiteID = &diveSite.ID
+
+		// Check for duplicate dive
+		isDuplicate, err := CheckDuplicateDive(userID, diveSite.ID, diveReq.Date)
+		if err != nil {
+			log.Printf("Error checking duplicate dive in batch: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check for duplicate dive"})
+			return
+		}
+
+		if isDuplicate {
+			// Skip duplicate dive but continue with others
+			skippedDives = append(skippedDives, map[string]interface{}{
+				"date": diveReq.Date,
+				"location": diveReq.Location,
+				"reason": "duplicate",
+			})
+			continue
+		}
+		
 		query := `
-			INSERT INTO dives (user_id, dive_date, max_depth, duration, buddy, latitude, longitude, location, water_temperature, visibility, notes, created_at, updated_at)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+			INSERT INTO dives (user_id, dive_site_id, dive_date, max_depth, duration, buddy, latitude, longitude, location, water_temperature, visibility, notes, created_at, updated_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 			RETURNING id, created_at, updated_at
 		`
 
 		err = tx.QueryRow(
 			query,
-			dive.UserID, dive.Date, dive.MaxDepth, dive.Duration,
+			dive.UserID, dive.DiveSiteID, dive.Date, dive.MaxDepth, dive.Duration,
 			dive.Buddy, dive.Latitude, dive.Longitude, dive.Location,
 			dive.WaterTemp, dive.Visibility, dive.Notes,
 			now, now,
@@ -200,7 +260,18 @@ func CreateMultipleDives(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, createdDives)
+	// Return response with created dives and skipped information
+	response := map[string]interface{}{
+		"created": createdDives,
+		"created_count": len(createdDives),
+	}
+
+	if len(skippedDives) > 0 {
+		response["skipped"] = skippedDives
+		response["skipped_count"] = len(skippedDives)
+	}
+
+	c.JSON(http.StatusCreated, response)
 }
 
 // UpdateDive updates an existing dive
@@ -232,12 +303,39 @@ func UpdateDive(c *gin.Context) {
 
 	db := database.DB
 
+	// Find or create dive site for the updated dive
+	diveSite, err := FindOrCreateDiveSite(diveReq.Location, diveReq.Lat, diveReq.Lng)
+	if err != nil {
+		log.Printf("Error finding/creating dive site for update: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process dive site"})
+		return
+	}
+
+	// Check for duplicate dive (excluding current dive)
+	isDuplicate, err := CheckDuplicateDiveForUpdate(userID, diveSite.ID, diveReq.Date, diveID)
+	if err != nil {
+		log.Printf("Error checking duplicate dive for update: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check for duplicate dive"})
+		return
+	}
+
+	if isDuplicate {
+		c.JSON(http.StatusConflict, gin.H{
+			"error": "A dive already exists for this date and location",
+			"details": map[string]interface{}{
+				"date": diveReq.Date,
+				"location": diveReq.Location,
+			},
+		})
+		return
+	}
+
 	// Update the dive
 	query := `
 		UPDATE dives 
-		SET dive_date = $1, max_depth = $2, duration = $3, buddy = $4, 
-		    water_temperature = $5, visibility = $6, notes = $7, updated_at = $8
-		WHERE id = $9 AND user_id = $10
+		SET dive_site_id = $1, dive_date = $2, max_depth = $3, duration = $4, buddy = $5, 
+		    latitude = $6, longitude = $7, location = $8, water_temperature = $9, visibility = $10, notes = $11, updated_at = $12
+		WHERE id = $13 AND user_id = $14
 		RETURNING id, user_id, dive_date, max_depth, duration, buddy, 
 		          water_temperature, visibility, notes, created_at, updated_at
 	`
@@ -246,8 +344,8 @@ func UpdateDive(c *gin.Context) {
 	now := time.Now()
 	err = db.QueryRow(
 		query,
-		diveReq.Date, diveReq.Depth, diveReq.Duration, diveReq.Buddy,
-		diveReq.WaterTemp, diveReq.Visibility, diveReq.Notes, now,
+		diveSite.ID, diveReq.Date, diveReq.Depth, diveReq.Duration, diveReq.Buddy,
+		diveReq.Lat, diveReq.Lng, diveReq.Location, diveReq.WaterTemp, diveReq.Visibility, diveReq.Notes, now,
 		diveID, userID,
 	).Scan(
 		&dive.ID, &dive.UserID, &dive.Date, &dive.MaxDepth, &dive.Duration,

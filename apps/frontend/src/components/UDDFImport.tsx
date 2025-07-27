@@ -163,8 +163,8 @@ const UDDFImport = ({ onImport }: UDDFImportProps) => {
 
       {/* Import Preview Dialog */}
       <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
+        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <CheckCircle className="h-5 w-5 text-green-500" />
               Import Preview
@@ -174,26 +174,29 @@ const UDDFImport = ({ onImport }: UDDFImportProps) => {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="max-h-96 overflow-y-auto">
-            <div className="space-y-2">
+          <div className="flex-1 overflow-y-auto min-h-0 py-4">
+            <div className="space-y-2 pr-2">
               {previewDives.map((dive, index) => (
                 <div
                   key={index}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-md"
+                  className="flex items-center justify-between p-3 bg-gray-50 rounded-md border"
                 >
-                  <div className="flex-1">
-                    <div className="font-medium">{dive.location}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium truncate">{dive.location}</div>
                     <div className="text-sm text-muted-foreground">
                       {new Date(dive.date).toLocaleDateString()} • {dive.depth}m • {dive.duration}min
                       {dive.buddy && ` • with ${dive.buddy}`}
                     </div>
+                  </div>
+                  <div className="text-xs text-muted-foreground ml-4 flex-shrink-0">
+                    #{index + 1}
                   </div>
                 </div>
               ))}
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="flex-shrink-0 border-t pt-4">
             <Button variant="outline" onClick={handleCancelImport}>
               Cancel
             </Button>

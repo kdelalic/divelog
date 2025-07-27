@@ -1,6 +1,16 @@
 import type { UserSettings } from './settings';
 import type { Dive } from './dives';
 
+export interface DiveSite {
+  id: number;
+  name: string;
+  latitude: number;
+  longitude: number;
+  description?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 const API_BASE_URL = 'http://localhost:8080/api/v1';
 const DEFAULT_USER_ID = 1; // Development user ID
 
@@ -181,6 +191,75 @@ export const divesApi = {
       return { data: undefined };
     } catch (error) {
       console.error('Failed to delete dive:', error);
+      return { error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  },
+};
+
+// API utility functions for dive sites
+export const diveSitesApi = {
+  // Fetch all dive sites
+  async fetchDiveSites(): Promise<ApiResponse<DiveSite[]>> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/dive-sites`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return { data };
+    } catch (error) {
+      console.error('Failed to fetch dive sites:', error);
+      return { error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  },
+
+  // Search dive sites by name
+  async searchDiveSites(query: string): Promise<ApiResponse<DiveSite[]>> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/dive-sites/search?q=${encodeURIComponent(query)}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return { data };
+    } catch (error) {
+      console.error('Failed to search dive sites:', error);
+      return { error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  },
+
+  // Get a specific dive site
+  async getDiveSite(id: number): Promise<ApiResponse<DiveSite>> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/dive-sites/${id}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return { data };
+    } catch (error) {
+      console.error('Failed to get dive site:', error);
       return { error: error instanceof Error ? error.message : 'Unknown error' };
     }
   },
