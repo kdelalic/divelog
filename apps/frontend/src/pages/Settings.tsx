@@ -15,11 +15,8 @@ const Settings = () => {
     resetToDefaults,
     isLoading,
     isOnline,
-    lastSyncedAt,
     error,
-    syncWithBackend,
     loadFromBackend,
-    setOfflineMode
   } = useSettingsStore();
 
   // Load settings from backend on component mount
@@ -62,11 +59,6 @@ const Settings = () => {
                   <span>Offline</span>
                 </div>
               )}
-              {lastSyncedAt && (
-                <span className="text-muted-foreground">
-                  Last synced: {new Date(lastSyncedAt).toLocaleTimeString()}
-                </span>
-              )}
             </div>
             {error && (
               <div className="flex items-center gap-1 text-sm text-red-600">
@@ -79,11 +71,11 @@ const Settings = () => {
         <div className="flex gap-2">
           <Button 
             variant="outline" 
-            onClick={syncWithBackend}
+            onClick={loadFromBackend}
             disabled={isLoading || !isOnline}
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-            Sync
+            Reload
           </Button>
           <Button 
             variant="outline" 

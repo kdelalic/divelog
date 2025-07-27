@@ -203,3 +203,145 @@ func GetDiveSite(c *gin.Context) {
 
 	c.JSON(http.StatusOK, site)
 }
+
+// CreateDiveSite creates a new dive site
+func CreateDiveSite(c *gin.Context) {
+	var siteReq models.DiveSiteRequest
+	if err := c.ShouldBindJSON(&siteReq); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Check if a dive site with the same name and close coordinates already exists
+	existingSite, err := FindOrCreateDiveSite(siteReq.Name, siteReq.Latitude, siteReq.Longitude)
+	if err != nil {
+		log.Printf("Error checking for existing dive site: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create dive site"})
+		return
+	}
+
+	// Check if this is actually a new site or an existing one
+	distance := calculateDistance(existingSite.Latitude, existingSite.Longitude, siteReq.Latitude, siteReq.Longitude)
+	if distance < 0.1 && existingSite.Name == siteReq.Name {
+		// This is essentially the same site
+		c.JSON(http.StatusConflict, gin.H{
+			"error": "A dive site with this name and location already exists",
+			"existing_site": existingSite,
+		})
+		return
+	}
+
+	// Create new site (FindOrCreateDiveSite already created it if it was new)
+	c.JSON(http.StatusCreated, existingSite)
+}
+
+// UpdateDiveSite updates an existing dive site
+func UpdateDiveSite(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid dive site id"})
+		return
+	}
+
+	var siteReq models.DiveSiteRequest
+	if err := c.ShouldBindJSON(&siteReq); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	db := database.DB
+
+	// Check if another dive site with the same name and close coordinates exists (excluding current one)
+	checkQuery := `SELECT id FROM dive_sites 
+				   WHERE LOWER(name) = LOWER($1) AND id != $2`
+	
+	var existingID int
+	err = db.QueryRow(checkQuery, siteReq.Name, id).Scan(&existingID)
+	if err == nil {
+		// Found another site with same name, check distance
+		var existingLat, existingLng float64
+		err = db.QueryRow(`SELECT latitude, longitude FROM dive_sites WHERE id = $1`, existingID).Scan(&existingLat, &existingLng)
+		if err == nil {
+			distance := calculateDistance(existingLat, existingLng, siteReq.Latitude, siteReq.Longitude)
+			if distance < 0.1 {
+				c.JSON(http.StatusConflict, gin.H{
+					"error": "A dive site with this name and location already exists",
+				})
+				return
+			}
+		}
+	}
+
+	// Update the dive site
+	updateQuery := `UPDATE dive_sites 
+					SET name = $1, latitude = $2, longitude = $3, description = $4, updated_at = NOW()
+					WHERE id = $5
+					RETURNING id, name, latitude, longitude, description, created_at, updated_at`
+
+	var site models.DiveSite
+	err = db.QueryRow(updateQuery, siteReq.Name, siteReq.Latitude, siteReq.Longitude, siteReq.Description, id).Scan(
+		&site.ID, &site.Name, &site.Latitude, &site.Longitude,
+		&site.Description, &site.CreatedAt, &site.UpdatedAt,
+	)
+
+	if err != nil {
+		log.Printf("Error updating dive site: %v", err)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Dive site not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, site)
+}
+
+// DeleteDiveSite deletes a dive site (only if no dives reference it)
+func DeleteDiveSite(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid dive site id"})
+		return
+	}
+
+	db := database.DB
+
+	// Check if any dives reference this dive site
+	var diveCount int
+	err = db.QueryRow(`SELECT COUNT(*) FROM dives WHERE dive_site_id = $1`, id).Scan(&diveCount)
+	if err != nil {
+		log.Printf("Error checking dive site usage: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check dive site usage"})
+		return
+	}
+
+	if diveCount > 0 {
+		c.JSON(http.StatusConflict, gin.H{
+			"error": "Cannot delete dive site that has associated dives",
+			"dive_count": diveCount,
+		})
+		return
+	}
+
+	// Delete the dive site
+	deleteQuery := `DELETE FROM dive_sites WHERE id = $1`
+	result, err := db.Exec(deleteQuery, id)
+	if err != nil {
+		log.Printf("Error deleting dive site: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete dive site"})
+		return
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		log.Printf("Error getting rows affected: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete dive site"})
+		return
+	}
+
+	if rowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Dive site not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Dive site deleted successfully"})
+}

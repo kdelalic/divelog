@@ -12,6 +12,7 @@ const Layout = () => {
             <div className="flex space-x-4">
               <Link to="/" className="text-gray-500 hover:text-gray-700">Dive Log</Link>
               <Link to="/map" className="text-gray-500 hover:text-gray-700">Map</Link>
+              <Link to="/dive-sites" className="text-gray-500 hover:text-gray-700">Dive Sites</Link>
               <Link to="/settings" className="text-gray-500 hover:text-gray-700">Settings</Link>
             </div>
           </div>

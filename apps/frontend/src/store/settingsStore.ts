@@ -30,9 +30,9 @@ const useSettingsStore = create<SettingsState>()((set, get) => ({
     const updatedSettings = {
       ...currentSettings,
       ...newSettings,
-      units: { ...currentSettings.units, ...newSettings.units },
-      preferences: { ...currentSettings.preferences, ...newSettings.preferences },
-      dive: { ...currentSettings.dive, ...newSettings.dive },
+      units: { ...currentSettings.units, ...(newSettings.units || {}) },
+      preferences: { ...currentSettings.preferences, ...(newSettings.preferences || {}) },
+      dive: { ...currentSettings.dive, ...(newSettings.dive || {}) },
     };
 
     set({ isLoading: true, error: null });
@@ -54,15 +54,24 @@ const useSettingsStore = create<SettingsState>()((set, get) => ({
   },
 
   updateUnitSettings: async (units) => {
-    await get().updateSettings({ units });
+    const currentSettings = get().settings;
+    await get().updateSettings({ 
+      units: { ...currentSettings.units, ...units }
+    });
   },
 
   updatePreferences: async (preferences) => {
-    await get().updateSettings({ preferences });
+    const currentSettings = get().settings;
+    await get().updateSettings({ 
+      preferences: { ...currentSettings.preferences, ...preferences }
+    });
   },
 
   updateDiveSettings: async (dive) => {
-    await get().updateSettings({ dive });
+    const currentSettings = get().settings;
+    await get().updateSettings({ 
+      dive: { ...currentSettings.dive, ...dive }
+    });
   },
 
   resetToDefaults: async () => {

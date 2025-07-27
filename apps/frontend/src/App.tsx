@@ -9,6 +9,7 @@ import AddDive from "./pages/AddDive";
 import EditDive from "./pages/EditDive";
 import Map from "./pages/Map";
 import Settings from "./pages/Settings";
+import DiveSites from "./pages/DiveSites";
 import useDiveStore from "./store/diveStore";
 import useSettingsStore from "./store/settingsStore";
 import './App.css'
@@ -37,6 +38,10 @@ const router = createBrowserRouter([
       {
         path: "settings",
         element: <Settings />,
+      },
+      {
+        path: "dive-sites",
+        element: <DiveSites />,
       }
     ],
   },

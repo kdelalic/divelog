@@ -5,7 +5,7 @@ import { divesApi } from '../lib/api';
 interface OfflineOperation {
   id: string;
   type: 'create' | 'update' | 'delete' | 'import';
-  data: any;
+  data: Omit<Dive, 'id'> | Dive | { id: number } | Omit<Dive, 'id'>[];
   timestamp: number;
 }
 
@@ -206,16 +206,16 @@ const useDiveStore = create<DiveState>()((set, get) => ({
       try {
         switch (operation.type) {
           case 'create':
-            await divesApi.createDive(operation.data);
+            await divesApi.createDive(operation.data as Omit<Dive, 'id'>);
             break;
           case 'update':
-            await divesApi.updateDive(operation.data);
+            await divesApi.updateDive(operation.data as Dive);
             break;
           case 'delete':
-            await divesApi.deleteDive(operation.data.id);
+            await divesApi.deleteDive((operation.data as { id: number }).id);
             break;
           case 'import':
-            await divesApi.createMultipleDives(operation.data);
+            await divesApi.createMultipleDives(operation.data as Omit<Dive, 'id'>[]);
             break;
         }
         

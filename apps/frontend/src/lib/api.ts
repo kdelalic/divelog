@@ -263,6 +263,78 @@ export const diveSitesApi = {
       return { error: error instanceof Error ? error.message : 'Unknown error' };
     }
   },
+
+  // Create a new dive site
+  async createDiveSite(site: Omit<DiveSite, 'id' | 'created_at' | 'updated_at'>): Promise<ApiResponse<DiveSite>> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/dive-sites`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(site),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return { data };
+    } catch (error) {
+      console.error('Failed to create dive site:', error);
+      return { error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  },
+
+  // Update a dive site
+  async updateDiveSite(site: DiveSite): Promise<ApiResponse<DiveSite>> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/dive-sites/${site.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: site.name,
+          latitude: site.latitude,
+          longitude: site.longitude,
+          description: site.description,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return { data };
+    } catch (error) {
+      console.error('Failed to update dive site:', error);
+      return { error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  },
+
+  // Delete a dive site
+  async deleteDiveSite(id: number): Promise<ApiResponse<void>> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/dive-sites/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return { data: undefined };
+    } catch (error) {
+      console.error('Failed to delete dive site:', error);
+      return { error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  },
 };
 
 // Generic API error handler

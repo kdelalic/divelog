@@ -74,6 +74,9 @@ func main() {
 		api.GET("/dive-sites", handlers.GetDiveSites)
 		api.GET("/dive-sites/search", handlers.SearchDiveSites)
 		api.GET("/dive-sites/:id", handlers.GetDiveSite)
+		api.POST("/dive-sites", handlers.CreateDiveSite)
+		api.PUT("/dive-sites/:id", handlers.UpdateDiveSite)
+		api.DELETE("/dive-sites/:id", handlers.DeleteDiveSite)
 	}
 
 	// Start server

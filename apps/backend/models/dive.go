@@ -64,3 +64,21 @@ type DiveSite struct {
 	CreatedAt   time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
 }
+
+// DiveSiteRequest represents the request body for creating/updating dive sites
+type DiveSiteRequest struct {
+	Name        string  `json:"name" binding:"required"`
+	Latitude    float64 `json:"latitude" binding:"required"`
+	Longitude   float64 `json:"longitude" binding:"required"`
+	Description *string `json:"description,omitempty"`
+}
+
+// ToDiveSite converts a DiveSiteRequest to DiveSite
+func (dsr *DiveSiteRequest) ToDiveSite() *DiveSite {
+	return &DiveSite{
+		Name:        dsr.Name,
+		Latitude:    dsr.Latitude,
+		Longitude:   dsr.Longitude,
+		Description: dsr.Description,
+	}
+}
