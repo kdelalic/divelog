@@ -75,10 +75,13 @@ const EditDive = () => {
   }
 
   return (
-    <div className="max-w-xl mx-auto">
-      <h2 className="text-2xl font-bold mb-6">Edit Dive</h2>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 bg-white p-8 rounded-lg shadow">
-        <div className="grid grid-cols-2 gap-4">
+    <div className="max-w-4xl mx-auto">
+      <div className="mb-8">
+        <h1 className="text-3xl lg:text-4xl font-bold tracking-tight text-slate-900">Edit Dive</h1>
+        <p className="mt-2 text-lg lg:text-xl text-slate-600">Update the details of your dive</p>
+      </div>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-8 bg-white p-8 lg:p-12 rounded-xl shadow-sm border border-slate-200">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <div>
             <label htmlFor="date" className="block text-sm font-medium text-gray-700">Date</label>
             <input type="date" id="date" {...register("date")} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
@@ -109,7 +112,7 @@ const EditDive = () => {
           <label htmlFor="buddy" className="block text-sm font-medium text-gray-700">Buddy</label>
           <input type="text" id="buddy" {...register("buddy")} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <div>
             <label htmlFor="lat" className="block text-sm font-medium text-gray-700">Latitude</label>
             <input type="number" step="any" id="lat" {...register("lat", { valueAsNumber: true })} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
@@ -121,11 +124,11 @@ const EditDive = () => {
             {errors.lng && <p className="mt-2 text-sm text-red-600">{errors.lng.message}</p>}
           </div>
         </div>
-        <div className="flex justify-end space-x-4">
-          <Button variant="ghost" asChild>
+        <div className="flex flex-col sm:flex-row gap-3 sm:justify-end pt-6 border-t border-slate-200 mt-8">
+          <Button variant="outline" size="lg" asChild className="px-6">
             <Link to="/">Cancel</Link>
           </Button>
-          <Button type="submit">Save Changes</Button>
+          <Button type="submit" size="lg" className="bg-blue-600 hover:bg-blue-700 px-6">Save Changes</Button>
         </div>
       </form>
     </div>

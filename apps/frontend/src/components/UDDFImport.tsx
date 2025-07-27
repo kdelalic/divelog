@@ -200,13 +200,15 @@ const UDDFImport = ({ onImport }: UDDFImportProps) => {
             </div>
           </div>
 
-          <DialogFooter className="flex-shrink-0 border-t pt-4">
-            <Button variant="outline" onClick={handleCancelImport}>
-              Cancel
-            </Button>
-            <Button onClick={handleConfirmImport}>
-              Import {previewDives.length} Dive{previewDives.length === 1 ? '' : 's'}
-            </Button>
+          <DialogFooter className="flex-shrink-0 border-t pt-6">
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+              <Button variant="outline" onClick={handleCancelImport} size="lg" className="px-6">
+                Cancel
+              </Button>
+              <Button onClick={handleConfirmImport} size="lg" className="bg-blue-600 hover:bg-blue-700 px-6">
+                Import {previewDives.length} Dive{previewDives.length === 1 ? '' : 's'}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>

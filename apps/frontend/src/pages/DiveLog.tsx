@@ -46,89 +46,107 @@ const DiveLog = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-3xl font-bold tracking-tight">Dive Dashboard</h2>
-        <div className="flex gap-2">
+    <div className="space-y-8">
+      {/* Header Section */}
+      <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-6 lg:gap-8">
+        <div className="flex-1">
+          <h1 className="text-4xl lg:text-5xl xl:text-6xl font-bold tracking-tight text-slate-900">Dive Dashboard</h1>
+          <p className="mt-3 text-lg lg:text-xl xl:text-2xl text-slate-600 max-w-2xl">Track and analyze your diving adventures with comprehensive logging and insights</p>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-3 lg:flex-shrink-0">
           <Button 
             variant="outline" 
+            size="lg"
             onClick={() => {
               setShowImport(true);
             }}
-            className="bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+            className="bg-white border-slate-300 text-slate-700 hover:bg-slate-50 hover:text-slate-900 px-8 py-3 text-base"
           >
             Import UDDF
           </Button>
           <Link to="/add">
-            <Button>Add Dive</Button>
+            <Button size="lg" className="bg-blue-600 hover:bg-blue-700 px-8 py-3 text-base shadow-lg hover:shadow-xl transition-shadow">Add Dive</Button>
           </Link>
         </div>
       </div>
 
+      {/* Stats Section */}
       <DashboardStats stats={stats} />
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <DiveChart dives={dives} />
-        <RecentDives dives={dives} />
+      {/* Charts Section */}
+      <div className="grid gap-8 xl:grid-cols-3 lg:grid-cols-2">
+        <div className="xl:col-span-2">
+          <DiveChart dives={dives} />
+        </div>
+        <div className="xl:col-span-1">
+          <RecentDives dives={dives} />
+        </div>
       </div>
 
-      <div id="table" className="bg-white shadow overflow-hidden rounded-lg">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">All Dives</h3>
+      {/* Table Section */}
+      <div id="table" className="bg-white shadow-sm ring-1 ring-slate-200 overflow-hidden rounded-xl">
+        <div className="px-8 py-6 border-b border-slate-200 bg-slate-50/50">
+          <h3 className="text-xl font-semibold text-slate-900">All Dives</h3>
+          <p className="mt-1 text-sm text-slate-600">Complete history of your dive activities</p>
         </div>
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+        <table className="min-w-full divide-y divide-slate-200">
+          <thead className="bg-slate-50">
             <tr>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th scope="col" className="w-1/6 px-8 py-4 text-left text-sm font-semibold text-slate-700 uppercase tracking-wider">Date</th>
+              <th scope="col" className="w-2/6 px-8 py-4 text-left text-sm font-semibold text-slate-700 uppercase tracking-wider">Location</th>
+              <th scope="col" className="w-1/6 px-8 py-4 text-left text-sm font-semibold text-slate-700 uppercase tracking-wider">
                 Depth ({settings.units.depth === 'meters' ? 'm' : 'ft'})
               </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration (min)</th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Buddy</th>
-              <th scope="col" className="relative px-6 py-3">
-                <span className="sr-only">Edit</span>
+              <th scope="col" className="w-1/6 px-8 py-4 text-left text-sm font-semibold text-slate-700 uppercase tracking-wider">Duration</th>
+              <th scope="col" className="w-1/6 px-8 py-4 text-left text-sm font-semibold text-slate-700 uppercase tracking-wider">Buddy</th>
+              <th scope="col" className="w-1/6 relative px-8 py-4">
+                <span className="sr-only">Actions</span>
               </th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-white divide-y divide-slate-100">
             {dives
               .sort((a, b) => new Date(b.datetime).getTime() - new Date(a.datetime).getTime())
               .map((dive) => (
               <tr 
                 key={dive.id} 
-                className="hover:bg-gray-50 cursor-pointer transition-colors"
+                className="hover:bg-slate-50 cursor-pointer transition-colors duration-150"
                 onClick={() => handleRowClick(dive)}
               >
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                <td className="px-8 py-5 whitespace-nowrap text-sm lg:text-base font-medium text-slate-900">
                   {formatDiveDateTime(dive.datetime, settings)}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{dive.location}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <td className="px-8 py-5 whitespace-nowrap text-sm lg:text-base text-slate-600 font-medium">{dive.location}</td>
+                <td className="px-8 py-5 whitespace-nowrap text-sm lg:text-base text-slate-600 font-semibold text-blue-600">
                   {formatDepth(dive.depth, settings.units.depth, 0)}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{dive.duration}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{dive.buddy || 'N/A'}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-4">
-                  <Button 
-                    variant="link" 
-                    asChild
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <Link to={`/edit/${dive.id}`}>Edit</Link>
-                  </Button>
-                  <Button 
-                    variant="link" 
-                    className="text-red-600 hover:text-red-900" 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (window.confirm("Are you sure you want to delete this dive?")) {
-                        deleteDive(dive.id);
-                      }
-                    }}
-                  >
-                    Delete
-                  </Button>
+                <td className="px-8 py-5 whitespace-nowrap text-sm lg:text-base text-slate-600">{dive.duration} min</td>
+                <td className="px-8 py-5 whitespace-nowrap text-sm lg:text-base text-slate-600">{dive.buddy || 'Solo'}</td>
+                <td className="px-8 py-5 whitespace-nowrap text-right text-sm font-medium">
+                  <div className="flex justify-end gap-2">
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      asChild
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-3 py-1"
+                    >
+                      <Link to={`/edit/${dive.id}`}>Edit</Link>
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 px-3 py-1" 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (window.confirm("Are you sure you want to delete this dive?")) {
+                          deleteDive(dive.id);
+                        }
+                      }}
+                    >
+                      Delete
+                    </Button>
+                  </div>
                 </td>
               </tr>
             ))}

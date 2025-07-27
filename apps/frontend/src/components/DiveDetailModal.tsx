@@ -30,7 +30,7 @@ const DiveDetailModal = ({ dive, isOpen, onClose }: DiveDetailModalProps) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[85vh] overflow-y-auto w-[95vw] xl:w-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl">
             <MapPin className="h-5 w-5 text-blue-600" />
@@ -50,8 +50,8 @@ const DiveDetailModal = ({ dive, isOpen, onClose }: DiveDetailModalProps) => {
             <TabsTrigger value="notes">Notes</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="overview" className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
+          <TabsContent value="overview" className="space-y-6">
+            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2">
@@ -158,7 +158,7 @@ const DiveDetailModal = ({ dive, isOpen, onClose }: DiveDetailModalProps) => {
               <DiveProfile 
                 samples={dive.samples}
                 maxDepth={dive.depth}
-                className="h-96"
+                className="h-96 lg:h-[500px] xl:h-[600px]"
               />
             ) : (
               <div className="text-center py-12">

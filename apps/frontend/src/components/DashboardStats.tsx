@@ -40,18 +40,18 @@ const DashboardStats = ({ stats }: DashboardStatsProps) => {
   ];
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4 lg:grid-cols-2">
       {statCards.map((card) => {
         const Icon = card.icon;
         return (
-          <Card key={card.title}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
-              <Icon className="h-4 w-4 text-muted-foreground" />
+          <Card key={card.title} className="border-slate-200 shadow-sm hover:shadow-lg hover:border-slate-300 transition-all duration-200 group">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+              <CardTitle className="text-sm font-semibold text-slate-700 group-hover:text-slate-900 transition-colors">{card.title}</CardTitle>
+              <Icon className="h-6 w-6 text-slate-500 group-hover:text-blue-500 transition-colors" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{card.value}</div>
-              <p className="text-xs text-muted-foreground">{card.subtitle}</p>
+            <CardContent className="pt-0">
+              <div className="text-4xl font-bold text-slate-900 mb-2 group-hover:text-blue-600 transition-colors">{card.value}</div>
+              <p className="text-sm text-slate-600 leading-relaxed">{card.subtitle}</p>
             </CardContent>
           </Card>
         );

@@ -18,14 +18,15 @@ const RecentDives = ({ dives }: RecentDivesProps) => {
 
   if (dives.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Dives</CardTitle>
+      <Card className="border-slate-200 shadow-sm">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg font-semibold text-slate-900">Recent Dives</CardTitle>
+          <p className="text-sm text-slate-600">Your latest diving activities</p>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8">
-            <div className="text-muted-foreground mb-4">No dives logged yet</div>
-            <Button asChild>
+          <div className="text-center py-12 bg-slate-50 rounded-lg">
+            <div className="text-slate-500 mb-4">No dives logged yet</div>
+            <Button asChild className="bg-blue-600 hover:bg-blue-700">
               <Link to="/add">Log Your First Dive</Link>
             </Button>
           </div>
@@ -35,44 +36,47 @@ const RecentDives = ({ dives }: RecentDivesProps) => {
   }
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0">
-        <CardTitle>Recent Dives</CardTitle>
-        <Button variant="outline" size="sm" asChild>
+    <Card className="border-slate-200 shadow-sm">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+        <div>
+          <CardTitle className="text-lg font-semibold text-slate-900">Recent Dives</CardTitle>
+          <p className="text-sm text-slate-600">Your latest diving activities</p>
+        </div>
+        <Button variant="outline" size="sm" asChild className="border-slate-300 text-slate-600 hover:bg-slate-50 px-4 py-2 ml-4">
           <Link to="#table">View All</Link>
         </Button>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-4">
         <div className="space-y-4">
           {recentDives.map((dive) => (
             <div
               key={dive.id}
-              className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+              className="flex flex-col xl:flex-row xl:items-center xl:justify-between p-5 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors duration-150 group cursor-pointer"
             >
-              <div className="space-y-1">
-                <div className="font-medium">{dive.location}</div>
-                <div className="text-sm text-muted-foreground">
+              <div className="space-y-2">
+                <div className="font-semibold text-slate-900">{dive.location}</div>
+                <div className="text-sm text-slate-600">
                   {formatDiveDateTime(dive.datetime, settings)}
                 </div>
-                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-1">
-                    <Waves className="h-3 w-3" />
+                <div className="flex items-center gap-6 text-sm text-slate-600">
+                  <div className="flex items-center gap-2">
+                    <Waves className="h-4 w-4 text-blue-500" />
                     {formatDepth(dive.depth, settings.units.depth)}
                   </div>
-                  <div className="flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-slate-500" />
                     {formatDuration(dive.duration)}
                   </div>
                   {dive.buddy && (
-                    <div className="flex items-center gap-1">
-                      <User className="h-3 w-3" />
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-slate-500" />
                       {dive.buddy}
                     </div>
                   )}
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" size="sm" asChild>
+              <div className="flex items-center gap-3 mt-3 xl:mt-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Button variant="ghost" size="sm" asChild className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-4 py-2">
                   <Link to={`/edit/${dive.id}`}>Edit</Link>
                 </Button>
               </div>

@@ -65,12 +65,13 @@ const DiveChart = ({ dives }: DiveChartProps) => {
 
   if (dives.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Dive Activity</CardTitle>
+      <Card className="border-slate-200 shadow-sm">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg font-semibold text-slate-900">Dive Activity</CardTitle>
+          <p className="text-sm text-slate-600">Track your diving frequency over time</p>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+          <div className="flex items-center justify-center h-[320px] text-slate-500 bg-slate-50 rounded-lg">
             No dive data to display
           </div>
         </CardContent>
@@ -79,12 +80,15 @@ const DiveChart = ({ dives }: DiveChartProps) => {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Dive Activity</CardTitle>
+    <Card className="border-slate-200 shadow-sm">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg font-semibold text-slate-900">Dive Activity</CardTitle>
+        <p className="text-sm text-slate-600">Your diving frequency over time</p>
       </CardHeader>
-      <CardContent>
-        <Line data={chartData} options={options} />
+      <CardContent className="pt-4">
+        <div className="h-[320px] lg:h-[400px] xl:h-[450px]">
+          <Line data={chartData} options={{ ...options, maintainAspectRatio: false }} />
+        </div>
       </CardContent>
     </Card>
   );

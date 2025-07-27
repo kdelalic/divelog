@@ -319,7 +319,7 @@ const DiveProfile: React.FC<DiveProfileProps> = ({
         },
       },
     };
-  }, [settings, maxDepth, chartData]);
+  }, [samples, settings, maxDepth, chartData]);
 
   if (!chartData) {
     return (

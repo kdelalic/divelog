@@ -37,50 +37,54 @@ const Settings = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            <SettingsIcon className="h-8 w-8" />
+    <div className="space-y-8">
+      <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-6">
+        <div className="space-y-3">
+          <h1 className="text-4xl font-bold tracking-tight flex items-center gap-3 text-slate-900">
+            <SettingsIcon className="h-9 w-9 text-slate-700" />
             Settings
-            {isLoading && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />}
-          </h2>
-          <div className="space-y-1">
-            <p className="text-muted-foreground">Customize your dive log preferences and units</p>
-            <div className="flex items-center gap-2 text-sm">
+            {isLoading && <Loader2 className="h-6 w-6 animate-spin text-slate-400" />}
+          </h1>
+          <div className="space-y-2">
+            <p className="text-lg text-slate-600">Customize your dive log preferences and units</p>
+            <div className="flex items-center gap-4 text-sm">
               {isOnline ? (
-                <div className="flex items-center gap-1 text-green-600">
+                <div className="flex items-center gap-2 text-green-600 bg-green-50 px-3 py-1 rounded-full">
                   <Cloud className="h-4 w-4" />
-                  <span>Online</span>
+                  <span className="font-medium">Online</span>
                 </div>
               ) : (
-                <div className="flex items-center gap-1 text-orange-600">
+                <div className="flex items-center gap-2 text-orange-600 bg-orange-50 px-3 py-1 rounded-full">
                   <CloudOff className="h-4 w-4" />
-                  <span>Offline</span>
+                  <span className="font-medium">Offline</span>
                 </div>
               )}
             </div>
             {error && (
-              <div className="flex items-center gap-1 text-sm text-red-600">
+              <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 px-3 py-2 rounded-md">
                 <AlertCircle className="h-4 w-4" />
                 <span>{error}</span>
               </div>
             )}
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-3">
           <Button 
             variant="outline" 
+            size="lg"
             onClick={loadFromBackend}
             disabled={isLoading || !isOnline}
+            className="px-6"
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             Reload
           </Button>
           <Button 
             variant="outline" 
+            size="lg"
             onClick={resetToDefaults}
             disabled={isLoading}
+            className="px-6"
           >
             Reset to Defaults
           </Button>
@@ -88,13 +92,13 @@ const Settings = () => {
       </div>
 
       <Tabs defaultValue="units" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="units">Units & Measurements</TabsTrigger>
-          <TabsTrigger value="preferences">Preferences</TabsTrigger>
-          <TabsTrigger value="diving">Diving Settings</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3 mb-8">
+          <TabsTrigger value="units" className="px-6 py-3">Units & Measurements</TabsTrigger>
+          <TabsTrigger value="preferences" className="px-6 py-3">Preferences</TabsTrigger>
+          <TabsTrigger value="diving" className="px-6 py-3">Diving Settings</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="units" className="space-y-4">
+        <TabsContent value="units" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Unit Preferences</CardTitle>
@@ -103,7 +107,7 @@ const Settings = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Depth</label>
                   <select
@@ -168,7 +172,7 @@ const Settings = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="preferences" className="space-y-4">
+        <TabsContent value="preferences" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Display Preferences</CardTitle>
@@ -177,7 +181,7 @@ const Settings = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Date Format</label>
                   <select
@@ -219,7 +223,7 @@ const Settings = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="diving" className="space-y-4">
+        <TabsContent value="diving" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Diving Settings</CardTitle>
