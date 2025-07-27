@@ -46,45 +46,59 @@ const DiveLog = () => {
   };
 
   return (
-    <div className="space-y-8">
-      {/* Header Section */}
-      <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-6 lg:gap-8">
-        <div className="flex-1">
-          <h1 className="text-4xl lg:text-5xl xl:text-6xl font-bold tracking-tight text-slate-900">Dive Dashboard</h1>
-          <p className="mt-3 text-lg lg:text-xl xl:text-2xl text-slate-600 max-w-2xl">Track and analyze your diving adventures with comprehensive logging and insights</p>
-        </div>
-        <div className="flex flex-col sm:flex-row gap-3 lg:flex-shrink-0">
-          <Button 
-            variant="outline" 
-            size="lg"
-            onClick={() => {
-              setShowImport(true);
-            }}
-            className="bg-white border-slate-300 text-slate-700 hover:bg-slate-50 hover:text-slate-900 px-8 py-3 text-base"
-          >
-            Import UDDF
-          </Button>
-          <Link to="/add">
-            <Button size="lg" className="bg-blue-600 hover:bg-blue-700 px-8 py-3 text-base shadow-lg hover:shadow-xl transition-shadow">Add Dive</Button>
-          </Link>
-        </div>
-      </div>
-
-      {/* Stats Section */}
-      <DashboardStats stats={stats} />
-
-      {/* Charts Section */}
-      <div className="grid gap-8 xl:grid-cols-3 lg:grid-cols-2">
-        <div className="xl:col-span-2">
-          <DiveChart dives={dives} />
-        </div>
-        <div className="xl:col-span-1">
-          <RecentDives dives={dives} />
+    <div className="min-h-screen bg-white">
+      {/* Hero Section */}
+      <div className="bg-gradient-to-br from-slate-50 to-white border-b border-slate-200">
+        <div className="px-8 py-20">
+          <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-12">
+            <div className="flex-1">
+              <h1 className="text-5xl lg:text-6xl font-bold tracking-tight text-slate-900 mb-6">
+                Dive Dashboard
+              </h1>
+              <p className="text-xl text-slate-600 max-w-2xl">
+                Track and analyze your diving adventures with comprehensive logging and insights
+              </p>
+            </div>
+            <div className="flex lg:flex-shrink-0">
+              <Button 
+                variant="outline" 
+                size="lg"
+                onClick={() => setShowImport(true)}
+                className="bg-white border-slate-300 text-slate-700 hover:bg-slate-50 px-8 py-4 text-base font-medium shadow-sm mr-6"
+              >
+                Import UDDF
+              </Button>
+              <Link to="/add">
+                <Button size="lg" className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 px-8 py-4 text-base font-medium shadow-lg hover:shadow-xl transition-all">
+                  Add Dive
+                </Button>
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Table Section */}
-      <div id="table" className="bg-white shadow-sm ring-1 ring-slate-200 overflow-hidden rounded-xl">
+      {/* Main Content */}
+      <div className="px-8 py-20">
+        {/* Stats Section */}
+        <div className="mb-24">
+          <DashboardStats stats={stats} />
+        </div>
+
+        {/* Charts Section */}
+        <div className="mb-24">
+          <div className="grid lg:grid-cols-5">
+            <div className="lg:col-span-3 lg:mr-16">
+              <DiveChart dives={dives} />
+            </div>
+            <div className="lg:col-span-2 mt-16 lg:mt-0">
+              <RecentDives dives={dives} />
+            </div>
+          </div>
+        </div>
+
+        {/* Table Section */}
+        <div id="table" className="bg-white shadow-sm ring-1 ring-slate-200 overflow-hidden rounded-xl">
         <div className="px-8 py-6 border-b border-slate-200 bg-slate-50/50">
           <h3 className="text-xl font-semibold text-slate-900">All Dives</h3>
           <p className="mt-1 text-sm text-slate-600">Complete history of your dive activities</p>
@@ -152,6 +166,7 @@ const DiveLog = () => {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       <DiveDetailModal 

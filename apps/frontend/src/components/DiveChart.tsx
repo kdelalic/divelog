@@ -9,7 +9,6 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Dive } from "@/lib/dives";
 import { getDivesByMonth } from "@/lib/diveStats";
 
@@ -65,32 +64,35 @@ const DiveChart = ({ dives }: DiveChartProps) => {
 
   if (dives.length === 0) {
     return (
-      <Card className="border-slate-200 shadow-sm">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg font-semibold text-slate-900">Dive Activity</CardTitle>
-          <p className="text-sm text-slate-600">Track your diving frequency over time</p>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center h-[320px] text-slate-500 bg-slate-50 rounded-lg">
-            No dive data to display
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm">
+        <div className="px-8 py-6">
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-slate-900">Dive Activity</h3>
+            <p className="text-sm text-slate-500 mt-1">Track your diving frequency over time</p>
           </div>
-        </CardContent>
-      </Card>
+          <div className="flex items-center justify-center h-[400px] text-slate-500 bg-slate-50 rounded-xl">
+            <div className="text-center">
+              <div className="text-lg font-medium mb-2">No dive data to display</div>
+              <p className="text-sm">Add your first dive to see activity trends</p>
+            </div>
+          </div>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Card className="border-slate-200 shadow-sm">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-lg font-semibold text-slate-900">Dive Activity</CardTitle>
-        <p className="text-sm text-slate-600">Your diving frequency over time</p>
-      </CardHeader>
-      <CardContent className="pt-4">
-        <div className="h-[320px] lg:h-[400px] xl:h-[450px]">
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm">
+      <div className="px-8 py-6">
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold text-slate-900">Dive Activity</h3>
+          <p className="text-sm text-slate-500 mt-1">Your diving frequency over time</p>
+        </div>
+        <div className="h-[400px]">
           <Line data={chartData} options={{ ...options, maintainAspectRatio: false }} />
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
 
