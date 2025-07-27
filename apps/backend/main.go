@@ -3,6 +3,7 @@ package main
 import (
 	"divelog-backend/database"
 	"divelog-backend/handlers"
+	"divelog-backend/middleware"
 	"log"
 	"os"
 
@@ -29,6 +30,9 @@ func main() {
 
 	// Create Gin router
 	r := gin.Default()
+
+	// Add request/response body logging middleware
+	r.Use(middleware.RequestResponseLogger())
 
 	// Add CORS middleware
 	r.Use(func(c *gin.Context) {

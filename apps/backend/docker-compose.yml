@@ -11,15 +11,5 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
 
-  metabase:
-    image: metabase/metabase
-    ports:
-      - "3000:3000"
-    volumes:
-      - metabase_data:/metabase-data
-    depends_on:
-      - postgres
-
 volumes:
   postgres_data:
-  metabase_data:
