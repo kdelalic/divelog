@@ -11,20 +11,15 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
 
-  pgadmin:
-    image: dpage/pgadmin4
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@admin.com
-      PGADMIN_DEFAULT_PASSWORD: admin
-      PGADMIN_CONFIG_SERVER_MODE: 'False'
+  metabase:
+    image: metabase/metabase
     ports:
-      - "8888:80"
+      - "3000:3000"
+    volumes:
+      - metabase_data:/metabase-data
     depends_on:
       - postgres
-    volumes:
-      - pgadmin_data:/var/lib/pgadmin
-      - ./servers.json:/pgadmin4/servers.json:ro
 
 volumes:
   postgres_data:
-  pgadmin_data:
+  metabase_data:

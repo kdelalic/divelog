@@ -53,7 +53,3 @@ subsurface-web/
 - GPS mapping of dive sites
 - Offline mode with sync queue
 - OAuth login with dive computer integrations (planned)
-
----
-
-Let me know if you want a diagram, ERD, or to generate code for any of the above.
