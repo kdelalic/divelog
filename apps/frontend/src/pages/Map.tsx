@@ -1,4 +1,4 @@
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, LayersControl } from 'react-leaflet';
 import L from 'leaflet';
 import useDiveStore from '../store/diveStore';
 import useSettingsStore from '../store/settingsStore';
@@ -69,10 +69,23 @@ const Map = () => {
           style={{ height: '100%', width: '100%' }}
           className="z-0"
         >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
+          <LayersControl position="topright">
+            {/* Satellite Layer (Default) */}
+            <LayersControl.BaseLayer checked name="Satellite">
+              <TileLayer
+                attribution='Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+                url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+              />
+            </LayersControl.BaseLayer>
+            
+            {/* Street Map Layer */}
+            <LayersControl.BaseLayer name="Street Map">
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
+            </LayersControl.BaseLayer>
+          </LayersControl>
           
           {dives.map(dive => (
             <Marker
@@ -102,7 +115,7 @@ const Map = () => {
       )}
 
       <div className="text-sm text-muted-foreground">
-        <p>Map powered by OpenStreetMap - completely free and open source</p>
+        <p>Default satellite imagery by Esri, street map by OpenStreetMap - Use the layer control (top right) to switch views</p>
       </div>
     </div>
   );

@@ -12,7 +12,7 @@ interface RecentDivesProps {
 }
 
 const RecentDives = ({ dives }: RecentDivesProps) => {
-  const recentDives = getRecentDives(dives, 5);
+  const recentDives = getRecentDives(dives, 3);
   const { settings } = useSettingsStore();
 
   if (dives.length === 0) {
