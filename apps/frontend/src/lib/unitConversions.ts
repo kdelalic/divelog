@@ -15,8 +15,10 @@ export const convertDepth = (value: number, from: DepthUnit, to: DepthUnit): num
 };
 
 export const formatDepth = (value: number, unit: DepthUnit, precision: number = 1): string => {
+  // Database stores in meters, so convert if user wants feet
+  const convertedValue = unit === 'feet' ? convertDepth(value, 'meters', 'feet') : value;
   const label = unit === 'meters' ? 'm' : 'ft';
-  return `${value.toFixed(precision)}${label}`;
+  return `${convertedValue.toFixed(precision)}${label}`;
 };
 
 // Temperature conversions
@@ -34,8 +36,10 @@ export const convertTemperature = (value: number, from: TemperatureUnit, to: Tem
 };
 
 export const formatTemperature = (value: number, unit: TemperatureUnit, precision: number = 1): string => {
+  // Database stores in celsius, so convert if user wants fahrenheit
+  const convertedValue = unit === 'fahrenheit' ? convertTemperature(value, 'celsius', 'fahrenheit') : value;
   const label = unit === 'celsius' ? '°C' : '°F';
-  return `${value.toFixed(precision)}${label}`;
+  return `${convertedValue.toFixed(precision)}${label}`;
 };
 
 // Distance conversions
@@ -53,8 +57,10 @@ export const convertDistance = (value: number, from: DistanceUnit, to: DistanceU
 };
 
 export const formatDistance = (value: number, unit: DistanceUnit, precision: number = 1): string => {
+  // Database stores in kilometers, so convert if user wants miles
+  const convertedValue = unit === 'miles' ? convertDistance(value, 'kilometers', 'miles') : value;
   const label = unit === 'kilometers' ? 'km' : 'mi';
-  return `${value.toFixed(precision)}${label}`;
+  return `${convertedValue.toFixed(precision)}${label}`;
 };
 
 // Weight conversions
@@ -72,8 +78,10 @@ export const convertWeight = (value: number, from: WeightUnit, to: WeightUnit): 
 };
 
 export const formatWeight = (value: number, unit: WeightUnit, precision: number = 1): string => {
+  // Database stores in kilograms, so convert if user wants pounds
+  const convertedValue = unit === 'pounds' ? convertWeight(value, 'kilograms', 'pounds') : value;
   const label = unit === 'kilograms' ? 'kg' : 'lbs';
-  return `${value.toFixed(precision)}${label}`;
+  return `${convertedValue.toFixed(precision)}${label}`;
 };
 
 // Pressure conversions
@@ -91,8 +99,10 @@ export const convertPressure = (value: number, from: PressureUnit, to: PressureU
 };
 
 export const formatPressure = (value: number, unit: PressureUnit, precision: number = 0): string => {
+  // Database stores in bar, so convert if user wants psi
+  const convertedValue = unit === 'psi' ? convertPressure(value, 'bar', 'psi') : value;
   const label = unit === 'bar' ? 'bar' : 'psi';
-  return `${value.toFixed(precision)}${label}`;
+  return `${convertedValue.toFixed(precision)}${label}`;
 };
 
 // Helper function to format any value with appropriate units

@@ -17,6 +17,7 @@ import { calculateDiveStatistics } from "@/lib/diveStats";
 import type { Dive } from "@/lib/dives";
 import useSettingsStore from "@/store/settingsStore";
 import { formatDepth } from "@/lib/unitConversions";
+import { formatDiveDateTime } from "@/lib/dateHelpers";
 
 const DiveLog = () => {
   const dives = useDiveStore((state) => state.dives);
@@ -92,14 +93,16 @@ const DiveLog = () => {
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {dives
-              .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+              .sort((a, b) => new Date(b.datetime).getTime() - new Date(a.datetime).getTime())
               .map((dive) => (
               <tr 
                 key={dive.id} 
                 className="hover:bg-gray-50 cursor-pointer transition-colors"
                 onClick={() => handleRowClick(dive)}
               >
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{dive.date}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                  {formatDiveDateTime(dive.datetime)}
+                </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{dive.location}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {formatDepth(dive.depth, settings.units.depth, 0)}

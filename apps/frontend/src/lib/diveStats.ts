@@ -30,8 +30,8 @@ export const calculateDiveStatistics = (dives: Dive[]): DiveStatistics => {
   const avgDepth = dives.reduce((sum, dive) => sum + dive.depth, 0) / dives.length;
   const uniqueLocations = new Set(dives.map(dive => dive.location)).size;
   
-  const sortedByDate = [...dives].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  const lastDiveDate = sortedByDate[0]?.date || null;
+  const sortedByDate = [...dives].sort((a, b) => new Date(b.datetime).getTime() - new Date(a.datetime).getTime());
+  const lastDiveDate = sortedByDate[0]?.datetime || null;
   
   const deepestDive = dives.reduce((deepest, dive) => 
     dive.depth > deepest.depth ? dive : deepest
@@ -65,13 +65,13 @@ export const formatDuration = (minutes: number): string => {
 
 export const getRecentDives = (dives: Dive[], count: number = 5): Dive[] => {
   return [...dives]
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .sort((a, b) => new Date(b.datetime).getTime() - new Date(a.datetime).getTime())
     .slice(0, count);
 };
 
 export const getDivesByMonth = (dives: Dive[]): { month: string; count: number }[] => {
   const monthCounts = dives.reduce((acc, dive) => {
-    const month = new Date(dive.date).toLocaleDateString('en-US', { 
+    const month = new Date(dive.datetime).toLocaleDateString('en-US', { 
       year: 'numeric', 
       month: 'short' 
     });

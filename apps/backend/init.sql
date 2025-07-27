@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS dives (
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
     dive_site_id INTEGER REFERENCES dive_sites(id) ON DELETE SET NULL,
     
-    dive_date DATE NOT NULL,
+    dive_datetime TIMESTAMP WITH TIME ZONE NOT NULL,
     max_depth DECIMAL(5, 2) NOT NULL, -- stored in meters
     duration INTEGER NOT NULL, -- stored in minutes
     buddy VARCHAR(255),
@@ -76,7 +76,7 @@ CREATE TABLE IF NOT EXISTS dives (
 
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_dives_user_id ON dives(user_id);
-CREATE INDEX IF NOT EXISTS idx_dives_date ON dives(dive_date);
+CREATE INDEX IF NOT EXISTS idx_dives_datetime ON dives(dive_datetime);
 CREATE INDEX IF NOT EXISTS idx_user_settings_user_id ON user_settings(user_id);
 
 -- Insert a default user for development

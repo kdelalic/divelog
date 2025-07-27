@@ -12,6 +12,9 @@ import {
 } from '@/components/ui/dialog';
 import { parseUDDFFile, validateUDDFFile, getUDDFImportSummary, UDDFParseError } from '@/lib/uddfParser';
 import type { Dive } from '@/lib/dives';
+import useSettingsStore from '@/store/settingsStore';
+import { formatDepth } from '@/lib/unitConversions';
+import { formatDiveDateTime } from '@/lib/dateHelpers';
 
 interface UDDFImportProps {
   onImport: (dives: Dive[]) => void;
@@ -24,6 +27,7 @@ const UDDFImport = ({ onImport }: UDDFImportProps) => {
   const [error, setError] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { settings } = useSettingsStore();
 
   const handleFileSelect = async (file: File) => {
     setError(null);
@@ -184,7 +188,7 @@ const UDDFImport = ({ onImport }: UDDFImportProps) => {
                   <div className="flex-1 min-w-0">
                     <div className="font-medium truncate">{dive.location}</div>
                     <div className="text-sm text-muted-foreground">
-                      {new Date(dive.date).toLocaleDateString()} • {dive.depth}m • {dive.duration}min
+                      {formatDiveDateTime(dive.datetime)} • {formatDepth(dive.depth, settings.units.depth)} • {dive.duration}min
                       {dive.buddy && ` • with ${dive.buddy}`}
                     </div>
                   </div>

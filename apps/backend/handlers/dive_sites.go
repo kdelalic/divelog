@@ -7,6 +7,7 @@ import (
 	"math"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -56,14 +57,25 @@ func FindOrCreateDiveSite(name string, latitude, longitude float64) (*models.Div
 }
 
 // CheckDuplicateDive checks if a dive already exists for the same user, date, and dive site
-func CheckDuplicateDive(userID int, diveSiteID int, diveDate string) (bool, error) {
+func CheckDuplicateDive(userID int, diveSiteID int, diveDateTime string) (bool, error) {
 	db := database.DB
 
+	// Parse the datetime and extract just the date part for comparison
+	dt, err := time.Parse(time.RFC3339, diveDateTime)
+	if err != nil {
+		// Try date-only format
+		dt, err = time.Parse("2006-01-02", diveDateTime)
+		if err != nil {
+			return false, err
+		}
+	}
+	dateOnly := dt.Format("2006-01-02")
+
 	query := `SELECT COUNT(*) FROM dives 
-			  WHERE user_id = $1 AND dive_site_id = $2 AND dive_date = $3`
+			  WHERE user_id = $1 AND dive_site_id = $2 AND DATE(dive_datetime) = $3`
 
 	var count int
-	err := db.QueryRow(query, userID, diveSiteID, diveDate).Scan(&count)
+	err = db.QueryRow(query, userID, diveSiteID, dateOnly).Scan(&count)
 	if err != nil {
 		return false, err
 	}
@@ -72,14 +84,25 @@ func CheckDuplicateDive(userID int, diveSiteID int, diveDate string) (bool, erro
 }
 
 // CheckDuplicateDiveForUpdate checks if a dive already exists excluding the current dive being updated
-func CheckDuplicateDiveForUpdate(userID int, diveSiteID int, diveDate string, excludeDiveID int) (bool, error) {
+func CheckDuplicateDiveForUpdate(userID int, diveSiteID int, diveDateTime string, excludeDiveID int) (bool, error) {
 	db := database.DB
 
+	// Parse the datetime and extract just the date part for comparison
+	dt, err := time.Parse(time.RFC3339, diveDateTime)
+	if err != nil {
+		// Try date-only format
+		dt, err = time.Parse("2006-01-02", diveDateTime)
+		if err != nil {
+			return false, err
+		}
+	}
+	dateOnly := dt.Format("2006-01-02")
+
 	query := `SELECT COUNT(*) FROM dives 
-			  WHERE user_id = $1 AND dive_site_id = $2 AND dive_date = $3 AND id != $4`
+			  WHERE user_id = $1 AND dive_site_id = $2 AND DATE(dive_datetime) = $3 AND id != $4`
 
 	var count int
-	err := db.QueryRow(query, userID, diveSiteID, diveDate, excludeDiveID).Scan(&count)
+	err = db.QueryRow(query, userID, diveSiteID, dateOnly, excludeDiveID).Scan(&count)
 	if err != nil {
 		return false, err
 	}

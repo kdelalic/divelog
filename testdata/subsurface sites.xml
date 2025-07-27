@@ -1,0 +1,63 @@
+<divesites program='subsurface' version='3'>
+<site uuid='80f2fa20' name='McAbee Beach' gps='36.615614 -121.899165'>
+  <geo cat='2' origin='2' value='USA'/>
+</site>
+<site uuid='ce5478ff' name='Monastery Beach North' gps='36.525370 -121.925780'>
+  <notes>additional name for site: site_6844a3216844081a6d09a379 </notes>
+  <geo cat='2' origin='2' value='USA'/>
+</site>
+<site uuid='d3e91b6d' name='Dos Ojos Barbie Line' gps='20.325177 -87.390552'>
+  <geo cat='2' origin='2' value='Mexico'/>
+</site>
+<site uuid='d3e91b6e' name='Dos Ojos Bat Cave' gps='20.325177 -87.390552'>
+  <geo cat='2' origin='2' value='Mexico'/>
+</site>
+<site uuid='d9210c02' name='Casa Cenote' gps='20.266768 -87.391836'>
+  <geo cat='2' origin='2' value='Mexico'/>
+</site>
+<site uuid='eea339e3' name='Paso Del Cedral' gps='20.367834 -87.029600'>
+  <geo cat='2' origin='2' value='Mexico'/>
+</site>
+<site uuid='eea339e4' name='Palancar Gardens' gps='20.335323 -87.027230'>
+  <geo cat='2' origin='2' value='Mexico'/>
+</site>
+<site uuid='eea339e5' name='Punta Delila' gps='20.346226 -87.028050'>
+  <geo cat='2' origin='2' value='Mexico'/>
+</site>
+<site uuid='eea339e6' name='Palancar Caves' gps='20.326790 -87.027150'>
+  <geo cat='2' origin='2' value='Mexico'/>
+</site>
+<site uuid='eea339e7' name='San Carlos Beach Breakwater' gps='36.609573 -121.893270'>
+  <geo cat='2' origin='2' value='USA'/>
+</site>
+<site uuid='eea339ed' name='San Carlos Beach Metridium' gps='36.611374 -121.894890'>
+  <geo cat='2' origin='2' value='USA'/>
+</site>
+<site uuid='eea339ee' name='Del Monte Beach Pier' gps='36.602720 -121.889400'>
+  <geo cat='2' origin='2' value='USA'/>
+</site>
+<site uuid='eea339ef' name='Aumentos' gps='36.638380 -121.922350'>
+  <geo cat='2' origin='2' value='USA'/>
+</site>
+<site uuid='eea339f0' name='Hopkins Reef' gps='36.622242 -121.899124'>
+  <geo cat='2' origin='2' value='USA'/>
+</site>
+<site uuid='eea339f4' name='Point Lobos' gps='36.520750 -121.939760'>
+  <geo cat='2' origin='2' value='USA'/>
+</site>
+<site uuid='eea339ff' name='LCU Wreck' gps='21.249788 -157.764190'>
+  <geo cat='2' origin='2' value='USA'/>
+</site>
+<site uuid='eea33a01' name='Koko Craters' gps='21.271230 -157.727050'>
+  <geo cat='2' origin='2' value='USA'/>
+</site>
+<site uuid='eea33a02' name='YO257 &amp; San Pedro Wreck' gps='21.260649 -157.837620'>
+  <geo cat='2' origin='2' value='USA'/>
+</site>
+<site uuid='eea33a03' name='Sea Tiger Wreck' gps='21.279900 -157.860090'>
+  <geo cat='2' origin='2' value='USA'/>
+</site>
+<site uuid='eea33a05' name='Nautilus Reef' gps='21.285828 -157.861010'>
+  <geo cat='2' origin='2' value='USA'/>
+</site>
+</divesites>

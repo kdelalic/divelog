@@ -4,6 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import type { Dive } from "@/lib/dives";
 import { getRecentDives, formatDuration } from "@/lib/diveStats";
+import useSettingsStore from "@/store/settingsStore";
+import { formatDepth } from "@/lib/unitConversions";
+import { formatDiveDateTime } from "@/lib/dateHelpers";
 
 interface RecentDivesProps {
   dives: Dive[];
@@ -11,6 +14,7 @@ interface RecentDivesProps {
 
 const RecentDives = ({ dives }: RecentDivesProps) => {
   const recentDives = getRecentDives(dives, 3);
+  const { settings } = useSettingsStore();
 
   if (dives.length === 0) {
     return (
@@ -48,12 +52,12 @@ const RecentDives = ({ dives }: RecentDivesProps) => {
               <div className="space-y-1">
                 <div className="font-medium">{dive.location}</div>
                 <div className="text-sm text-muted-foreground">
-                  {new Date(dive.date).toLocaleDateString()}
+                  {formatDiveDateTime(dive.datetime)}
                 </div>
                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
                   <div className="flex items-center gap-1">
                     <Waves className="h-3 w-3" />
-                    {dive.depth}m
+                    {formatDepth(dive.depth, settings.units.depth)}
                   </div>
                   <div className="flex items-center gap-1">
                     <Clock className="h-3 w-3" />

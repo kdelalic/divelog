@@ -9,7 +9,7 @@ type Dive struct {
 	ID             int       `json:"id" db:"id"`
 	UserID         int       `json:"user_id" db:"user_id"`
 	DiveSiteID     *int      `json:"dive_site_id,omitempty" db:"dive_site_id"`
-	Date           string    `json:"date" db:"dive_date"`
+	DateTime       time.Time `json:"datetime" db:"dive_datetime"`
 	MaxDepth       float64   `json:"depth" db:"max_depth"`
 	Duration       int       `json:"duration" db:"duration"`
 	Buddy          *string   `json:"buddy,omitempty" db:"buddy"`
@@ -25,7 +25,7 @@ type Dive struct {
 
 // DiveRequest represents the request body for creating/updating dives
 type DiveRequest struct {
-	Date      string   `json:"date" binding:"required"`
+	DateTime  string   `json:"datetime" binding:"required"` // ISO 8601 format
 	Location  string   `json:"location" binding:"required"`
 	Depth     float64  `json:"depth" binding:"required"`
 	Duration  int      `json:"duration" binding:"required"`
@@ -37,11 +37,27 @@ type DiveRequest struct {
 	Notes     *string  `json:"notes,omitempty"`
 }
 
+// parseDateTime converts ISO 8601 string to time.Time
+func parseDateTime(dateTimeStr string) time.Time {
+	// Try parsing as full ISO 8601 timestamp first
+	if t, err := time.Parse(time.RFC3339, dateTimeStr); err == nil {
+		return t
+	}
+	
+	// Fallback to date-only format (assume start of day)
+	if t, err := time.Parse("2006-01-02", dateTimeStr); err == nil {
+		return t
+	}
+	
+	// Last resort: current time
+	return time.Now()
+}
+
 // ToDive converts a DiveRequest to Dive
 func (dr *DiveRequest) ToDive(userID int) *Dive {
 	return &Dive{
 		UserID:     userID,
-		Date:       dr.Date,
+		DateTime:   parseDateTime(dr.DateTime),
 		Location:   dr.Location,
 		MaxDepth:   dr.Depth,
 		Duration:   dr.Duration,

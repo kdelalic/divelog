@@ -1,6 +1,6 @@
 export interface Dive {
   id: number;
-  date: string;
+  datetime: string; // ISO 8601 datetime string
   location: string;
   depth: number;
   duration: number;

@@ -1,6 +1,9 @@
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import useDiveStore from '../store/diveStore';
+import useSettingsStore from '../store/settingsStore';
+import { formatDepth } from '@/lib/unitConversions';
+import { formatDiveDateTime } from '@/lib/dateHelpers';
 
 // Fix for default markers in Leaflet
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -19,6 +22,7 @@ L.Marker.prototype.options.icon = DefaultIcon;
 
 const Map = () => {
   const dives = useDiveStore((state) => state.dives);
+  const { settings } = useSettingsStore();
 
   // Calculate center point based on dive locations
   const getMapCenter = () => {
@@ -79,8 +83,8 @@ const Map = () => {
                 <div className="p-2">
                   <h3 className="font-bold text-lg mb-2">{dive.location}</h3>
                   <div className="space-y-1 text-sm">
-                    <div><strong>Date:</strong> {new Date(dive.date).toLocaleDateString()}</div>
-                    <div><strong>Depth:</strong> {dive.depth}m</div>
+                    <div><strong>Date:</strong> {formatDiveDateTime(dive.datetime)}</div>
+                    <div><strong>Depth:</strong> {formatDepth(dive.depth, settings.units.depth)}</div>
                     <div><strong>Duration:</strong> {dive.duration} minutes</div>
                     {dive.buddy && <div><strong>Buddy:</strong> {dive.buddy}</div>}
                   </div>

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 
 const diveSchema = z.object({
   date: z.string().min(1, "Date is required"),
+  time: z.string().optional(),
   location: z.string().min(1, "Location is required"),
   depth: z.number().min(0, "Depth must be a positive number"),
   duration: z.number().min(0, "Duration must be a positive number"),
@@ -31,7 +32,13 @@ const EditDive = () => {
 
   useEffect(() => {
     if (diveToEdit) {
-      setValue("date", diveToEdit.date);
+      // Parse datetime back to date and time
+      const date = new Date(diveToEdit.datetime);
+      const dateStr = date.toISOString().split('T')[0];
+      const timeStr = date.toTimeString().substring(0, 5);
+      
+      setValue("date", dateStr);
+      setValue("time", timeStr !== '00:00' ? timeStr : '');
       setValue("location", diveToEdit.location);
       setValue("depth", diveToEdit.depth);
       setValue("duration", diveToEdit.duration);
@@ -43,7 +50,22 @@ const EditDive = () => {
 
   const onSubmit: SubmitHandler<DiveFormValues> = (data) => {
     if (diveToEdit) {
-      editDive({ ...data, id: diveToEdit.id });
+      // Combine date and time into ISO datetime
+      const datetime = data.time 
+        ? `${data.date}T${data.time}:00.000Z`
+        : `${data.date}T00:00:00.000Z`;
+      
+      const diveData = {
+        ...data,
+        datetime,
+        id: diveToEdit.id
+      };
+      
+      // Remove separate date/time fields
+      delete (diveData as any).date;
+      delete (diveData as any).time;
+      
+      editDive(diveData);
       navigate("/");
     }
   };
@@ -56,10 +78,17 @@ const EditDive = () => {
     <div className="max-w-xl mx-auto">
       <h2 className="text-2xl font-bold mb-6">Edit Dive</h2>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 bg-white p-8 rounded-lg shadow">
-        <div>
-          <label htmlFor="date" className="block text-sm font-medium text-gray-700">Date</label>
-          <input type="date" id="date" {...register("date")} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
-          {errors.date && <p className="mt-2 text-sm text-red-600">{errors.date.message}</p>}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="date" className="block text-sm font-medium text-gray-700">Date</label>
+            <input type="date" id="date" {...register("date")} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
+            {errors.date && <p className="mt-2 text-sm text-red-600">{errors.date.message}</p>}
+          </div>
+          <div>
+            <label htmlFor="time" className="block text-sm font-medium text-gray-700">Time (optional)</label>
+            <input type="time" id="time" {...register("time")} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
+            {errors.time && <p className="mt-2 text-sm text-red-600">{errors.time.message}</p>}
+          </div>
         </div>
         <div>
           <label htmlFor="location" className="block text-sm font-medium text-gray-700">Location</label>

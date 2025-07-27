@@ -12,6 +12,9 @@ import { Button } from "@/components/ui/button";
 import type { Dive } from "@/lib/dives";
 import { formatDuration } from "@/lib/diveStats";
 import { Link } from "react-router-dom";
+import useSettingsStore from "@/store/settingsStore";
+import { formatDepth } from "@/lib/unitConversions";
+import { formatDiveDateTimeLong } from "@/lib/dateHelpers";
 
 interface DiveDetailModalProps {
   dive: Dive | null;
@@ -22,7 +25,8 @@ interface DiveDetailModalProps {
 const DiveDetailModal = ({ dive, isOpen, onClose }: DiveDetailModalProps) => {
   if (!dive) return null;
 
-  const diveDate = new Date(dive.date);
+  // Removed unused diveDate variable
+  const { settings } = useSettingsStore();
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -33,12 +37,7 @@ const DiveDetailModal = ({ dive, isOpen, onClose }: DiveDetailModalProps) => {
             {dive.location}
           </DialogTitle>
           <DialogDescription>
-            Dive #{dive.id} • {diveDate.toLocaleDateString('en-US', { 
-              weekday: 'long', 
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric' 
-            })}
+            Dive #{dive.id} • {formatDiveDateTimeLong(dive.datetime)}
           </DialogDescription>
         </DialogHeader>
 
@@ -62,7 +61,7 @@ const DiveDetailModal = ({ dive, isOpen, onClose }: DiveDetailModalProps) => {
                 <CardContent className="space-y-3">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Max Depth:</span>
-                    <span className="font-medium">{dive.depth}m</span>
+                    <span className="font-medium">{formatDepth(dive.depth, settings.units.depth)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Duration:</span>
@@ -70,7 +69,7 @@ const DiveDetailModal = ({ dive, isOpen, onClose }: DiveDetailModalProps) => {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Avg Depth:</span>
-                    <span className="font-medium">{Math.round(dive.depth * 0.7)}m</span>
+                    <span className="font-medium">{formatDepth(Math.round(dive.depth * 0.7), settings.units.depth)}</span>
                   </div>
                 </CardContent>
               </Card>

@@ -11,6 +11,22 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// parseDateTime converts ISO 8601 string to time.Time
+func parseDateTime(dateTimeStr string) time.Time {
+	// Try parsing as full ISO 8601 timestamp first
+	if t, err := time.Parse(time.RFC3339, dateTimeStr); err == nil {
+		return t
+	}
+	
+	// Fallback to date-only format (assume start of day)
+	if t, err := time.Parse("2006-01-02", dateTimeStr); err == nil {
+		return t
+	}
+	
+	// Last resort: current time
+	return time.Now()
+}
+
 // GetDives retrieves all dives for a user
 func GetDives(c *gin.Context) {
 	userIDStr := c.Query("user_id")
@@ -30,7 +46,7 @@ func GetDives(c *gin.Context) {
 	// Query to get dives with location information
 	query := `
 		SELECT 
-			d.id, d.user_id, d.dive_site_id, d.dive_date, d.max_depth, d.duration, 
+			d.id, d.user_id, d.dive_site_id, d.dive_datetime, d.max_depth, d.duration, 
 			d.buddy, d.water_temperature, d.visibility, d.notes, d.created_at, d.updated_at,
 			COALESCE(ds.latitude, d.latitude, 0.0) as latitude,
 			COALESCE(ds.longitude, d.longitude, 0.0) as longitude,
@@ -38,7 +54,7 @@ func GetDives(c *gin.Context) {
 		FROM dives d
 		LEFT JOIN dive_sites ds ON d.dive_site_id = ds.id
 		WHERE d.user_id = $1
-		ORDER BY d.dive_date DESC, d.created_at DESC
+		ORDER BY d.dive_datetime DESC, d.created_at DESC
 	`
 
 	rows, err := db.Query(query, userID)
@@ -53,7 +69,7 @@ func GetDives(c *gin.Context) {
 	for rows.Next() {
 		var dive models.Dive
 		err := rows.Scan(
-			&dive.ID, &dive.UserID, &dive.DiveSiteID, &dive.Date, &dive.MaxDepth, 
+			&dive.ID, &dive.UserID, &dive.DiveSiteID, &dive.DateTime, &dive.MaxDepth, 
 			&dive.Duration, &dive.Buddy, &dive.WaterTemp, &dive.Visibility, 
 			&dive.Notes, &dive.CreatedAt, &dive.UpdatedAt,
 			&dive.Latitude, &dive.Longitude, &dive.Location,
@@ -109,7 +125,7 @@ func CreateDive(c *gin.Context) {
 	dive.DiveSiteID = &diveSite.ID
 
 	// Check for duplicate dive
-	isDuplicate, err := CheckDuplicateDive(userID, diveSite.ID, diveReq.Date)
+	isDuplicate, err := CheckDuplicateDive(userID, diveSite.ID, diveReq.DateTime)
 	if err != nil {
 		log.Printf("Error checking duplicate dive: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check for duplicate dive"})
@@ -120,7 +136,7 @@ func CreateDive(c *gin.Context) {
 		c.JSON(http.StatusConflict, gin.H{
 			"error": "A dive already exists for this date and location",
 			"details": map[string]interface{}{
-				"date": diveReq.Date,
+				"date": diveReq.DateTime,
 				"location": diveReq.Location,
 			},
 		})
@@ -129,7 +145,7 @@ func CreateDive(c *gin.Context) {
 
 	// Insert the dive with dive site reference
 	query := `
-		INSERT INTO dives (user_id, dive_site_id, dive_date, max_depth, duration, buddy, latitude, longitude, location, water_temperature, visibility, notes, created_at, updated_at)
+		INSERT INTO dives (user_id, dive_site_id, dive_datetime, max_depth, duration, buddy, latitude, longitude, location, water_temperature, visibility, notes, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 		RETURNING id, created_at, updated_at
 	`
@@ -137,7 +153,7 @@ func CreateDive(c *gin.Context) {
 	now := time.Now()
 	err = db.QueryRow(
 		query,
-		dive.UserID, dive.DiveSiteID, dive.Date, dive.MaxDepth, dive.Duration,
+		dive.UserID, dive.DiveSiteID, dive.DateTime, dive.MaxDepth, dive.Duration,
 		dive.Buddy, dive.Latitude, dive.Longitude, dive.Location,
 		dive.WaterTemp, dive.Visibility, dive.Notes,
 		now, now,
@@ -209,7 +225,7 @@ func CreateMultipleDives(c *gin.Context) {
 		dive.DiveSiteID = &diveSite.ID
 
 		// Check for duplicate dive
-		isDuplicate, err := CheckDuplicateDive(userID, diveSite.ID, diveReq.Date)
+		isDuplicate, err := CheckDuplicateDive(userID, diveSite.ID, diveReq.DateTime)
 		if err != nil {
 			log.Printf("Error checking duplicate dive in batch: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check for duplicate dive"})
@@ -219,7 +235,7 @@ func CreateMultipleDives(c *gin.Context) {
 		if isDuplicate {
 			// Skip duplicate dive but continue with others
 			skippedDives = append(skippedDives, map[string]interface{}{
-				"date": diveReq.Date,
+				"date": diveReq.DateTime,
 				"location": diveReq.Location,
 				"reason": "duplicate",
 			})
@@ -227,14 +243,14 @@ func CreateMultipleDives(c *gin.Context) {
 		}
 		
 		query := `
-			INSERT INTO dives (user_id, dive_site_id, dive_date, max_depth, duration, buddy, latitude, longitude, location, water_temperature, visibility, notes, created_at, updated_at)
+			INSERT INTO dives (user_id, dive_site_id, dive_datetime, max_depth, duration, buddy, latitude, longitude, location, water_temperature, visibility, notes, created_at, updated_at)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 			RETURNING id, created_at, updated_at
 		`
 
 		err = tx.QueryRow(
 			query,
-			dive.UserID, dive.DiveSiteID, dive.Date, dive.MaxDepth, dive.Duration,
+			dive.UserID, dive.DiveSiteID, dive.DateTime, dive.MaxDepth, dive.Duration,
 			dive.Buddy, dive.Latitude, dive.Longitude, dive.Location,
 			dive.WaterTemp, dive.Visibility, dive.Notes,
 			now, now,
@@ -312,7 +328,7 @@ func UpdateDive(c *gin.Context) {
 	}
 
 	// Check for duplicate dive (excluding current dive)
-	isDuplicate, err := CheckDuplicateDiveForUpdate(userID, diveSite.ID, diveReq.Date, diveID)
+	isDuplicate, err := CheckDuplicateDiveForUpdate(userID, diveSite.ID, diveReq.DateTime, diveID)
 	if err != nil {
 		log.Printf("Error checking duplicate dive for update: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check for duplicate dive"})
@@ -323,7 +339,7 @@ func UpdateDive(c *gin.Context) {
 		c.JSON(http.StatusConflict, gin.H{
 			"error": "A dive already exists for this date and location",
 			"details": map[string]interface{}{
-				"date": diveReq.Date,
+				"date": diveReq.DateTime,
 				"location": diveReq.Location,
 			},
 		})
@@ -333,10 +349,10 @@ func UpdateDive(c *gin.Context) {
 	// Update the dive
 	query := `
 		UPDATE dives 
-		SET dive_site_id = $1, dive_date = $2, max_depth = $3, duration = $4, buddy = $5, 
+		SET dive_site_id = $1, dive_datetime = $2, max_depth = $3, duration = $4, buddy = $5, 
 		    latitude = $6, longitude = $7, location = $8, water_temperature = $9, visibility = $10, notes = $11, updated_at = $12
 		WHERE id = $13 AND user_id = $14
-		RETURNING id, user_id, dive_date, max_depth, duration, buddy, 
+		RETURNING id, user_id, dive_datetime, max_depth, duration, buddy, 
 		          water_temperature, visibility, notes, created_at, updated_at
 	`
 
@@ -344,11 +360,11 @@ func UpdateDive(c *gin.Context) {
 	now := time.Now()
 	err = db.QueryRow(
 		query,
-		diveSite.ID, diveReq.Date, diveReq.Depth, diveReq.Duration, diveReq.Buddy,
+		diveSite.ID, parseDateTime(diveReq.DateTime), diveReq.Depth, diveReq.Duration, diveReq.Buddy,
 		diveReq.Lat, diveReq.Lng, diveReq.Location, diveReq.WaterTemp, diveReq.Visibility, diveReq.Notes, now,
 		diveID, userID,
 	).Scan(
-		&dive.ID, &dive.UserID, &dive.Date, &dive.MaxDepth, &dive.Duration,
+		&dive.ID, &dive.UserID, &dive.DateTime, &dive.MaxDepth, &dive.Duration,
 		&dive.Buddy, &dive.WaterTemp, &dive.Visibility, &dive.Notes,
 		&dive.CreatedAt, &dive.UpdatedAt,
 	)

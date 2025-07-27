@@ -177,9 +177,9 @@ const parseUDDFDive = (
   const afterDive = uddfDive.informationafterdive;
 
   // Extract basic dive information
-  const date = beforeDive?.datetime 
-    ? parseUDDFDate(beforeDive.datetime)
-    : new Date().toISOString().split('T')[0];
+  const datetime = beforeDive?.datetime 
+    ? parseUDDFDateTime(beforeDive.datetime)
+    : new Date().toISOString();
 
   const depth = afterDive?.greatestdepth || 0;
   const durationSeconds = afterDive?.diveduration || 0;
@@ -222,7 +222,7 @@ const parseUDDFDive = (
 
   return {
     id,
-    date,
+    datetime,
     location,
     depth: Math.round(depth * 10) / 10, // Round to 1 decimal place
     duration, // Already converted from seconds to minutes and rounded
@@ -232,17 +232,18 @@ const parseUDDFDive = (
   };
 };
 
-const parseUDDFDate = (dateString: string): string => {
+const parseUDDFDateTime = (dateString: string): string => {
   try {
     // UDDF dates can be in various formats, commonly ISO 8601
     const date = new Date(dateString);
     if (isNaN(date.getTime())) {
       throw new Error('Invalid date');
     }
-    return date.toISOString().split('T')[0];
+    
+    return date.toISOString();
   } catch {
     // Fallback to current date if parsing fails
-    return new Date().toISOString().split('T')[0];
+    return new Date().toISOString();
   }
 };
 
@@ -271,8 +272,8 @@ export const getUDDFImportSummary = (dives: Dive[]): string => {
   
   const locations = new Set(dives.map(dive => dive.location));
   const dateRange = dives.length > 1 
-    ? `${dives[0].date} to ${dives[dives.length - 1].date}`
-    : dives[0].date;
+    ? `${new Date(dives[0].datetime).toLocaleDateString()} to ${new Date(dives[dives.length - 1].datetime).toLocaleDateString()}`
+    : new Date(dives[0].datetime).toLocaleDateString();
   
   return `Found ${dives.length} dive${dives.length === 1 ? '' : 's'} from ${locations.size} location${locations.size === 1 ? '' : 's'} (${dateRange})`;
 };
