@@ -188,7 +188,7 @@ const UDDFImport = ({ onImport }: UDDFImportProps) => {
                   <div className="flex-1 min-w-0">
                     <div className="font-medium truncate">{dive.location}</div>
                     <div className="text-sm text-muted-foreground">
-                      {formatDiveDateTime(dive.datetime)} • {formatDepth(dive.depth, settings.units.depth)} • {dive.duration}min
+                      {formatDiveDateTime(dive.datetime, settings)} • {formatDepth(dive.depth, settings.units.depth)} • {dive.duration}min
                       {dive.buddy && ` • with ${dive.buddy}`}
                     </div>
                   </div>

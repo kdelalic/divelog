@@ -83,7 +83,7 @@ const Map = () => {
                 <div className="p-2">
                   <h3 className="font-bold text-lg mb-2">{dive.location}</h3>
                   <div className="space-y-1 text-sm">
-                    <div><strong>Date:</strong> {formatDiveDateTime(dive.datetime)}</div>
+                    <div><strong>Date:</strong> {formatDiveDateTime(dive.datetime, settings)}</div>
                     <div><strong>Depth:</strong> {formatDepth(dive.depth, settings.units.depth)}</div>
                     <div><strong>Duration:</strong> {dive.duration} minutes</div>
                     {dive.buddy && <div><strong>Buddy:</strong> {dive.buddy}</div>}

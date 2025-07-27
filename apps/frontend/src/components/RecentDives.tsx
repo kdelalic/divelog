@@ -52,7 +52,7 @@ const RecentDives = ({ dives }: RecentDivesProps) => {
               <div className="space-y-1">
                 <div className="font-medium">{dive.location}</div>
                 <div className="text-sm text-muted-foreground">
-                  {formatDiveDateTime(dive.datetime)}
+                  {formatDiveDateTime(dive.datetime, settings)}
                 </div>
                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
                   <div className="flex items-center gap-1">

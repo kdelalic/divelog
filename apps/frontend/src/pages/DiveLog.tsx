@@ -101,7 +101,7 @@ const DiveLog = () => {
                 onClick={() => handleRowClick(dive)}
               >
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                  {formatDiveDateTime(dive.datetime)}
+                  {formatDiveDateTime(dive.datetime, settings)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{dive.location}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

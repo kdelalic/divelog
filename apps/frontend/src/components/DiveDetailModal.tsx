@@ -37,7 +37,7 @@ const DiveDetailModal = ({ dive, isOpen, onClose }: DiveDetailModalProps) => {
             {dive.location}
           </DialogTitle>
           <DialogDescription>
-            Dive #{dive.id} • {formatDiveDateTimeLong(dive.datetime)}
+            Dive #{dive.id} • {formatDiveDateTimeLong(dive.datetime, settings)}
           </DialogDescription>
         </DialogHeader>
 
