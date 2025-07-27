@@ -15,6 +15,7 @@ import { Link } from "react-router-dom";
 import useSettingsStore from "@/store/settingsStore";
 import { formatDepth } from "@/lib/unitConversions";
 import { formatDiveDateTimeLong } from "@/lib/dateHelpers";
+import DiveProfile from "./DiveProfile";
 
 interface DiveDetailModalProps {
   dive: Dive | null;
@@ -23,10 +24,9 @@ interface DiveDetailModalProps {
 }
 
 const DiveDetailModal = ({ dive, isOpen, onClose }: DiveDetailModalProps) => {
-  if (!dive) return null;
-
-  // Removed unused diveDate variable
   const { settings } = useSettingsStore();
+  
+  if (!dive) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -42,8 +42,9 @@ const DiveDetailModal = ({ dive, isOpen, onClose }: DiveDetailModalProps) => {
         </DialogHeader>
 
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="conditions">Conditions</TabsTrigger>
             <TabsTrigger value="equipment">Equipment</TabsTrigger>
             <TabsTrigger value="notes">Notes</TabsTrigger>
@@ -150,6 +151,24 @@ const DiveDetailModal = ({ dive, isOpen, onClose }: DiveDetailModalProps) => {
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          <TabsContent value="profile" className="space-y-4">
+            {dive.samples && dive.samples.length > 0 ? (
+              <DiveProfile 
+                samples={dive.samples}
+                maxDepth={dive.depth}
+                className="h-96"
+              />
+            ) : (
+              <div className="text-center py-12">
+                <div className="text-gray-500 text-lg mb-2">No Profile Data Available</div>
+                <div className="text-gray-400 text-sm max-w-md mx-auto">
+                  This dive doesn't contain detailed sample data. Profile charts are available 
+                  for dives imported from dive computers or UDDF files with sample data.
+                </div>
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="conditions" className="space-y-4">

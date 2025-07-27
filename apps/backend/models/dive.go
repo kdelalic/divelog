@@ -4,37 +4,47 @@ import (
 	"time"
 )
 
+// DiveSample represents a single data point in a dive profile
+type DiveSample struct {
+	Time        int      `json:"time"`                  // Time in seconds from dive start
+	Depth       float64  `json:"depth"`                 // Depth in meters
+	Temperature *float64 `json:"temperature,omitempty"` // Temperature in celsius
+	Pressure    *float64 `json:"pressure,omitempty"`    // Tank pressure in bar
+}
+
 // Dive represents a dive record
 type Dive struct {
-	ID             int       `json:"id" db:"id"`
-	UserID         int       `json:"user_id" db:"user_id"`
-	DiveSiteID     *int      `json:"dive_site_id,omitempty" db:"dive_site_id"`
-	DateTime       time.Time `json:"datetime" db:"dive_datetime"`
-	MaxDepth       float64   `json:"depth" db:"max_depth"`
-	Duration       int       `json:"duration" db:"duration"`
-	Buddy          *string   `json:"buddy,omitempty" db:"buddy"`
-	WaterTemp      *float64  `json:"water_temperature,omitempty" db:"water_temperature"`
-	Visibility     *int      `json:"visibility,omitempty" db:"visibility"`
-	Notes          *string   `json:"notes,omitempty" db:"notes"`
-	Latitude       float64   `json:"lat" db:"latitude"`
-	Longitude      float64   `json:"lng" db:"longitude"`
-	Location       string    `json:"location" db:"location"`
-	CreatedAt      time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt      time.Time `json:"updated_at" db:"updated_at"`
+	ID         int          `json:"id" db:"id"`
+	UserID     int          `json:"user_id" db:"user_id"`
+	DiveSiteID *int         `json:"dive_site_id,omitempty" db:"dive_site_id"`
+	DateTime   time.Time    `json:"datetime" db:"dive_datetime"`
+	MaxDepth   float64      `json:"depth" db:"max_depth"`
+	Duration   int          `json:"duration" db:"duration"`
+	Buddy      *string      `json:"buddy,omitempty" db:"buddy"`
+	WaterTemp  *float64     `json:"water_temperature,omitempty" db:"water_temperature"`
+	Visibility *int         `json:"visibility,omitempty" db:"visibility"`
+	Notes      *string      `json:"notes,omitempty" db:"notes"`
+	Latitude   float64      `json:"lat" db:"latitude"`
+	Longitude  float64      `json:"lng" db:"longitude"`
+	Location   string       `json:"location" db:"location"`
+	Samples    []DiveSample `json:"samples,omitempty" db:"samples"` // Dive profile samples
+	CreatedAt  time.Time    `json:"created_at" db:"created_at"`
+	UpdatedAt  time.Time    `json:"updated_at" db:"updated_at"`
 }
 
 // DiveRequest represents the request body for creating/updating dives
 type DiveRequest struct {
-	DateTime  string   `json:"datetime" binding:"required"` // ISO 8601 format
-	Location  string   `json:"location" binding:"required"`
-	Depth     float64  `json:"depth" binding:"required"`
-	Duration  int      `json:"duration" binding:"required"`
-	Buddy     *string  `json:"buddy,omitempty"`
-	Lat       float64  `json:"lat" binding:"required"`
-	Lng       float64  `json:"lng" binding:"required"`
-	WaterTemp *float64 `json:"water_temperature,omitempty"`
-	Visibility *int    `json:"visibility,omitempty"`
-	Notes     *string  `json:"notes,omitempty"`
+	DateTime   string       `json:"datetime" binding:"required"` // ISO 8601 format
+	Location   string       `json:"location" binding:"required"`
+	Depth      float64      `json:"depth" binding:"required"`
+	Duration   int          `json:"duration" binding:"required"`
+	Buddy      *string      `json:"buddy,omitempty"`
+	Lat        float64      `json:"lat" binding:"required"`
+	Lng        float64      `json:"lng" binding:"required"`
+	WaterTemp  *float64     `json:"water_temperature,omitempty"`
+	Visibility *int         `json:"visibility,omitempty"`
+	Notes      *string      `json:"notes,omitempty"`
+	Samples    []DiveSample `json:"samples,omitempty"`
 }
 
 // parseDateTime converts ISO 8601 string to time.Time
@@ -43,12 +53,12 @@ func parseDateTime(dateTimeStr string) time.Time {
 	if t, err := time.Parse(time.RFC3339, dateTimeStr); err == nil {
 		return t
 	}
-	
+
 	// Fallback to date-only format (assume start of day)
 	if t, err := time.Parse("2006-01-02", dateTimeStr); err == nil {
 		return t
 	}
-	
+
 	// Last resort: current time
 	return time.Now()
 }
@@ -67,16 +77,17 @@ func (dr *DiveRequest) ToDive(userID int) *Dive {
 		WaterTemp:  dr.WaterTemp,
 		Visibility: dr.Visibility,
 		Notes:      dr.Notes,
+		Samples:    dr.Samples,
 	}
 }
 
 // DiveSite represents a dive site
 type DiveSite struct {
-	ID          int     `json:"id" db:"id"`
-	Name        string  `json:"name" db:"name"`
-	Latitude    float64 `json:"latitude" db:"latitude"`
-	Longitude   float64 `json:"longitude" db:"longitude"`
-	Description *string `json:"description,omitempty" db:"description"`
+	ID          int       `json:"id" db:"id"`
+	Name        string    `json:"name" db:"name"`
+	Latitude    float64   `json:"latitude" db:"latitude"`
+	Longitude   float64   `json:"longitude" db:"longitude"`
+	Description *string   `json:"description,omitempty" db:"description"`
 	CreatedAt   time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
 }

@@ -1,5 +1,5 @@
 import { XMLParser } from 'fast-xml-parser';
-import type { Dive } from './dives';
+import type { Dive, DiveSample } from './dives';
 
 interface UDDFSite {
   '@_id': string;
@@ -41,6 +41,12 @@ interface UDDFDive {
       divetime?: number;
       depth?: number;
       temperature?: number;
+      tankpressure?: number;
+      setpo2?: number;
+      cns?: number;
+      ndl?: number;
+      stoptime?: number;
+      stopdepth?: number;
     }>;
   };
 }
@@ -89,6 +95,8 @@ export const parseUDDFFile = async (file: File): Promise<Dive[]> => {
     });
 
     const result = parser.parse(text) as UDDFRoot;
+    
+    console.log('Parsed UDDF structure:', result);
     
     if (!result.uddf) {
       throw new UDDFParseError('Invalid UDDF file: missing uddf root element');
@@ -145,6 +153,7 @@ export const parseUDDFFile = async (file: File): Promise<Dive[]> => {
         
         groupDives.forEach(uddfDive => {
           try {
+            console.log('Processing dive:', uddfDive);
             const dive = parseUDDFDive(uddfDive, diveIdCounter++, diveSites);
             if (dive) {
               dives.push(dive);
@@ -181,8 +190,8 @@ const parseUDDFDive = (
     ? parseUDDFDateTime(beforeDive.datetime)
     : new Date().toISOString();
 
-  const depth = afterDive?.greatestdepth || 0;
-  const durationSeconds = afterDive?.diveduration || 0;
+  const depth = Number(afterDive?.greatestdepth) || 0;
+  const durationSeconds = Number(afterDive?.diveduration) || 0;
   const duration = Math.round(durationSeconds / 60); // Convert seconds to minutes
 
   // Extract buddy information
@@ -203,15 +212,46 @@ const parseUDDFDive = (
   if (siteRef && diveSites.has(siteRef)) {
     const site = diveSites.get(siteRef)!;
     location = site.name || `Site ${siteRef}`;
-    lat = site.geography?.latitude || 0;
-    lng = site.geography?.longitude || 0;
+    lat = Number(site.geography?.latitude) || 0;
+    lng = Number(site.geography?.longitude) || 0;
   } else if (diveSites.size > 0) {
     // Fallback to first site if no specific link found
     const firstSite = diveSites.values().next().value;
     if (firstSite) {
       location = firstSite.name || location;
-      lat = firstSite.geography?.latitude || 0;
-      lng = firstSite.geography?.longitude || 0;
+      lat = Number(firstSite.geography?.latitude) || 0;
+      lng = Number(firstSite.geography?.longitude) || 0;
+    }
+  }
+
+  // Extract dive profile samples
+  let samples: DiveSample[] | undefined;
+  console.log('Checking samples for dive:', { 
+    hasSamples: !!uddfDive.samples, 
+    hasWaypoint: !!uddfDive.samples?.waypoint,
+    samplesStructure: uddfDive.samples 
+  });
+  
+  if (uddfDive.samples?.waypoint) {
+    const waypoints = Array.isArray(uddfDive.samples.waypoint) 
+      ? uddfDive.samples.waypoint 
+      : [uddfDive.samples.waypoint];
+    
+    samples = waypoints
+      .filter(wp => wp.divetime !== undefined && wp.depth !== undefined)
+      .map(wp => ({
+        time: Number(wp.divetime!), // Ensure time is a number
+        depth: Number(wp.depth!), // Ensure depth is a number
+        temperature: wp.temperature !== undefined ? Number(wp.temperature) : undefined, // Convert to number if present
+        pressure: wp.tankpressure !== undefined ? Number(wp.tankpressure) : undefined, // Convert to number if present
+      }))
+      .sort((a, b) => a.time - b.time); // Sort by time
+    
+    // Only include samples if we have meaningful data
+    if (samples.length === 0) {
+      samples = undefined;
+    } else {
+      console.log(`Extracted ${samples.length} dive samples for dive ${id}`);
     }
   }
 
@@ -229,6 +269,7 @@ const parseUDDFDive = (
     buddy: buddy || undefined,
     lat,
     lng,
+    samples,
   };
 };
 

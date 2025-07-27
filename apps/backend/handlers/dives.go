@@ -3,6 +3,7 @@ package handlers
 import (
 	"divelog-backend/database"
 	"divelog-backend/models"
+	"encoding/json"
 	"log"
 	"net/http"
 	"strconv"
@@ -47,7 +48,7 @@ func GetDives(c *gin.Context) {
 	query := `
 		SELECT 
 			d.id, d.user_id, d.dive_site_id, d.dive_datetime, d.max_depth, d.duration, 
-			d.buddy, d.water_temperature, d.visibility, d.notes, d.created_at, d.updated_at,
+			d.buddy, d.water_temperature, d.visibility, d.notes, d.samples, d.created_at, d.updated_at,
 			COALESCE(ds.latitude, d.latitude, 0.0) as latitude,
 			COALESCE(ds.longitude, d.longitude, 0.0) as longitude,
 			COALESCE(ds.name, d.location, 'Unknown Location') as location
@@ -68,12 +69,21 @@ func GetDives(c *gin.Context) {
 	var dives []models.Dive
 	for rows.Next() {
 		var dive models.Dive
+		var samplesJSON []byte
 		err := rows.Scan(
 			&dive.ID, &dive.UserID, &dive.DiveSiteID, &dive.DateTime, &dive.MaxDepth, 
 			&dive.Duration, &dive.Buddy, &dive.WaterTemp, &dive.Visibility, 
-			&dive.Notes, &dive.CreatedAt, &dive.UpdatedAt,
+			&dive.Notes, &samplesJSON, &dive.CreatedAt, &dive.UpdatedAt,
 			&dive.Latitude, &dive.Longitude, &dive.Location,
 		)
+		
+		// Parse samples JSON if present
+		if samplesJSON != nil {
+			if err := json.Unmarshal(samplesJSON, &dive.Samples); err != nil {
+				log.Printf("Error parsing samples JSON: %v", err)
+				dive.Samples = []models.DiveSample{} // Default to empty array
+			}
+		}
 		if err != nil {
 			log.Printf("Error scanning dive: %v", err)
 			continue
@@ -143,10 +153,21 @@ func CreateDive(c *gin.Context) {
 		return
 	}
 
+	// Serialize samples to JSON
+	var samplesJSON []byte
+	if len(dive.Samples) > 0 {
+		samplesJSON, err = json.Marshal(dive.Samples)
+		if err != nil {
+			log.Printf("Error marshaling samples: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process samples data"})
+			return
+		}
+	}
+
 	// Insert the dive with dive site reference
 	query := `
-		INSERT INTO dives (user_id, dive_site_id, dive_datetime, max_depth, duration, buddy, latitude, longitude, location, water_temperature, visibility, notes, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+		INSERT INTO dives (user_id, dive_site_id, dive_datetime, max_depth, duration, buddy, latitude, longitude, location, water_temperature, visibility, notes, samples, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 		RETURNING id, created_at, updated_at
 	`
 
@@ -155,7 +176,7 @@ func CreateDive(c *gin.Context) {
 		query,
 		dive.UserID, dive.DiveSiteID, dive.DateTime, dive.MaxDepth, dive.Duration,
 		dive.Buddy, dive.Latitude, dive.Longitude, dive.Location,
-		dive.WaterTemp, dive.Visibility, dive.Notes,
+		dive.WaterTemp, dive.Visibility, dive.Notes, samplesJSON,
 		now, now,
 	).Scan(&dive.ID, &dive.CreatedAt, &dive.UpdatedAt)
 
@@ -242,9 +263,20 @@ func CreateMultipleDives(c *gin.Context) {
 			continue
 		}
 		
+		// Serialize samples to JSON
+		var samplesJSON []byte
+		if len(dive.Samples) > 0 {
+			samplesJSON, err = json.Marshal(dive.Samples)
+			if err != nil {
+				log.Printf("Error marshaling samples in batch: %v", err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process samples data"})
+				return
+			}
+		}
+
 		query := `
-			INSERT INTO dives (user_id, dive_site_id, dive_datetime, max_depth, duration, buddy, latitude, longitude, location, water_temperature, visibility, notes, created_at, updated_at)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+			INSERT INTO dives (user_id, dive_site_id, dive_datetime, max_depth, duration, buddy, latitude, longitude, location, water_temperature, visibility, notes, samples, created_at, updated_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 			RETURNING id, created_at, updated_at
 		`
 
@@ -252,7 +284,7 @@ func CreateMultipleDives(c *gin.Context) {
 			query,
 			dive.UserID, dive.DiveSiteID, dive.DateTime, dive.MaxDepth, dive.Duration,
 			dive.Buddy, dive.Latitude, dive.Longitude, dive.Location,
-			dive.WaterTemp, dive.Visibility, dive.Notes,
+			dive.WaterTemp, dive.Visibility, dive.Notes, samplesJSON,
 			now, now,
 		).Scan(&dive.ID, &dive.CreatedAt, &dive.UpdatedAt)
 
@@ -346,28 +378,48 @@ func UpdateDive(c *gin.Context) {
 		return
 	}
 
+	// Serialize samples to JSON
+	var samplesJSON []byte
+	if len(diveReq.Samples) > 0 {
+		samplesJSON, err = json.Marshal(diveReq.Samples)
+		if err != nil {
+			log.Printf("Error marshaling samples for update: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process samples data"})
+			return
+		}
+	}
+
 	// Update the dive
 	query := `
 		UPDATE dives 
 		SET dive_site_id = $1, dive_datetime = $2, max_depth = $3, duration = $4, buddy = $5, 
-		    latitude = $6, longitude = $7, location = $8, water_temperature = $9, visibility = $10, notes = $11, updated_at = $12
-		WHERE id = $13 AND user_id = $14
+		    latitude = $6, longitude = $7, location = $8, water_temperature = $9, visibility = $10, notes = $11, samples = $12, updated_at = $13
+		WHERE id = $14 AND user_id = $15
 		RETURNING id, user_id, dive_datetime, max_depth, duration, buddy, 
-		          water_temperature, visibility, notes, created_at, updated_at
+		          water_temperature, visibility, notes, samples, created_at, updated_at
 	`
 
 	var dive models.Dive
+	var samplesJSONOut []byte
 	now := time.Now()
 	err = db.QueryRow(
 		query,
 		diveSite.ID, parseDateTime(diveReq.DateTime), diveReq.Depth, diveReq.Duration, diveReq.Buddy,
-		diveReq.Lat, diveReq.Lng, diveReq.Location, diveReq.WaterTemp, diveReq.Visibility, diveReq.Notes, now,
+		diveReq.Lat, diveReq.Lng, diveReq.Location, diveReq.WaterTemp, diveReq.Visibility, diveReq.Notes, samplesJSON, now,
 		diveID, userID,
 	).Scan(
 		&dive.ID, &dive.UserID, &dive.DateTime, &dive.MaxDepth, &dive.Duration,
-		&dive.Buddy, &dive.WaterTemp, &dive.Visibility, &dive.Notes,
+		&dive.Buddy, &dive.WaterTemp, &dive.Visibility, &dive.Notes, &samplesJSONOut,
 		&dive.CreatedAt, &dive.UpdatedAt,
 	)
+	
+	// Parse samples JSON if present
+	if samplesJSONOut != nil {
+		if err := json.Unmarshal(samplesJSONOut, &dive.Samples); err != nil {
+			log.Printf("Error parsing samples JSON: %v", err)
+			dive.Samples = []models.DiveSample{} // Default to empty array
+		}
+	}
 
 	if err != nil {
 		log.Printf("Error updating dive: %v", err)

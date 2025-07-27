@@ -69,6 +69,7 @@ CREATE TABLE IF NOT EXISTS dives (
     water_temperature DECIMAL(5, 2), -- stored in celsius
     visibility INTEGER, -- stored in meters
     notes TEXT,
+    samples JSONB, -- dive profile samples (time, depth, temperature, pressure)
     
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -77,6 +78,7 @@ CREATE TABLE IF NOT EXISTS dives (
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_dives_user_id ON dives(user_id);
 CREATE INDEX IF NOT EXISTS idx_dives_datetime ON dives(dive_datetime);
+CREATE INDEX IF NOT EXISTS idx_dives_samples ON dives USING GIN (samples); -- for JSONB queries
 CREATE INDEX IF NOT EXISTS idx_user_settings_user_id ON user_settings(user_id);
 
 -- Insert a default user for development
