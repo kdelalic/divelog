@@ -6,7 +6,9 @@ import (
 	"divelog-backend/handlers"
 	"divelog-backend/middleware"
 	"divelog-backend/repository"
+	"divelog-backend/utils"
 	"log"
+	"log/slog"
 
 	"github.com/gin-gonic/gin"
 )
@@ -18,9 +20,13 @@ func main() {
 		log.Fatal("Failed to load configuration:", err)
 	}
 
-	// Initialize database
-	if err := database.InitDB(); err != nil {
-		log.Fatal("Failed to initialize database:", err)
+	// Initialize structured logging
+	utils.InitLogger(cfg.GinMode)
+
+	// Initialize database with improved connection pooling
+	if err := database.InitDBWithConfig(nil); err != nil {
+		utils.LogError(nil, "Failed to initialize database", err)
+		log.Fatal("Database initialization failed:", err)
 	}
 	defer database.CloseDB()
 
@@ -32,32 +38,52 @@ func main() {
 	// Create repositories
 	diveRepo := repository.NewDiveRepository(database.DB)
 	diveSiteRepo := repository.NewDiveSiteRepository(database.DB)
+	settingsRepo := repository.NewSettingsRepository(database.DB)
 
 	// Create handlers
 	diveHandler := handlers.NewDiveHandler(diveRepo, diveSiteRepo)
 	diveSiteHandler := handlers.NewDiveSiteHandler(diveSiteRepo)
+	settingsHandler := handlers.NewSettingsHandler(settingsRepo)
 
 	// Create Gin router
 	r := gin.Default()
 
 	// Add global middleware
+	r.Use(middleware.RequestID())
+	r.Use(middleware.SecurityHeaders())
+	r.Use(middleware.RequestSizeLimit(10 << 20)) // 10MB limit
+	r.Use(middleware.RateLimit(100))             // 100 requests per minute
 	r.Use(middleware.RequestResponseLogger())
 	r.Use(middleware.CORS())
 
-	// Health check endpoint
+	// Health check endpoint with database check
 	r.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"status":  "ok",
-			"service": "divelog-backend",
-		})
+		dbHealth := "ok"
+		if err := database.HealthCheck(); err != nil {
+			dbHealth = "unhealthy"
+			utils.LogError(c.Request.Context(), "Database health check failed", err,
+				slog.String("request_id", c.GetString("request_id")))
+		}
+
+		response := gin.H{
+			"status":   "ok",
+			"service":  "divelog-backend",
+			"database": dbHealth,
+		}
+
+		if dbHealth == "unhealthy" {
+			c.JSON(503, response)
+		} else {
+			c.JSON(200, response)
+		}
 	})
 
 	// API routes
 	api := r.Group("/api/v1")
 	{
-		// Settings endpoints (keeping original for now)
-		api.GET("/settings", handlers.GetSettings)
-		api.PUT("/settings", handlers.UpdateSettings)
+		// Settings endpoints
+		api.GET("/settings", settingsHandler.GetSettings)
+		api.PUT("/settings", settingsHandler.UpdateSettings)
 
 		// Dive endpoints with middleware
 		diveRoutes := api.Group("/dives")
@@ -83,8 +109,9 @@ func main() {
 	}
 
 	// Start server
-	log.Printf("Server starting on port %s", cfg.Port)
+	utils.LogInfo(nil, "Server starting", slog.String("port", cfg.Port))
 	if err := r.Run(":" + cfg.Port); err != nil {
-		log.Fatal("Failed to start server:", err)
+		utils.LogError(nil, "Failed to start server", err)
+		log.Fatal("Server startup failed:", err)
 	}
 }
