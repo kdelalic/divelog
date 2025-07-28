@@ -72,8 +72,6 @@ const useDiveStore = create<DiveState>()((set, get) => ({
   },
 
   editDive: async (updatedDive) => {
-    console.log('🔴 editDive called with:', updatedDive);
-    console.trace('🔴 editDive call stack');
     set({ isLoading: true, error: null });
 
     if (get().isOnline) {

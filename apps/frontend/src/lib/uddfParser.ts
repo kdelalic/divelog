@@ -96,7 +96,6 @@ export const parseUDDFFile = async (file: File): Promise<Dive[]> => {
 
     const result = parser.parse(text) as UDDFRoot;
     
-    console.log('Parsed UDDF structure:', result);
     
     if (!result.uddf) {
       throw new UDDFParseError('Invalid UDDF file: missing uddf root element');
@@ -153,7 +152,6 @@ export const parseUDDFFile = async (file: File): Promise<Dive[]> => {
         
         groupDives.forEach(uddfDive => {
           try {
-            console.log('Processing dive:', uddfDive);
             const dive = parseUDDFDive(uddfDive, diveIdCounter++, diveSites);
             if (dive) {
               dives.push(dive);
@@ -226,11 +224,6 @@ const parseUDDFDive = (
 
   // Extract dive profile samples
   let samples: DiveSample[] | undefined;
-  console.log('Checking samples for dive:', { 
-    hasSamples: !!uddfDive.samples, 
-    hasWaypoint: !!uddfDive.samples?.waypoint,
-    samplesStructure: uddfDive.samples 
-  });
   
   if (uddfDive.samples?.waypoint) {
     const waypoints = Array.isArray(uddfDive.samples.waypoint) 
@@ -250,8 +243,6 @@ const parseUDDFDive = (
     // Only include samples if we have meaningful data
     if (samples.length === 0) {
       samples = undefined;
-    } else {
-      console.log(`Extracted ${samples.length} dive samples for dive ${id}`);
     }
   }
 

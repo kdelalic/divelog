@@ -46,15 +46,15 @@ const AddDive = () => {
     const depthInMeters = convertDepth(data.depth, settings.units.depth, 'meters');
     
     const diveData = {
-      ...data,
+      location: data.location,
       depth: depthInMeters,
+      duration: data.duration,
+      buddy: data.buddy,
+      lat: data.lat,
+      lng: data.lng,
       datetime,
       equipment,
     };
-    
-    // Remove separate date/time fields
-    delete (diveData as any).date;
-    delete (diveData as any).time;
     
     addDive(diveData);
     navigate("/");

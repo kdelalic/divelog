@@ -64,7 +64,7 @@ const EditDive = () => {
         setIsEquipmentOpen(true);
       }
     }
-  }, [diveToEdit, setValue]);
+  }, [diveToEdit, setValue, settings.units.depth]);
 
   const onSubmit: SubmitHandler<DiveFormValues> = (data) => {
     if (diveToEdit) {
@@ -77,16 +77,16 @@ const EditDive = () => {
       const depthInMeters = convertDepth(data.depth, settings.units.depth, 'meters');
       
       const diveData = {
-        ...data,
+        location: data.location,
         depth: depthInMeters,
+        duration: data.duration,
+        buddy: data.buddy,
+        lat: data.lat,
+        lng: data.lng,
         datetime,
         equipment,
         id: diveToEdit.id
       };
-      
-      // Remove separate date/time fields
-      delete (diveData as any).date;
-      delete (diveData as any).time;
       
       editDive(diveData);
       navigate("/");
