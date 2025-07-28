@@ -36,7 +36,7 @@ type UserSettings struct {
 // SettingsRequest represents the request body for updating settings
 type SettingsRequest struct {
 	UnitPreference string `json:"unitPreference"`
-	Units struct {
+	Units          struct {
 		Depth       string `json:"depth"`
 		Temperature string `json:"temperature"`
 		Distance    string `json:"distance"`

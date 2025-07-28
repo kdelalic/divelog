@@ -1,20 +1,21 @@
 package main
 
 import (
+	"divelog-backend/config"
 	"divelog-backend/database"
 	"divelog-backend/handlers"
 	"divelog-backend/middleware"
+	"divelog-backend/repository"
 	"log"
-	"os"
 
 	"github.com/gin-gonic/gin"
-	"github.com/joho/godotenv"
 )
 
 func main() {
-	// Load environment variables
-	if err := godotenv.Load(); err != nil {
-		log.Printf("Warning: .env file not found: %v", err)
+	// Load configuration
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatal("Failed to load configuration:", err)
 	}
 
 	// Initialize database
@@ -24,34 +25,29 @@ func main() {
 	defer database.CloseDB()
 
 	// Set Gin mode
-	if os.Getenv("GIN_MODE") == "release" {
+	if cfg.GinMode == "release" {
 		gin.SetMode(gin.ReleaseMode)
 	}
+
+	// Create repositories
+	diveRepo := repository.NewDiveRepository(database.DB)
+	diveSiteRepo := repository.NewDiveSiteRepository(database.DB)
+
+	// Create handlers
+	diveHandler := handlers.NewDiveHandler(diveRepo, diveSiteRepo)
+	diveSiteHandler := handlers.NewDiveSiteHandler(diveSiteRepo)
 
 	// Create Gin router
 	r := gin.Default()
 
-	// Add request/response body logging middleware
+	// Add global middleware
 	r.Use(middleware.RequestResponseLogger())
-
-	// Add CORS middleware
-	r.Use(func(c *gin.Context) {
-		c.Header("Access-Control-Allow-Origin", "*")
-		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
-
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
-			return
-		}
-
-		c.Next()
-	})
+	r.Use(middleware.CORS())
 
 	// Health check endpoint
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{
-			"status": "ok",
+			"status":  "ok",
 			"service": "divelog-backend",
 		})
 	})
@@ -59,34 +55,36 @@ func main() {
 	// API routes
 	api := r.Group("/api/v1")
 	{
-		// Settings endpoints
+		// Settings endpoints (keeping original for now)
 		api.GET("/settings", handlers.GetSettings)
 		api.PUT("/settings", handlers.UpdateSettings)
-		
-		// Dive endpoints
-		api.GET("/dives", handlers.GetDives)
-		api.POST("/dives", handlers.CreateDive)
-		api.POST("/dives/batch", handlers.CreateMultipleDives)
-		api.PUT("/dives/:id", handlers.UpdateDive)
-		api.DELETE("/dives/:id", handlers.DeleteDive)
 
-		// Dive site endpoints
-		api.GET("/dive-sites", handlers.GetDiveSites)
-		api.GET("/dive-sites/search", handlers.SearchDiveSites)
-		api.GET("/dive-sites/:id", handlers.GetDiveSite)
-		api.POST("/dive-sites", handlers.CreateDiveSite)
-		api.PUT("/dive-sites/:id", handlers.UpdateDiveSite)
-		api.DELETE("/dive-sites/:id", handlers.DeleteDiveSite)
+		// Dive endpoints with middleware
+		diveRoutes := api.Group("/dives")
+		diveRoutes.Use(middleware.UserIDMiddleware())
+		{
+			diveRoutes.GET("", diveHandler.GetDives)
+			diveRoutes.POST("", diveHandler.CreateDive)
+			diveRoutes.POST("/batch", diveHandler.CreateMultipleDives)
+			diveRoutes.PUT("/:id", diveHandler.UpdateDive)
+			diveRoutes.DELETE("/:id", diveHandler.DeleteDive)
+		}
+
+		// Dive site endpoints (no user validation needed for these)
+		diveSiteRoutes := api.Group("/dive-sites")
+		{
+			diveSiteRoutes.GET("", diveSiteHandler.GetDiveSites)
+			diveSiteRoutes.GET("/search", diveSiteHandler.SearchDiveSites)
+			diveSiteRoutes.GET("/:id", diveSiteHandler.GetDiveSite)
+			diveSiteRoutes.POST("", diveSiteHandler.CreateDiveSite)
+			diveSiteRoutes.PUT("/:id", diveSiteHandler.UpdateDiveSite)
+			diveSiteRoutes.DELETE("/:id", diveSiteHandler.DeleteDiveSite)
+		}
 	}
 
 	// Start server
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-
-	log.Printf("Server starting on port %s", port)
-	if err := r.Run(":" + port); err != nil {
+	log.Printf("Server starting on port %s", cfg.Port)
+	if err := r.Run(":" + cfg.Port); err != nil {
 		log.Fatal("Failed to start server:", err)
 	}
 }

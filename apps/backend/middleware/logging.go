@@ -25,7 +25,7 @@ func (w bodyLogWriter) Write(b []byte) (int, error) {
 func RequestResponseLogger() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
-		
+
 		// Read request body
 		var requestBody []byte
 		if c.Request.Body != nil {
@@ -61,7 +61,7 @@ func logRequest(c *gin.Context, requestBody []byte, responseBody []byte, duratio
 
 	// Format request body for logging
 	requestBodyStr := formatBodyForLog(requestBody, "application/json")
-	
+
 	// Format response body for logging
 	responseBodyStr := formatBodyForLog(responseBody, c.Writer.Header().Get("Content-Type"))
 
@@ -102,14 +102,14 @@ func formatBodyForLog(body []byte, contentType string) string {
 	// Limit body size for logging (max 1000 characters)
 	maxLogSize := 1000
 	bodyStr := string(body)
-	
+
 	if len(bodyStr) > maxLogSize {
 		bodyStr = bodyStr[:maxLogSize] + "... (truncated)"
 	}
 
 	// Try to format as JSON if it's JSON content
-	if strings.Contains(contentType, "application/json") || 
-	   (contentType == "" && isValidJSON(body)) {
+	if strings.Contains(contentType, "application/json") ||
+		(contentType == "" && isValidJSON(body)) {
 		var prettyJSON bytes.Buffer
 		if err := json.Indent(&prettyJSON, body[:min(len(body), maxLogSize)], "", "  "); err == nil {
 			return prettyJSON.String()

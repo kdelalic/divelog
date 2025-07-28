@@ -54,7 +54,7 @@ func UpdateSettings(c *gin.Context) {
 	}
 
 	settings := req.ToUserSettings(userID)
-	
+
 	err = updateUserSettings(settings)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update settings"})
@@ -79,10 +79,10 @@ func getUserSettings(userID int) (*models.UserSettings, error) {
 		       default_gas_mix, max_depth_warning, created_at, updated_at
 		FROM user_settings WHERE user_id = $1
 	`
-	
+
 	settings := &models.UserSettings{}
 	row := database.DB.QueryRow(query, userID)
-	
+
 	err := row.Scan(
 		&settings.ID, &settings.UserID, &settings.UnitPreference, &settings.DepthUnit, &settings.TemperatureUnit,
 		&settings.DistanceUnit, &settings.WeightUnit, &settings.PressureUnit, &settings.VolumeUnit,
@@ -91,7 +91,7 @@ func getUserSettings(userID int) (*models.UserSettings, error) {
 		&settings.DefaultGasMix, &settings.MaxDepthWarning,
 		&settings.CreatedAt, &settings.UpdatedAt,
 	)
-	
+
 	return settings, err
 }
 
@@ -104,7 +104,7 @@ func createDefaultSettings(userID int) (*models.UserSettings, error) {
 		VALUES ($1, 'metric', 'meters', 'celsius', 'kilometers', 'kilograms', 'bar', 'liters', 'ISO', '24h', 'private', true, false, 'Air (21% O₂)', 40)
 		RETURNING id, created_at, updated_at
 	`
-	
+
 	settings := &models.UserSettings{
 		UserID:              userID,
 		UnitPreference:      "metric",
@@ -122,10 +122,10 @@ func createDefaultSettings(userID int) (*models.UserSettings, error) {
 		DefaultGasMix:       "Air (21% O₂)",
 		MaxDepthWarning:     40,
 	}
-	
+
 	row := database.DB.QueryRow(query, userID)
 	err := row.Scan(&settings.ID, &settings.CreatedAt, &settings.UpdatedAt)
-	
+
 	return settings, err
 }
 
@@ -138,13 +138,13 @@ func updateUserSettings(settings *models.UserSettings) error {
 			auto_calculate_nitrox = $13, default_gas_mix = $14, max_depth_warning = $15, updated_at = $16
 		WHERE user_id = $1
 	`
-	
+
 	_, err := database.DB.Exec(query,
 		settings.UserID, settings.UnitPreference, settings.DepthUnit, settings.TemperatureUnit, settings.DistanceUnit,
 		settings.WeightUnit, settings.PressureUnit, settings.VolumeUnit, settings.DateFormat, settings.TimeFormat,
 		settings.DefaultVisibility, settings.ShowBuddyReminders, settings.AutoCalculateNitrox,
 		settings.DefaultGasMix, settings.MaxDepthWarning, time.Now(),
 	)
-	
+
 	return err
 }

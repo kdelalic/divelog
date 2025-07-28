@@ -14,7 +14,7 @@ var DB *sql.DB
 func InitDB() error {
 	databaseURL := os.Getenv("DATABASE_URL")
 	if databaseURL == "" {
-		return fmt.Errorf("DATABASE_URL environment variable is not set")
+		databaseURL = "postgres://dev:devpass@localhost:5432/subsurface?sslmode=disable"
 	}
 
 	var err error
