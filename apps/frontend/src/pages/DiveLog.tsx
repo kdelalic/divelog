@@ -46,11 +46,11 @@ const DiveLog = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="space-y-8">
       {/* Hero Section */}
-      <div className="bg-gradient-to-br from-slate-50 to-white border-b border-slate-200">
-        <div className="px-8 py-20">
-          <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-12">
+      <div className="bg-gradient-to-br from-slate-50 to-white border-b border-slate-200 -mx-4 sm:-mx-6 lg:-mx-8 xl:-mx-12 -mt-6 lg:-mt-8">
+        <div className="px-4 sm:px-6 lg:px-8 xl:px-12 py-12 lg:py-16">
+          <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-8">
             <div className="flex-1">
               <h1 className="text-5xl lg:text-6xl font-bold tracking-tight text-slate-900 mb-6">
                 Dive Dashboard
@@ -78,27 +78,23 @@ const DiveLog = () => {
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="px-8 py-20">
-        {/* Stats Section */}
-        <div className="mb-24">
-          <DashboardStats stats={stats} />
-        </div>
+      {/* Stats Section */}
+      <div>
+        <DashboardStats stats={stats} />
+      </div>
 
-        {/* Charts Section */}
-        <div className="mb-24">
-          <div className="grid lg:grid-cols-5">
-            <div className="lg:col-span-3 lg:mr-16">
-              <DiveChart dives={dives} />
-            </div>
-            <div className="lg:col-span-2 mt-16 lg:mt-0">
-              <RecentDives dives={dives} />
-            </div>
-          </div>
+      {/* Charts Section */}
+      <div className="grid lg:grid-cols-5 gap-8">
+        <div className="lg:col-span-3">
+          <DiveChart dives={dives} />
         </div>
+        <div className="lg:col-span-2">
+          <RecentDives dives={dives} />
+        </div>
+      </div>
 
-        {/* Table Section */}
-        <div id="table" className="bg-white shadow-sm ring-1 ring-slate-200 overflow-hidden rounded-xl">
+      {/* Table Section */}
+      <div id="table" className="bg-white shadow-sm ring-1 ring-slate-200 overflow-hidden rounded-xl">
         <div className="px-8 py-6 border-b border-slate-200 bg-slate-50/50">
           <h3 className="text-xl font-semibold text-slate-900">All Dives</h3>
           <p className="mt-1 text-sm text-slate-600">Complete history of your dive activities</p>
@@ -135,7 +131,7 @@ const DiveLog = () => {
                   {formatDepth(dive.depth, settings.units.depth, 0)}
                 </td>
                 <td className="px-8 py-5 whitespace-nowrap text-sm lg:text-base text-slate-600">{dive.duration} min</td>
-                <td className="px-8 py-5 whitespace-nowrap text-sm lg:text-base text-slate-600">{dive.buddy || 'Solo'}</td>
+                <td className="px-8 py-5 whitespace-nowrap text-sm lg:text-base text-slate-600">{dive.buddy || '—'}</td>
                 <td className="px-8 py-5 whitespace-nowrap text-right text-sm font-medium">
                   <div className="flex justify-end gap-2">
                     <Button 
@@ -166,7 +162,6 @@ const DiveLog = () => {
             ))}
           </tbody>
         </table>
-        </div>
       </div>
 
       <DiveDetailModal 

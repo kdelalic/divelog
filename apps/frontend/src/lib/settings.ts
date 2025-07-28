@@ -3,6 +3,7 @@ export type TemperatureUnit = 'celsius' | 'fahrenheit';
 export type DistanceUnit = 'kilometers' | 'miles';
 export type WeightUnit = 'kilograms' | 'pounds';
 export type PressureUnit = 'bar' | 'psi';
+export type VolumeUnit = 'liters' | 'cubic_feet';
 
 export interface UserSettings {
   units: {
@@ -11,6 +12,7 @@ export interface UserSettings {
     distance: DistanceUnit;
     weight: WeightUnit;
     pressure: PressureUnit;
+    volume: VolumeUnit;
   };
   preferences: {
     dateFormat: 'ISO' | 'US' | 'EU';
@@ -32,6 +34,7 @@ export const defaultSettings: UserSettings = {
     distance: 'kilometers',
     weight: 'kilograms',
     pressure: 'bar',
+    volume: 'liters',
   },
   preferences: {
     dateFormat: 'ISO',

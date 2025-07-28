@@ -91,14 +91,14 @@ const Settings = () => {
         </div>
       </div>
 
-      <Tabs defaultValue="units" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-8">
-          <TabsTrigger value="units" className="px-6 py-3">Units & Measurements</TabsTrigger>
-          <TabsTrigger value="preferences" className="px-6 py-3">Preferences</TabsTrigger>
-          <TabsTrigger value="diving" className="px-6 py-3">Diving Settings</TabsTrigger>
+      <Tabs defaultValue="units" className="w-full space-y-6">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="units">Units & Measurements</TabsTrigger>
+          <TabsTrigger value="preferences">Preferences</TabsTrigger>
+          <TabsTrigger value="diving">Diving Settings</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="units" className="space-y-6">
+        <TabsContent value="units">
           <Card>
             <CardHeader>
               <CardTitle>Unit Preferences</CardTitle>
@@ -107,7 +107,7 @@ const Settings = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Depth</label>
                   <select
@@ -172,7 +172,7 @@ const Settings = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="preferences" className="space-y-6">
+        <TabsContent value="preferences">
           <Card>
             <CardHeader>
               <CardTitle>Display Preferences</CardTitle>
@@ -181,7 +181,7 @@ const Settings = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Date Format</label>
                   <select
@@ -223,7 +223,7 @@ const Settings = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="diving" className="space-y-6">
+        <TabsContent value="diving">
           <Card>
             <CardHeader>
               <CardTitle>Diving Settings</CardTitle>
@@ -232,7 +232,7 @@ const Settings = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <label className="text-sm font-medium">Show Buddy Reminders</label>

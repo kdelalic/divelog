@@ -12,39 +12,108 @@ type DiveSample struct {
 	Pressure    *float64 `json:"pressure,omitempty"`    // Tank pressure in bar
 }
 
+// GasMix represents breathing gas composition
+type GasMix struct {
+	Oxygen   int     `json:"oxygen"`             // O2 percentage (21 for air, 32 for EANx32, etc.)
+	Helium   *int    `json:"helium,omitempty"`   // He percentage (for trimix)
+	Nitrogen *int    `json:"nitrogen,omitempty"` // N2 percentage (calculated automatically)
+	Name     *string `json:"name,omitempty"`     // Custom name (e.g., "EANx32", "Trimix 18/45")
+}
+
+// Tank represents a diving tank/cylinder
+type Tank struct {
+	ID              *int    `json:"id,omitempty"`
+	Name            *string `json:"name,omitempty"`            // Tank identifier
+	Size            float64 `json:"size"`                      // Tank volume in liters
+	WorkingPressure float64 `json:"working_pressure"`          // Working pressure in bar
+	StartPressure   float64 `json:"start_pressure"`            // Starting pressure in bar
+	EndPressure     float64 `json:"end_pressure"`              // Ending pressure in bar
+	GasMix          GasMix  `json:"gas_mix"`                   // Gas mix used
+	Material        *string `json:"material,omitempty"`        // Tank material (steel/aluminum)
+}
+
+// Wetsuit represents exposure protection
+type Wetsuit struct {
+	Type      string  `json:"type"`                // wetsuit/drysuit/shorty/none
+	Thickness *int    `json:"thickness,omitempty"` // Thickness in mm
+	Material  *string `json:"material,omitempty"`  // Neoprene, etc.
+}
+
+// Equipment represents all diving equipment used
+type Equipment struct {
+	Tanks     []Tank   `json:"tanks"`                 // Multiple tanks for technical diving
+	BCD       *string  `json:"bcd,omitempty"`         // BCD model/type
+	Regulator *string  `json:"regulator,omitempty"`   // Regulator model/type
+	Wetsuit   *Wetsuit `json:"wetsuit,omitempty"`     // Exposure protection
+	Weights   *float64 `json:"weights,omitempty"`     // Weight carried in kg
+	Fins      *string  `json:"fins,omitempty"`        // Fins model
+	Mask      *string  `json:"mask,omitempty"`        // Mask model
+	Computer  *string  `json:"computer,omitempty"`    // Dive computer model
+	Notes     *string  `json:"notes,omitempty"`       // Additional equipment notes
+}
+
+// DiveConditions represents environmental conditions
+type DiveConditions struct {
+	WaterTempSurface *float64 `json:"water_temp_surface,omitempty"` // Surface temperature in celsius
+	WaterTempBottom  *float64 `json:"water_temp_bottom,omitempty"`  // Bottom temperature in celsius
+	AirTemp          *float64 `json:"air_temp,omitempty"`           // Air temperature in celsius
+	Visibility       *float64 `json:"visibility,omitempty"`         // Visibility in meters
+	CurrentStrength  *string  `json:"current_strength,omitempty"`   // none/light/moderate/strong
+	CurrentDirection *string  `json:"current_direction,omitempty"`  // Direction or description
+	Weather          *string  `json:"weather,omitempty"`            // sunny/cloudy/overcast/rainy/windy
+	SeaState         *int     `json:"sea_state,omitempty"`          // Sea state scale 0-9
+	Surge            *string  `json:"surge,omitempty"`              // none/light/moderate/heavy
+}
+
+// SafetyStop represents a safety stop during the dive
+type SafetyStop struct {
+	Depth    float64 `json:"depth"`    // Safety stop depth in meters
+	Duration int     `json:"duration"` // Safety stop duration in minutes
+}
+
 // Dive represents a dive record
 type Dive struct {
-	ID         int          `json:"id" db:"id"`
-	UserID     int          `json:"user_id" db:"user_id"`
-	DiveSiteID *int         `json:"dive_site_id,omitempty" db:"dive_site_id"`
-	DateTime   time.Time    `json:"datetime" db:"dive_datetime"`
-	MaxDepth   float64      `json:"depth" db:"max_depth"`
-	Duration   int          `json:"duration" db:"duration"`
-	Buddy      *string      `json:"buddy,omitempty" db:"buddy"`
-	WaterTemp  *float64     `json:"water_temperature,omitempty" db:"water_temperature"`
-	Visibility *int         `json:"visibility,omitempty" db:"visibility"`
-	Notes      *string      `json:"notes,omitempty" db:"notes"`
-	Latitude   float64      `json:"lat" db:"latitude"`
-	Longitude  float64      `json:"lng" db:"longitude"`
-	Location   string       `json:"location" db:"location"`
-	Samples    []DiveSample `json:"samples,omitempty" db:"samples"` // Dive profile samples
-	CreatedAt  time.Time    `json:"created_at" db:"created_at"`
-	UpdatedAt  time.Time    `json:"updated_at" db:"updated_at"`
+	ID           int              `json:"id" db:"id"`
+	UserID       int              `json:"user_id" db:"user_id"`
+	DiveSiteID   *int             `json:"dive_site_id,omitempty" db:"dive_site_id"`
+	DateTime     time.Time        `json:"datetime" db:"dive_datetime"`
+	MaxDepth     float64          `json:"depth" db:"max_depth"`
+	Duration     int              `json:"duration" db:"duration"`
+	Buddy        *string          `json:"buddy,omitempty" db:"buddy"`
+	WaterTemp    *float64         `json:"water_temperature,omitempty" db:"water_temperature"`
+	Visibility   *int             `json:"visibility,omitempty" db:"visibility"`
+	Notes        *string          `json:"notes,omitempty" db:"notes"`
+	Latitude     float64          `json:"lat" db:"latitude"`
+	Longitude    float64          `json:"lng" db:"longitude"`
+	Location     string           `json:"location" db:"location"`
+	Samples      []DiveSample     `json:"samples,omitempty" db:"samples"`         // Dive profile samples
+	Equipment    *Equipment       `json:"equipment,omitempty" db:"equipment"`     // Equipment used on dive
+	Conditions   *DiveConditions  `json:"conditions,omitempty" db:"conditions"`   // Environmental conditions
+	DiveType     *string          `json:"dive_type,omitempty" db:"dive_type"`     // recreational/training/technical/work/research
+	Rating       *int             `json:"rating,omitempty" db:"rating"`           // Dive rating 1-5 stars
+	SafetyStops  []SafetyStop     `json:"safety_stops,omitempty" db:"safety_stops"` // Safety stops performed
+	CreatedAt    time.Time        `json:"created_at" db:"created_at"`
+	UpdatedAt    time.Time        `json:"updated_at" db:"updated_at"`
 }
 
 // DiveRequest represents the request body for creating/updating dives
 type DiveRequest struct {
-	DateTime   string       `json:"datetime" binding:"required"` // ISO 8601 format
-	Location   string       `json:"location" binding:"required"`
-	Depth      float64      `json:"depth" binding:"required"`
-	Duration   int          `json:"duration" binding:"required"`
-	Buddy      *string      `json:"buddy,omitempty"`
-	Lat        float64      `json:"lat" binding:"required"`
-	Lng        float64      `json:"lng" binding:"required"`
-	WaterTemp  *float64     `json:"water_temperature,omitempty"`
-	Visibility *int         `json:"visibility,omitempty"`
-	Notes      *string      `json:"notes,omitempty"`
-	Samples    []DiveSample `json:"samples,omitempty"`
+	DateTime    string          `json:"datetime" binding:"required"` // ISO 8601 format
+	Location    string          `json:"location" binding:"required"`
+	Depth       float64         `json:"depth" binding:"required"`
+	Duration    int             `json:"duration" binding:"required"`
+	Buddy       *string         `json:"buddy,omitempty"`
+	Lat         float64         `json:"lat" binding:"required"`
+	Lng         float64         `json:"lng" binding:"required"`
+	WaterTemp   *float64        `json:"water_temperature,omitempty"`
+	Visibility  *int            `json:"visibility,omitempty"`
+	Notes       *string         `json:"notes,omitempty"`
+	Samples     []DiveSample    `json:"samples,omitempty"`
+	Equipment   *Equipment      `json:"equipment,omitempty"`
+	Conditions  *DiveConditions `json:"conditions,omitempty"`
+	DiveType    *string         `json:"dive_type,omitempty"`
+	Rating      *int            `json:"rating,omitempty"`
+	SafetyStops []SafetyStop    `json:"safety_stops,omitempty"`
 }
 
 // parseDateTime converts ISO 8601 string to time.Time
@@ -66,18 +135,23 @@ func parseDateTime(dateTimeStr string) time.Time {
 // ToDive converts a DiveRequest to Dive
 func (dr *DiveRequest) ToDive(userID int) *Dive {
 	return &Dive{
-		UserID:     userID,
-		DateTime:   parseDateTime(dr.DateTime),
-		Location:   dr.Location,
-		MaxDepth:   dr.Depth,
-		Duration:   dr.Duration,
-		Buddy:      dr.Buddy,
-		Latitude:   dr.Lat,
-		Longitude:  dr.Lng,
-		WaterTemp:  dr.WaterTemp,
-		Visibility: dr.Visibility,
-		Notes:      dr.Notes,
-		Samples:    dr.Samples,
+		UserID:      userID,
+		DateTime:    parseDateTime(dr.DateTime),
+		Location:    dr.Location,
+		MaxDepth:    dr.Depth,
+		Duration:    dr.Duration,
+		Buddy:       dr.Buddy,
+		Latitude:    dr.Lat,
+		Longitude:   dr.Lng,
+		WaterTemp:   dr.WaterTemp,
+		Visibility:  dr.Visibility,
+		Notes:       dr.Notes,
+		Samples:     dr.Samples,
+		Equipment:   dr.Equipment,
+		Conditions:  dr.Conditions,
+		DiveType:    dr.DiveType,
+		Rating:      dr.Rating,
+		SafetyStops: dr.SafetyStops,
 	}
 }
 

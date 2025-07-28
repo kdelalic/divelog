@@ -110,6 +110,45 @@ func CheckDuplicateDiveForUpdate(userID int, diveSiteID int, diveDateTime string
 	return count > 0, nil
 }
 
+// CheckDuplicateDiveForUpdateByLocation checks if a dive already exists at the same location and date, excluding the current dive
+func CheckDuplicateDiveForUpdateByLocation(userID int, latitude, longitude float64, diveDateTime string, excludeDiveID int) (bool, error) {
+	db := database.DB
+
+	// Parse the datetime and extract just the date part for comparison
+	dt, err := time.Parse(time.RFC3339, diveDateTime)
+	if err != nil {
+		// Try date-only format
+		dt, err = time.Parse("2006-01-02", diveDateTime)
+		if err != nil {
+			return false, err
+		}
+	}
+	dateOnly := dt.Format("2006-01-02")
+
+	// Check for dives at the same location (within ~100m) on the same date, excluding the current dive
+	query := `
+		SELECT COUNT(*) FROM dives d
+		LEFT JOIN dive_sites ds ON d.dive_site_id = ds.id
+		WHERE d.user_id = $1 
+		  AND d.id != $2
+		  AND DATE(d.dive_datetime) = $3
+		  AND (
+		    -- Check direct coordinates
+		    (ABS(COALESCE(d.latitude, 0) - $4) < 0.001 AND ABS(COALESCE(d.longitude, 0) - $5) < 0.001)
+		    OR
+		    -- Check dive site coordinates  
+		    (ABS(COALESCE(ds.latitude, 0) - $4) < 0.001 AND ABS(COALESCE(ds.longitude, 0) - $5) < 0.001)
+		  )`
+
+	var count int
+	err = db.QueryRow(query, userID, excludeDiveID, dateOnly, latitude, longitude).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+
+	return count > 0, nil
+}
+
 // calculateDistance calculates the distance between two coordinates in kilometers
 func calculateDistance(lat1, lon1, lat2, lon2 float64) float64 {
 	const R = 6371 // Earth's radius in kilometers

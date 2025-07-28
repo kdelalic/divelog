@@ -71,6 +71,13 @@ CREATE TABLE IF NOT EXISTS dives (
     notes TEXT,
     samples JSONB, -- dive profile samples (time, depth, temperature, pressure)
     
+    -- Equipment and conditions (stored as JSONB for flexibility)
+    equipment JSONB, -- tanks, BCD, regulator, wetsuit, weights, etc.
+    conditions JSONB, -- water temp, air temp, visibility, current, weather, sea state
+    dive_type VARCHAR(20) CHECK (dive_type IN ('recreational', 'training', 'technical', 'work', 'research')),
+    rating INTEGER CHECK (rating >= 1 AND rating <= 5), -- 1-5 star rating
+    safety_stops JSONB, -- array of safety stops with depth and duration
+    
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -79,6 +86,10 @@ CREATE TABLE IF NOT EXISTS dives (
 CREATE INDEX IF NOT EXISTS idx_dives_user_id ON dives(user_id);
 CREATE INDEX IF NOT EXISTS idx_dives_datetime ON dives(dive_datetime);
 CREATE INDEX IF NOT EXISTS idx_dives_samples ON dives USING GIN (samples); -- for JSONB queries
+CREATE INDEX IF NOT EXISTS idx_dives_equipment ON dives USING GIN (equipment); -- for JSONB queries
+CREATE INDEX IF NOT EXISTS idx_dives_conditions ON dives USING GIN (conditions); -- for JSONB queries
+CREATE INDEX IF NOT EXISTS idx_dives_dive_type ON dives(dive_type);
+CREATE INDEX IF NOT EXISTS idx_dives_rating ON dives(rating);
 CREATE INDEX IF NOT EXISTS idx_user_settings_user_id ON user_settings(user_id);
 
 -- Insert a default user for development

@@ -226,6 +226,14 @@ const DiveProfile: React.FC<DiveProfileProps> = ({
     return {
       responsive: true,
       maintainAspectRatio: false,
+      layout: {
+        padding: {
+          top: 10,
+          right: 10,
+          bottom: 70,
+          left: 10,
+        },
+      },
       interaction: {
         mode: 'index' as const,
         intersect: false,
@@ -324,12 +332,24 @@ const DiveProfile: React.FC<DiveProfileProps> = ({
       scales: {
         x: {
           display: true,
+          position: 'bottom' as const,
           title: {
             display: true,
             text: 'Time (minutes)',
+            padding: 10,
           },
           grid: {
             color: 'rgba(0, 0, 0, 0.1)',
+            display: true,
+          },
+          ticks: {
+            display: true,
+            maxTicksLimit: 10,
+            padding: 5,
+          },
+          border: {
+            display: true,
+            color: 'rgba(0, 0, 0, 0.3)',
           },
         },
         depth: {
@@ -402,7 +422,7 @@ const DiveProfile: React.FC<DiveProfileProps> = ({
   }
 
   return (
-    <div className={`relative ${className}`}>
+    <div className={`relative h-full ${className}`}>
       <div className="absolute top-2 right-2 z-10">
         <Button
           variant="outline"
@@ -414,7 +434,7 @@ const DiveProfile: React.FC<DiveProfileProps> = ({
           Reset Zoom
         </Button>
       </div>
-      <div className="h-full">
+      <div className="h-full w-full min-h-[400px] overflow-visible">
         <Line ref={chartRef} data={chartData} options={chartOptions} />
       </div>
     </div>

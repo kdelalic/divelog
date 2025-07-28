@@ -1,4 +1,4 @@
-import type { DepthUnit, TemperatureUnit, DistanceUnit, WeightUnit, PressureUnit } from './settings';
+import type { DepthUnit, TemperatureUnit, DistanceUnit, WeightUnit, PressureUnit, VolumeUnit } from './settings';
 
 // Depth conversions
 export const convertDepth = (value: number, from: DepthUnit, to: DepthUnit): number => {
@@ -105,11 +105,32 @@ export const formatPressure = (value: number, unit: PressureUnit, precision: num
   return `${convertedValue.toFixed(precision)}${label}`;
 };
 
+// Volume conversions
+export const convertVolume = (value: number, from: VolumeUnit, to: VolumeUnit): number => {
+  if (from === to) return value;
+  
+  if (from === 'liters' && to === 'cubic_feet') {
+    return value * 0.0353147;
+  }
+  if (from === 'cubic_feet' && to === 'liters') {
+    return value * 28.3168;
+  }
+  
+  return value;
+};
+
+export const formatVolume = (value: number, unit: VolumeUnit, precision: number = 1): string => {
+  // Database stores in liters, so convert if user wants cubic feet
+  const convertedValue = unit === 'cubic_feet' ? convertVolume(value, 'liters', 'cubic_feet') : value;
+  const label = unit === 'liters' ? 'L' : 'ft³';
+  return `${convertedValue.toFixed(precision)}${label}`;
+};
+
 // Helper function to format any value with appropriate units
 export const formatValue = (
   value: number,
-  type: 'depth' | 'temperature' | 'distance' | 'weight' | 'pressure',
-  unit: DepthUnit | TemperatureUnit | DistanceUnit | WeightUnit | PressureUnit,
+  type: 'depth' | 'temperature' | 'distance' | 'weight' | 'pressure' | 'volume',
+  unit: DepthUnit | TemperatureUnit | DistanceUnit | WeightUnit | PressureUnit | VolumeUnit,
   precision?: number
 ): string => {
   switch (type) {
@@ -123,6 +144,8 @@ export const formatValue = (
       return formatWeight(value, unit as WeightUnit, precision);
     case 'pressure':
       return formatPressure(value, unit as PressureUnit, precision);
+    case 'volume':
+      return formatVolume(value, unit as VolumeUnit, precision);
     default:
       return value.toString();
   }
