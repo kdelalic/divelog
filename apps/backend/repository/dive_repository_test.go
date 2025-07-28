@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"database/sql"
 	"divelog-backend/models"
 	"testing"
@@ -38,7 +39,7 @@ func TestDiveRepository_CreateDive(t *testing.T) {
 		Longitude: -74.0060,
 	}
 
-	err := repo.CreateDive(dive)
+	err := repo.CreateDive(context.Background(), dive)
 	if err != nil {
 		t.Errorf("CreateDive failed: %v", err)
 	}
@@ -57,7 +58,7 @@ func TestDiveRepository_GetDivesByUserID(t *testing.T) {
 
 	repo := NewDiveRepository(db)
 	
-	dives, err := repo.GetDivesByUserID(1)
+	dives, err := repo.GetDivesByUserID(context.Background(), 1)
 	if err != nil {
 		t.Errorf("GetDivesByUserID failed: %v", err)
 	}
