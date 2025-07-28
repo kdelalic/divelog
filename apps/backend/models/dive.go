@@ -1,8 +1,56 @@
 package models
 
 import (
+	"database/sql/driver"
+	"encoding/json"
+	"strings"
 	"time"
 )
+
+// LocalTime is a custom time type that marshals without timezone information
+type LocalTime struct {
+	time.Time
+}
+
+// MarshalJSON formats time without timezone
+func (lt LocalTime) MarshalJSON() ([]byte, error) {
+	// Format as ISO 8601 without timezone suffix
+	formatted := lt.Time.Format("2006-01-02T15:04:05")
+	return json.Marshal(formatted)
+}
+
+// UnmarshalJSON parses time from JSON
+func (lt *LocalTime) UnmarshalJSON(data []byte) error {
+	var timeStr string
+	if err := json.Unmarshal(data, &timeStr); err != nil {
+		return err
+	}
+	parsedTime := parseDateTime(timeStr)
+	lt.Time = parsedTime
+	return nil
+}
+
+// Scan implements the sql.Scanner interface for database reads
+func (lt *LocalTime) Scan(value interface{}) error {
+	if value == nil {
+		lt.Time = time.Time{}
+		return nil
+	}
+	
+	switch v := value.(type) {
+	case time.Time:
+		lt.Time = v
+		return nil
+	default:
+		lt.Time = time.Time{}
+		return nil
+	}
+}
+
+// Value implements the driver.Valuer interface for database writes
+func (lt LocalTime) Value() (driver.Value, error) {
+	return lt.Time, nil
+}
 
 // DiveSample represents a single data point in a dive profile
 type DiveSample struct {
@@ -76,7 +124,7 @@ type Dive struct {
 	ID           int              `json:"id" db:"id"`
 	UserID       int              `json:"user_id" db:"user_id"`
 	DiveSiteID   *int             `json:"dive_site_id,omitempty" db:"dive_site_id"`
-	DateTime     time.Time        `json:"datetime" db:"dive_datetime"`
+	DateTime     LocalTime        `json:"datetime" db:"dive_datetime"`
 	MaxDepth     float64          `json:"depth" db:"max_depth"`
 	Duration     int              `json:"duration" db:"duration"`
 	Buddy        *string          `json:"buddy,omitempty" db:"buddy"`
@@ -116,18 +164,24 @@ type DiveRequest struct {
 	SafetyStops []SafetyStop    `json:"safety_stops,omitempty"`
 }
 
-// parseDateTime converts ISO 8601 string to time.Time
+// parseDateTime converts ISO 8601 string to time.Time without timezone handling
 func parseDateTime(dateTimeStr string) time.Time {
-	// Try parsing as full ISO 8601 timestamp first
-	if t, err := time.Parse(time.RFC3339, dateTimeStr); err == nil {
-		return t
+	// Strip timezone suffix if present (e.g., "Z" or "+00:00")
+	dateTimeStr = strings.TrimSuffix(dateTimeStr, "Z")
+	
+	// Try parsing as timestamp without timezone (2006-01-02T15:04:05 or 2006-01-02T15:04:05.000)
+	layouts := []string{
+		"2006-01-02T15:04:05.000",
+		"2006-01-02T15:04:05",
+		"2006-01-02",
 	}
-
-	// Fallback to date-only format (assume start of day)
-	if t, err := time.Parse("2006-01-02", dateTimeStr); err == nil {
-		return t
+	
+	for _, layout := range layouts {
+		if t, err := time.Parse(layout, dateTimeStr); err == nil {
+			return t
+		}
 	}
-
+	
 	// Last resort: current time
 	return time.Now()
 }
@@ -136,7 +190,7 @@ func parseDateTime(dateTimeStr string) time.Time {
 func (dr *DiveRequest) ToDive(userID int) *Dive {
 	return &Dive{
 		UserID:      userID,
-		DateTime:    parseDateTime(dr.DateTime),
+		DateTime:    LocalTime{parseDateTime(dr.DateTime)},
 		Location:    dr.Location,
 		MaxDepth:    dr.Depth,
 		Duration:    dr.Duration,

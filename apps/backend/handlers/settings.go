@@ -74,7 +74,7 @@ func UpdateSettings(c *gin.Context) {
 // getUserSettings retrieves settings for a user from the database
 func getUserSettings(userID int) (*models.UserSettings, error) {
 	query := `
-		SELECT id, user_id, depth_unit, temperature_unit, distance_unit, weight_unit, pressure_unit,
+		SELECT id, user_id, depth_unit, temperature_unit, distance_unit, weight_unit, pressure_unit, volume_unit,
 		       date_format, time_format, default_visibility, show_buddy_reminders, auto_calculate_nitrox,
 		       default_gas_mix, max_depth_warning, created_at, updated_at
 		FROM user_settings WHERE user_id = $1
@@ -85,7 +85,7 @@ func getUserSettings(userID int) (*models.UserSettings, error) {
 	
 	err := row.Scan(
 		&settings.ID, &settings.UserID, &settings.DepthUnit, &settings.TemperatureUnit,
-		&settings.DistanceUnit, &settings.WeightUnit, &settings.PressureUnit,
+		&settings.DistanceUnit, &settings.WeightUnit, &settings.PressureUnit, &settings.VolumeUnit,
 		&settings.DateFormat, &settings.TimeFormat, &settings.DefaultVisibility,
 		&settings.ShowBuddyReminders, &settings.AutoCalculateNitrox,
 		&settings.DefaultGasMix, &settings.MaxDepthWarning,
@@ -98,10 +98,10 @@ func getUserSettings(userID int) (*models.UserSettings, error) {
 // createDefaultSettings creates default settings for a new user
 func createDefaultSettings(userID int) (*models.UserSettings, error) {
 	query := `
-		INSERT INTO user_settings (user_id, depth_unit, temperature_unit, distance_unit, weight_unit, pressure_unit,
+		INSERT INTO user_settings (user_id, depth_unit, temperature_unit, distance_unit, weight_unit, pressure_unit, volume_unit,
 		                          date_format, time_format, default_visibility, show_buddy_reminders, auto_calculate_nitrox,
 		                          default_gas_mix, max_depth_warning)
-		VALUES ($1, 'meters', 'celsius', 'kilometers', 'kilograms', 'bar', 'ISO', '24h', 'private', true, false, 'Air (21% O₂)', 40)
+		VALUES ($1, 'meters', 'celsius', 'kilometers', 'kilograms', 'bar', 'liters', 'ISO', '24h', 'private', true, false, 'Air (21% O₂)', 40)
 		RETURNING id, created_at, updated_at
 	`
 	
@@ -112,6 +112,7 @@ func createDefaultSettings(userID int) (*models.UserSettings, error) {
 		DistanceUnit:        "kilometers",
 		WeightUnit:          "kilograms",
 		PressureUnit:        "bar",
+		VolumeUnit:          "liters",
 		DateFormat:          "ISO",
 		TimeFormat:          "24h",
 		DefaultVisibility:   "private",
@@ -131,15 +132,15 @@ func createDefaultSettings(userID int) (*models.UserSettings, error) {
 func updateUserSettings(settings *models.UserSettings) error {
 	query := `
 		UPDATE user_settings SET
-			depth_unit = $2, temperature_unit = $3, distance_unit = $4, weight_unit = $5, pressure_unit = $6,
-			date_format = $7, time_format = $8, default_visibility = $9, show_buddy_reminders = $10,
-			auto_calculate_nitrox = $11, default_gas_mix = $12, max_depth_warning = $13, updated_at = $14
+			depth_unit = $2, temperature_unit = $3, distance_unit = $4, weight_unit = $5, pressure_unit = $6, volume_unit = $7,
+			date_format = $8, time_format = $9, default_visibility = $10, show_buddy_reminders = $11,
+			auto_calculate_nitrox = $12, default_gas_mix = $13, max_depth_warning = $14, updated_at = $15
 		WHERE user_id = $1
 	`
 	
 	_, err := database.DB.Exec(query,
 		settings.UserID, settings.DepthUnit, settings.TemperatureUnit, settings.DistanceUnit,
-		settings.WeightUnit, settings.PressureUnit, settings.DateFormat, settings.TimeFormat,
+		settings.WeightUnit, settings.PressureUnit, settings.VolumeUnit, settings.DateFormat, settings.TimeFormat,
 		settings.DefaultVisibility, settings.ShowBuddyReminders, settings.AutoCalculateNitrox,
 		settings.DefaultGasMix, settings.MaxDepthWarning, time.Now(),
 	)

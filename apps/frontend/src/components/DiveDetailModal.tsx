@@ -13,6 +13,7 @@ import type { Dive } from "@/lib/dives";
 import { formatDuration } from "@/lib/diveStats";
 import { Link } from "react-router-dom";
 import useSettingsStore from "@/store/settingsStore";
+import { formatVolume } from "@/lib/unitConversions";
 import { formatDepth } from "@/lib/unitConversions";
 import { formatDiveDateTimeLong } from "@/lib/dateHelpers";
 import DiveProfile from "./DiveProfile";
@@ -264,7 +265,7 @@ const DiveDetailModal = ({ dive, isOpen, onClose }: DiveDetailModalProps) => {
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">Tank Size:</span>
                             <span className="font-medium">
-                              {tank.size}L {tank.material || 'Steel'}
+                              {formatVolume(tank.size, settings.units.volume)} {tank.material || 'Steel'}
                             </span>
                           </div>
                           <div className="flex justify-between">

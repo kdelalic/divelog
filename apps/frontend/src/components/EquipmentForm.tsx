@@ -10,6 +10,7 @@ import type { Equipment, Tank } from '@/lib/dives';
 import { createGasMix, getGasMixColor } from '@/lib/dives';
 import useSettingsStore from '@/store/settingsStore';
 import { convertPressure, convertVolume, convertWeight } from '@/lib/unitConversions';
+import { unitLabels } from '@/lib/settings';
 
 interface EquipmentFormProps {
   equipment?: Equipment;
@@ -159,7 +160,7 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({ equipment, onChange }) =>
                   
                   <div className="space-y-2">
                     <Label htmlFor={`tank-${index}-size`}>
-                      Size ({settings.units.volume === 'liters' ? 'L' : 'ft³'})
+                      Size ({unitLabels.volume[settings.units.volume]})
                     </Label>
                     <Input
                       id={`tank-${index}-size`}
@@ -340,7 +341,7 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({ equipment, onChange }) =>
 
           <div className="space-y-2">
             <Label htmlFor="weights">
-              Weight ({settings.units.weight === 'kilograms' ? 'kg' : 'lbs'})
+              Weight ({unitLabels.weight[settings.units.weight]})
             </Label>
             <Input
               id="weights"

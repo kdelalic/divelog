@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import useSettingsStore from '../store/settingsStore';
-import type { DepthUnit, TemperatureUnit, DistanceUnit, WeightUnit, PressureUnit } from '../lib/settings';
+import type { DepthUnit, TemperatureUnit, DistanceUnit, WeightUnit, PressureUnit, VolumeUnit } from '../lib/settings';
 import { useEffect } from 'react';
 
 const Settings = () => {
@@ -165,6 +165,18 @@ const Settings = () => {
                   >
                     <option value="bar">Bar</option>
                     <option value="psi">PSI</option>
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Tank Volume</label>
+                  <select
+                    value={settings.units.volume}
+                    onChange={(e) => handleUnitChange('volume', e.target.value as VolumeUnit)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="liters">Liters (L)</option>
+                    <option value="cubic_feet">Cubic Feet (ft³)</option>
                   </select>
                 </div>
               </div>

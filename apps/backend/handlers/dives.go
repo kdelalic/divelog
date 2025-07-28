@@ -7,21 +7,28 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 )
 
-// parseDateTime converts ISO 8601 string to time.Time
+// parseDateTime converts ISO 8601 string to time.Time without timezone handling
 func parseDateTime(dateTimeStr string) time.Time {
-	// Try parsing as full ISO 8601 timestamp first
-	if t, err := time.Parse(time.RFC3339, dateTimeStr); err == nil {
-		return t
+	// Strip timezone suffix if present (e.g., "Z" or "+00:00")
+	dateTimeStr = strings.TrimSuffix(dateTimeStr, "Z")
+	
+	// Try parsing as timestamp without timezone (2006-01-02T15:04:05 or 2006-01-02T15:04:05.000)
+	layouts := []string{
+		"2006-01-02T15:04:05.000",
+		"2006-01-02T15:04:05",
+		"2006-01-02",
 	}
 	
-	// Fallback to date-only format (assume start of day)
-	if t, err := time.Parse("2006-01-02", dateTimeStr); err == nil {
-		return t
+	for _, layout := range layouts {
+		if t, err := time.Parse(layout, dateTimeStr); err == nil {
+			return t
+		}
 	}
 	
 	// Last resort: current time
@@ -411,19 +418,19 @@ func UpdateDive(c *gin.Context) {
 	}
 
 	log.Printf("UpdateDive: Current dive - DateTime: %s, Location: %s, Lat: %f, Lng: %f", 
-		currentDive.DateTime.Format(time.RFC3339), currentDive.Location, currentDive.Latitude, currentDive.Longitude)
+		currentDive.DateTime.Time.Format("2006-01-02T15:04:05"), currentDive.Location, currentDive.Latitude, currentDive.Longitude)
 
 	// Parse the new datetime for comparison
 	newDateTime := parseDateTime(diveReq.DateTime)
 	
 	// Only check for duplicates if location or date actually changed
 	locationChanged := currentDive.Latitude != diveReq.Lat || currentDive.Longitude != diveReq.Lng
-	dateChanged := currentDive.DateTime.Format("2006-01-02") != newDateTime.Format("2006-01-02")
+	dateChanged := currentDive.DateTime.Time.Format("2006-01-02") != newDateTime.Format("2006-01-02")
 	
 	log.Printf("UpdateDive: Location changed: %t (current: %f,%f vs new: %f,%f)", 
 		locationChanged, currentDive.Latitude, currentDive.Longitude, diveReq.Lat, diveReq.Lng)
 	log.Printf("UpdateDive: Date changed: %t (current: %s vs new: %s)", 
-		dateChanged, currentDive.DateTime.Format("2006-01-02"), newDateTime.Format("2006-01-02"))
+		dateChanged, currentDive.DateTime.Time.Format("2006-01-02"), newDateTime.Format("2006-01-02"))
 	
 	var diveSite *models.DiveSite
 	if locationChanged || dateChanged {

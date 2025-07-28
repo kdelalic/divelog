@@ -70,4 +70,8 @@ export const unitLabels = {
     bar: 'bar',
     psi: 'psi',
   },
+  volume: {
+    liters: 'L',
+    cubic_feet: 'ft³',
+  },
 } as const;

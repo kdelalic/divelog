@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS user_settings (
     distance_unit VARCHAR(15) NOT NULL DEFAULT 'kilometers' CHECK (distance_unit IN ('kilometers', 'miles')),
     weight_unit VARCHAR(15) NOT NULL DEFAULT 'kilograms' CHECK (weight_unit IN ('kilograms', 'pounds')),
     pressure_unit VARCHAR(10) NOT NULL DEFAULT 'bar' CHECK (pressure_unit IN ('bar', 'psi')),
+    volume_unit VARCHAR(15) NOT NULL DEFAULT 'liters' CHECK (volume_unit IN ('liters', 'cubic_feet')),
     
     -- Display preferences
     date_format VARCHAR(10) NOT NULL DEFAULT 'ISO' CHECK (date_format IN ('ISO', 'US', 'EU')),
@@ -55,7 +56,7 @@ CREATE TABLE IF NOT EXISTS dives (
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
     dive_site_id INTEGER REFERENCES dive_sites(id) ON DELETE SET NULL,
     
-    dive_datetime TIMESTAMP WITH TIME ZONE NOT NULL,
+    dive_datetime TIMESTAMP NOT NULL,
     max_depth DECIMAL(5, 2) NOT NULL, -- stored in meters
     duration INTEGER NOT NULL, -- stored in minutes
     buddy VARCHAR(255),

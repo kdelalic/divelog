@@ -15,6 +15,7 @@ type UserSettings struct {
 	DistanceUnit    string `json:"distance_unit" db:"distance_unit"`
 	WeightUnit      string `json:"weight_unit" db:"weight_unit"`
 	PressureUnit    string `json:"pressure_unit" db:"pressure_unit"`
+	VolumeUnit      string `json:"volume_unit" db:"volume_unit"`
 
 	// Display preferences
 	DateFormat        string `json:"date_format" db:"date_format"`
@@ -39,6 +40,7 @@ type SettingsRequest struct {
 		Distance    string `json:"distance"`
 		Weight      string `json:"weight"`
 		Pressure    string `json:"pressure"`
+		Volume      string `json:"volume"`
 	} `json:"units"`
 	Preferences struct {
 		DateFormat        string `json:"dateFormat"`
@@ -62,6 +64,7 @@ func (sr *SettingsRequest) ToUserSettings(userID int) *UserSettings {
 		DistanceUnit:        sr.Units.Distance,
 		WeightUnit:          sr.Units.Weight,
 		PressureUnit:        sr.Units.Pressure,
+		VolumeUnit:          sr.Units.Volume,
 		DateFormat:          sr.Preferences.DateFormat,
 		TimeFormat:          sr.Preferences.TimeFormat,
 		DefaultVisibility:   sr.Preferences.DefaultVisibility,
@@ -81,6 +84,7 @@ func (us *UserSettings) ToFrontendFormat() map[string]interface{} {
 			"distance":    us.DistanceUnit,
 			"weight":      us.WeightUnit,
 			"pressure":    us.PressureUnit,
+			"volume":      us.VolumeUnit,
 		},
 		"preferences": map[string]string{
 			"dateFormat":        us.DateFormat,
