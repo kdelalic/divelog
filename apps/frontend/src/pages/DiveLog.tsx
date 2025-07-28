@@ -12,7 +12,7 @@ import DashboardStats from "@/components/DashboardStats";
 import DiveChart from "@/components/DiveChart";
 import RecentDives from "@/components/RecentDives";
 import DiveDetailModal from "@/components/DiveDetailModal";
-import UDDFImport from "@/components/UDDFImport";
+import DiveImport from "@/components/DiveImport";
 import { calculateDiveStatistics } from "@/lib/diveStats";
 import type { Dive } from "@/lib/dives";
 import useSettingsStore from "@/store/settingsStore";
@@ -66,7 +66,7 @@ const DiveLog = () => {
                 onClick={() => setShowImport(true)}
                 className="bg-white border-slate-300 text-slate-700 hover:bg-slate-50 px-8 py-4 text-base font-medium shadow-sm mr-6"
               >
-                Import UDDF
+                Import
               </Button>
               <Link to="/add">
                 <Button size="lg" className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 px-8 py-4 text-base font-medium shadow-lg hover:shadow-xl transition-all">
@@ -170,13 +170,12 @@ const DiveLog = () => {
         onClose={handleCloseModal}
       />
 
-      {/* UDDF Import Dialog */}
       <Dialog open={showImport} onOpenChange={setShowImport}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Import Dive Data</DialogTitle>
           </DialogHeader>
-          <UDDFImport onImport={handleImportDives} />
+          <DiveImport onImport={handleImportDives} />
         </DialogContent>
       </Dialog>
     </div>

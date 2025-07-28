@@ -61,7 +61,7 @@ go run main.go      # Start Go API server on :8080
 - `src/components/Layout.tsx` - Main layout wrapper with navigation
 - `src/components/DashboardStats.tsx` - Statistics cards with unit-aware formatting
 - `src/components/DiveDetailModal.tsx` - Detailed dive view modal with tabs
-- `src/components/UDDFImport.tsx` - File import component with drag/drop
+- `src/components/DiveImport.tsx` - File import component with drag/drop
 - `src/components/DiveChart.tsx` - Chart.js visualizations
 
 ### Routing and Navigation

@@ -11,20 +11,22 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { parseUDDFFile, validateUDDFFile, getUDDFImportSummary, UDDFParseError } from '@/lib/uddfParser';
+import { parseSubsurfaceCSV, SubsurfaceCSVParseError } from '@/lib/subsurfaceCsvParser';
 import type { Dive } from '@/lib/dives';
 import useSettingsStore from '@/store/settingsStore';
 import { formatDepth } from '@/lib/unitConversions';
 import { formatDiveDateTime } from '@/lib/dateHelpers';
 
-interface UDDFImportProps {
+interface DiveImportProps {
   onImport: (dives: Dive[]) => void;
 }
 
-const UDDFImport = ({ onImport }: UDDFImportProps) => {
+const DiveImport = ({ onImport }: DiveImportProps) => {
   const [isUploading, setIsUploading] = useState(false);
   const [previewDives, setPreviewDives] = useState<Dive[]>([]);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fileType, setFileType] = useState<'uddf' | 'csv' | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { settings } = useSettingsStore();
@@ -32,24 +34,39 @@ const UDDFImport = ({ onImport }: UDDFImportProps) => {
   const handleFileSelect = async (file: File) => {
     setError(null);
     setIsUploading(true);
+    setFileType(null);
 
     try {
-      // Validate file
-      if (!validateUDDFFile(file)) {
-        throw new Error('Invalid UDDF file. Please ensure it has a .uddf extension and is not empty.');
+      let parsedDives: Dive[] = [];
+      const fileName = file.name.toLowerCase();
+      
+      if (fileName.endsWith('.uddf')) {
+        // Handle UDDF file
+        if (!validateUDDFFile(file)) {
+          throw new Error('Invalid UDDF file. Please ensure it has a .uddf extension and is not empty.');
+        }
+        parsedDives = await parseUDDFFile(file);
+        setFileType('uddf');
+      } else if (fileName.endsWith('.csv')) {
+        // Handle CSV file
+        if (file.size === 0) {
+          throw new Error('CSV file is empty.');
+        }
+        const text = await file.text();
+        parsedDives = parseSubsurfaceCSV(text);
+        setFileType('csv');
+      } else {
+        throw new Error('Unsupported file format. Please upload a .uddf or .csv file.');
       }
-
-      // Parse file
-      const parsedDives = await parseUDDFFile(file);
       
       if (parsedDives.length === 0) {
-        throw new Error('No valid dives found in the UDDF file.');
+        throw new Error(`No valid dives found in the ${fileType?.toUpperCase()} file.`);
       }
 
       setPreviewDives(parsedDives);
       setIsPreviewOpen(true);
     } catch (err) {
-      if (err instanceof UDDFParseError) {
+      if (err instanceof UDDFParseError || err instanceof SubsurfaceCSVParseError) {
         setError(err.message);
       } else {
         setError(err instanceof Error ? err.message : 'Unknown error occurred');
@@ -103,10 +120,10 @@ const UDDFImport = ({ onImport }: UDDFImportProps) => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Upload className="h-5 w-5" />
-            Import UDDF File
+            Import Dive Data
           </CardTitle>
           <CardDescription>
-            Upload a UDDF (.uddf) file from your dive computer or diving software to import your dives
+            Upload dive data from your dive computer, Subsurface, or other diving software
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -123,7 +140,7 @@ const UDDFImport = ({ onImport }: UDDFImportProps) => {
             <input
               ref={fileInputRef}
               type="file"
-              accept=".uddf"
+              accept=".uddf,.csv"
               onChange={handleFileInputChange}
               className="hidden"
             />
@@ -132,10 +149,10 @@ const UDDFImport = ({ onImport }: UDDFImportProps) => {
             
             <div className="space-y-2">
               <p className="text-lg font-medium">
-                {dragActive ? 'Drop your UDDF file here' : 'Drop your UDDF file here or click to browse'}
+                {dragActive ? 'Drop your file here' : 'Drop your file here or click to browse'}
               </p>
               <p className="text-sm text-muted-foreground">
-                Supports UDDF files from Subsurface, dive computers, and other diving software
+                Supports UDDF files (.uddf) and Subsurface CSV exports (.csv)
               </p>
             </div>
             
@@ -159,8 +176,8 @@ const UDDFImport = ({ onImport }: UDDFImportProps) => {
           )}
 
           <div className="mt-4 text-xs text-muted-foreground">
-            <p>UDDF (Universal Dive Data Format) is the standard format for dive data exchange.</p>
-            <p>Compatible with Subsurface, dive computers from major manufacturers, and most diving software.</p>
+            <p><strong>UDDF:</strong> Universal Dive Data Format from dive computers and diving software</p>
+            <p><strong>CSV:</strong> Subsurface CSV export format with dive logs and equipment data</p>
           </div>
         </CardContent>
       </Card>
@@ -174,7 +191,7 @@ const UDDFImport = ({ onImport }: UDDFImportProps) => {
               Import Preview
             </DialogTitle>
             <DialogDescription>
-              {getUDDFImportSummary(previewDives)}
+              {fileType === 'csv' ? `Found ${previewDives.length} dive${previewDives.length === 1 ? '' : 's'} in Subsurface CSV file` : getUDDFImportSummary(previewDives)}
             </DialogDescription>
           </DialogHeader>
 
@@ -216,4 +233,4 @@ const UDDFImport = ({ onImport }: UDDFImportProps) => {
   );
 };
 
-export default UDDFImport;
+export default DiveImport;
