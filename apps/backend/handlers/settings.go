@@ -3,7 +3,7 @@ package handlers
 import (
 	"divelog-backend/models"
 	"divelog-backend/repository"
-	"log"
+	"divelog-backend/utils"
 	"net/http"
 	"strconv"
 
@@ -29,9 +29,9 @@ func (h *SettingsHandler) GetSettings(c *gin.Context) {
 		return
 	}
 
-	settings, err := h.settingsRepo.GetOrCreateDefault(userID)
+	settings, err := h.settingsRepo.GetOrCreateDefault(c.Request.Context(), userID)
 	if err != nil {
-		log.Printf("Error getting/creating settings for user %d: %v", userID, err)
+		utils.LogError(c.Request.Context(), "Error getting/creating settings for user", err, utils.UserID(userID))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve settings"})
 		return
 	}
@@ -56,17 +56,17 @@ func (h *SettingsHandler) UpdateSettings(c *gin.Context) {
 
 	settings := req.ToUserSettings(userID)
 
-	err = h.settingsRepo.Update(settings)
+	err = h.settingsRepo.Update(c.Request.Context(), settings)
 	if err != nil {
-		log.Printf("Error updating settings for user %d: %v", userID, err)
+		utils.LogError(c.Request.Context(), "Error updating settings for user", err, utils.UserID(userID))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update settings"})
 		return
 	}
 
 	// Retrieve updated settings to return
-	updatedSettings, err := h.settingsRepo.GetByUserID(userID)
+	updatedSettings, err := h.settingsRepo.GetByUserID(c.Request.Context(), userID)
 	if err != nil {
-		log.Printf("Error retrieving updated settings for user %d: %v", userID, err)
+		utils.LogError(c.Request.Context(), "Error retrieving updated settings for user", err, utils.UserID(userID))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve updated settings"})
 		return
 	}

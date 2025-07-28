@@ -1,10 +1,10 @@
 package repository
 
 import (
+	"context"
 	"database/sql"
 	"divelog-backend/models"
 	"divelog-backend/utils"
-	"log"
 	"math"
 )
 
@@ -17,7 +17,7 @@ func NewDiveSiteRepository(db *sql.DB) *DiveSiteRepository {
 }
 
 // FindOrCreateDiveSite finds an existing dive site or creates a new one
-func (r *DiveSiteRepository) FindOrCreateDiveSite(name string, latitude, longitude float64) (*models.DiveSite, error) {
+func (r *DiveSiteRepository) FindOrCreateDiveSite(ctx context.Context, name string, latitude, longitude float64) (*models.DiveSite, error) {
 	// Try to find an existing dive site with the same name and close coordinates
 	var existingSite models.DiveSite
 	query := `SELECT id, name, latitude, longitude, description, created_at, updated_at 
@@ -40,17 +40,17 @@ func (r *DiveSiteRepository) FindOrCreateDiveSite(name string, latitude, longitu
 	}
 
 	// No matching site found, create a new one
-	return r.createDiveSite(name, latitude, longitude)
+	return r.createDiveSite(ctx, name, latitude, longitude)
 }
 
 // GetAll returns all dive sites
-func (r *DiveSiteRepository) GetAll() ([]models.DiveSite, error) {
+func (r *DiveSiteRepository) GetAll(ctx context.Context) ([]models.DiveSite, error) {
 	query := `SELECT id, name, latitude, longitude, description, created_at, updated_at 
 			  FROM dive_sites ORDER BY name`
 
 	rows, err := r.db.Query(query)
 	if err != nil {
-		log.Printf("Error querying dive sites: %v", err)
+		utils.LogError(ctx, "Error querying dive sites", err)
 		return nil, utils.ErrDatabaseError
 	}
 	defer rows.Close()
@@ -59,7 +59,7 @@ func (r *DiveSiteRepository) GetAll() ([]models.DiveSite, error) {
 	for rows.Next() {
 		site, err := r.scanDiveSite(rows)
 		if err != nil {
-			log.Printf("Error scanning dive site: %v", err)
+			utils.LogError(ctx, "Error scanning dive site", err)
 			continue
 		}
 		sites = append(sites, *site)
@@ -69,7 +69,7 @@ func (r *DiveSiteRepository) GetAll() ([]models.DiveSite, error) {
 }
 
 // Search searches for dive sites by name
-func (r *DiveSiteRepository) Search(query string) ([]models.DiveSite, error) {
+func (r *DiveSiteRepository) Search(ctx context.Context, query string) ([]models.DiveSite, error) {
 	searchQuery := `SELECT id, name, latitude, longitude, description, created_at, updated_at 
 					FROM dive_sites 
 					WHERE LOWER(name) LIKE LOWER($1) 
@@ -78,7 +78,7 @@ func (r *DiveSiteRepository) Search(query string) ([]models.DiveSite, error) {
 
 	rows, err := r.db.Query(searchQuery, "%"+query+"%")
 	if err != nil {
-		log.Printf("Error searching dive sites: %v", err)
+		utils.LogError(ctx, "Error searching dive sites", err)
 		return nil, utils.ErrDatabaseError
 	}
 	defer rows.Close()
@@ -87,7 +87,7 @@ func (r *DiveSiteRepository) Search(query string) ([]models.DiveSite, error) {
 	for rows.Next() {
 		site, err := r.scanDiveSite(rows)
 		if err != nil {
-			log.Printf("Error scanning dive site: %v", err)
+			utils.LogError(ctx, "Error scanning dive site", err)
 			continue
 		}
 		sites = append(sites, *site)
@@ -97,7 +97,7 @@ func (r *DiveSiteRepository) Search(query string) ([]models.DiveSite, error) {
 }
 
 // GetByID returns a specific dive site
-func (r *DiveSiteRepository) GetByID(id int) (*models.DiveSite, error) {
+func (r *DiveSiteRepository) GetByID(ctx context.Context, id int) (*models.DiveSite, error) {
 	query := `SELECT id, name, latitude, longitude, description, created_at, updated_at 
 			  FROM dive_sites WHERE id = $1`
 
@@ -111,7 +111,7 @@ func (r *DiveSiteRepository) GetByID(id int) (*models.DiveSite, error) {
 		if err == sql.ErrNoRows {
 			return nil, utils.ErrDiveSiteNotFound
 		}
-		log.Printf("Error getting dive site: %v", err)
+		utils.LogError(ctx, "Error getting dive site", err)
 		return nil, utils.ErrDatabaseError
 	}
 
@@ -119,9 +119,9 @@ func (r *DiveSiteRepository) GetByID(id int) (*models.DiveSite, error) {
 }
 
 // Create creates a new dive site
-func (r *DiveSiteRepository) Create(siteReq *models.DiveSiteRequest) (*models.DiveSite, error) {
+func (r *DiveSiteRepository) Create(ctx context.Context, siteReq *models.DiveSiteRequest) (*models.DiveSite, error) {
 	// Check if a dive site with the same name and close coordinates already exists
-	existingSite, err := r.FindOrCreateDiveSite(siteReq.Name, siteReq.Latitude, siteReq.Longitude)
+	existingSite, err := r.FindOrCreateDiveSite(ctx, siteReq.Name, siteReq.Latitude, siteReq.Longitude)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +137,7 @@ func (r *DiveSiteRepository) Create(siteReq *models.DiveSiteRequest) (*models.Di
 }
 
 // Update updates an existing dive site
-func (r *DiveSiteRepository) Update(id int, siteReq *models.DiveSiteRequest) (*models.DiveSite, error) {
+func (r *DiveSiteRepository) Update(ctx context.Context, id int, siteReq *models.DiveSiteRequest) (*models.DiveSite, error) {
 	// Check if another dive site with the same name and close coordinates exists (excluding current one)
 	checkQuery := `SELECT id FROM dive_sites 
 				   WHERE LOWER(name) = LOWER($1) AND id != $2`
@@ -172,7 +172,7 @@ func (r *DiveSiteRepository) Update(id int, siteReq *models.DiveSiteRequest) (*m
 		if err == sql.ErrNoRows {
 			return nil, utils.ErrDiveSiteNotFound
 		}
-		log.Printf("Error updating dive site: %v", err)
+		utils.LogError(ctx, "Error updating dive site", err)
 		return nil, utils.ErrDatabaseError
 	}
 
@@ -180,12 +180,12 @@ func (r *DiveSiteRepository) Update(id int, siteReq *models.DiveSiteRequest) (*m
 }
 
 // Delete deletes a dive site (only if no dives reference it)
-func (r *DiveSiteRepository) Delete(id int) error {
+func (r *DiveSiteRepository) Delete(ctx context.Context, id int) error {
 	// Check if any dives reference this dive site
 	var diveCount int
 	err := r.db.QueryRow(`SELECT COUNT(*) FROM dives WHERE dive_site_id = $1`, id).Scan(&diveCount)
 	if err != nil {
-		log.Printf("Error checking dive site usage: %v", err)
+		utils.LogError(ctx, "Error checking dive site usage", err)
 		return utils.ErrDatabaseError
 	}
 
@@ -197,13 +197,13 @@ func (r *DiveSiteRepository) Delete(id int) error {
 	deleteQuery := `DELETE FROM dive_sites WHERE id = $1`
 	result, err := r.db.Exec(deleteQuery, id)
 	if err != nil {
-		log.Printf("Error deleting dive site: %v", err)
+		utils.LogError(ctx, "Error deleting dive site", err)
 		return utils.ErrDatabaseError
 	}
 
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		log.Printf("Error getting rows affected: %v", err)
+		utils.LogError(ctx, "Error getting rows affected", err)
 		return utils.ErrDatabaseError
 	}
 
@@ -215,7 +215,7 @@ func (r *DiveSiteRepository) Delete(id int) error {
 }
 
 // GetDiveSiteByDiveID gets the dive site ID for a specific dive
-func (r *DiveSiteRepository) GetDiveSiteByDiveID(diveID int) (*int, error) {
+func (r *DiveSiteRepository) GetDiveSiteByDiveID(ctx context.Context, diveID int) (*int, error) {
 	var diveSiteID *int
 	err := r.db.QueryRow(`SELECT dive_site_id FROM dives WHERE id = $1`, diveID).Scan(&diveSiteID)
 	if err != nil {
@@ -228,7 +228,7 @@ func (r *DiveSiteRepository) GetDiveSiteByDiveID(diveID int) (*int, error) {
 }
 
 // createDiveSite creates a new dive site
-func (r *DiveSiteRepository) createDiveSite(name string, latitude, longitude float64) (*models.DiveSite, error) {
+func (r *DiveSiteRepository) createDiveSite(ctx context.Context, name string, latitude, longitude float64) (*models.DiveSite, error) {
 	insertQuery := `INSERT INTO dive_sites (name, latitude, longitude, created_at, updated_at)
 					VALUES ($1, $2, $3, NOW(), NOW())
 					RETURNING id, name, latitude, longitude, description, created_at, updated_at`

@@ -1,8 +1,8 @@
 package utils
 
 import (
+	"context"
 	"encoding/json"
-	"log"
 )
 
 // MarshalJSON safely marshals data to JSON, returning nil for empty data
@@ -21,7 +21,8 @@ func UnmarshalJSON(data []byte, target interface{}) error {
 	}
 
 	if err := json.Unmarshal(data, target); err != nil {
-		log.Printf("Error unmarshaling JSON: %v", err)
+		// Note: We can't access request context here, so using background context
+		LogError(context.Background(), "Error unmarshaling JSON", err)
 		return err
 	}
 

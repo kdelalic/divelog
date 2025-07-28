@@ -1,10 +1,10 @@
 package repository
 
 import (
+	"context"
 	"database/sql"
 	"divelog-backend/models"
 	"divelog-backend/utils"
-	"log"
 	"time"
 )
 
@@ -17,7 +17,7 @@ func NewSettingsRepository(db *sql.DB) *SettingsRepository {
 }
 
 // GetByUserID retrieves settings for a user from the database
-func (r *SettingsRepository) GetByUserID(userID int) (*models.UserSettings, error) {
+func (r *SettingsRepository) GetByUserID(ctx context.Context, userID int) (*models.UserSettings, error) {
 	query := `
 		SELECT id, user_id, unit_preference, depth_unit, temperature_unit, distance_unit, weight_unit, pressure_unit, volume_unit,
 		       date_format, time_format, default_visibility, show_buddy_reminders, auto_calculate_nitrox,
@@ -41,7 +41,7 @@ func (r *SettingsRepository) GetByUserID(userID int) (*models.UserSettings, erro
 		if err == sql.ErrNoRows {
 			return nil, utils.ErrDatabaseError // Will be handled as "not found"
 		}
-		log.Printf("Error getting user settings: %v", err)
+		utils.LogError(ctx, "Error getting user settings", err, utils.UserID(userID))
 		return nil, utils.ErrDatabaseError
 	}
 
@@ -49,7 +49,7 @@ func (r *SettingsRepository) GetByUserID(userID int) (*models.UserSettings, erro
 }
 
 // CreateDefault creates default settings for a new user
-func (r *SettingsRepository) CreateDefault(userID int) (*models.UserSettings, error) {
+func (r *SettingsRepository) CreateDefault(ctx context.Context, userID int) (*models.UserSettings, error) {
 	query := `
 		INSERT INTO user_settings (user_id, unit_preference, depth_unit, temperature_unit, distance_unit, weight_unit, pressure_unit, volume_unit,
 		                          date_format, time_format, default_visibility, show_buddy_reminders, auto_calculate_nitrox,
@@ -80,7 +80,7 @@ func (r *SettingsRepository) CreateDefault(userID int) (*models.UserSettings, er
 	err := row.Scan(&settings.ID, &settings.CreatedAt, &settings.UpdatedAt)
 
 	if err != nil {
-		log.Printf("Error creating default settings: %v", err)
+		utils.LogError(ctx, "Error creating default settings", err, utils.UserID(userID))
 		return nil, utils.ErrDatabaseError
 	}
 
@@ -88,7 +88,7 @@ func (r *SettingsRepository) CreateDefault(userID int) (*models.UserSettings, er
 }
 
 // Update updates settings in the database
-func (r *SettingsRepository) Update(settings *models.UserSettings) error {
+func (r *SettingsRepository) Update(ctx context.Context, settings *models.UserSettings) error {
 	query := `
 		UPDATE user_settings SET
 			unit_preference = $2, depth_unit = $3, temperature_unit = $4, distance_unit = $5, weight_unit = $6, pressure_unit = $7, volume_unit = $8,
@@ -105,7 +105,7 @@ func (r *SettingsRepository) Update(settings *models.UserSettings) error {
 	)
 
 	if err != nil {
-		log.Printf("Error updating settings: %v", err)
+		utils.LogError(ctx, "Error updating settings", err, utils.UserID(settings.UserID))
 		return utils.ErrDatabaseError
 	}
 
@@ -113,11 +113,11 @@ func (r *SettingsRepository) Update(settings *models.UserSettings) error {
 }
 
 // GetOrCreateDefault gets settings for a user, creating defaults if they don't exist
-func (r *SettingsRepository) GetOrCreateDefault(userID int) (*models.UserSettings, error) {
-	settings, err := r.GetByUserID(userID)
+func (r *SettingsRepository) GetOrCreateDefault(ctx context.Context, userID int) (*models.UserSettings, error) {
+	settings, err := r.GetByUserID(ctx, userID)
 	if err != nil {
 		// If no settings found, create defaults
-		return r.CreateDefault(userID)
+		return r.CreateDefault(ctx, userID)
 	}
 	return settings, nil
 }

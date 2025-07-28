@@ -4,7 +4,7 @@ import (
 	"divelog-backend/models"
 	"divelog-backend/repository"
 	"divelog-backend/utils"
-	"log"
+	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -22,9 +22,9 @@ func NewDiveSiteHandler(diveSiteRepo *repository.DiveSiteRepository) *DiveSiteHa
 
 // GetDiveSites returns all dive sites
 func (h *DiveSiteHandler) GetDiveSites(c *gin.Context) {
-	sites, err := h.diveSiteRepo.GetAll()
+	sites, err := h.diveSiteRepo.GetAll(c.Request.Context())
 	if err != nil {
-		log.Printf("Error getting dive sites: %v", err)
+		utils.LogError(c.Request.Context(), "Error getting dive sites", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve dive sites"})
 		return
 	}
@@ -40,9 +40,9 @@ func (h *DiveSiteHandler) SearchDiveSites(c *gin.Context) {
 		return
 	}
 
-	sites, err := h.diveSiteRepo.Search(query)
+	sites, err := h.diveSiteRepo.Search(c.Request.Context(), query)
 	if err != nil {
-		log.Printf("Error searching dive sites: %v", err)
+		utils.LogError(c.Request.Context(), "Error searching dive sites", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to search dive sites"})
 		return
 	}
@@ -57,13 +57,13 @@ func (h *DiveSiteHandler) GetDiveSite(c *gin.Context) {
 		return
 	}
 
-	site, err := h.diveSiteRepo.GetByID(id)
+	site, err := h.diveSiteRepo.GetByID(c.Request.Context(), id)
 	if err != nil {
 		if err == utils.ErrDiveSiteNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Dive site not found"})
 			return
 		}
-		log.Printf("Error getting dive site: %v", err)
+		utils.LogError(c.Request.Context(), "Error getting dive site", err, slog.Int("dive_site_id", id))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get dive site"})
 		return
 	}
@@ -79,7 +79,7 @@ func (h *DiveSiteHandler) CreateDiveSite(c *gin.Context) {
 		return
 	}
 
-	site, err := h.diveSiteRepo.Create(&siteReq)
+	site, err := h.diveSiteRepo.Create(c.Request.Context(), &siteReq)
 	if err != nil {
 		if err == utils.ErrDuplicateDive { // Reusing error for similar concept
 			c.JSON(http.StatusConflict, gin.H{
@@ -88,7 +88,7 @@ func (h *DiveSiteHandler) CreateDiveSite(c *gin.Context) {
 			})
 			return
 		}
-		log.Printf("Error creating dive site: %v", err)
+		utils.LogError(c.Request.Context(), "Error creating dive site", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create dive site"})
 		return
 	}
@@ -109,7 +109,7 @@ func (h *DiveSiteHandler) UpdateDiveSite(c *gin.Context) {
 		return
 	}
 
-	site, err := h.diveSiteRepo.Update(id, &siteReq)
+	site, err := h.diveSiteRepo.Update(c.Request.Context(), id, &siteReq)
 	if err != nil {
 		if err == utils.ErrDiveSiteNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Dive site not found"})
@@ -121,7 +121,7 @@ func (h *DiveSiteHandler) UpdateDiveSite(c *gin.Context) {
 			})
 			return
 		}
-		log.Printf("Error updating dive site: %v", err)
+		utils.LogError(c.Request.Context(), "Error updating dive site", err, slog.Int("dive_site_id", id))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update dive site"})
 		return
 	}
@@ -136,7 +136,7 @@ func (h *DiveSiteHandler) DeleteDiveSite(c *gin.Context) {
 		return
 	}
 
-	err = h.diveSiteRepo.Delete(id)
+	err = h.diveSiteRepo.Delete(c.Request.Context(), id)
 	if err != nil {
 		if err == utils.ErrDiveSiteNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Dive site not found"})
@@ -148,7 +148,7 @@ func (h *DiveSiteHandler) DeleteDiveSite(c *gin.Context) {
 			})
 			return
 		}
-		log.Printf("Error deleting dive site: %v", err)
+		utils.LogError(c.Request.Context(), "Error deleting dive site", err, slog.Int("dive_site_id", id))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete dive site"})
 		return
 	}

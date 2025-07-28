@@ -1,10 +1,11 @@
 package repository
 
 import (
+	"context"
 	"database/sql"
 	"divelog-backend/models"
 	"divelog-backend/utils"
-	"log"
+	"log/slog"
 	"time"
 )
 
@@ -17,7 +18,7 @@ func NewDiveRepository(db *sql.DB) *DiveRepository {
 }
 
 // GetDivesByUserID retrieves all dives for a user
-func (r *DiveRepository) GetDivesByUserID(userID int) ([]models.Dive, error) {
+func (r *DiveRepository) GetDivesByUserID(ctx context.Context, userID int) ([]models.Dive, error) {
 	query := `
 		SELECT 
 			d.id, d.user_id, d.dive_site_id, d.dive_datetime, d.max_depth, d.duration, 
@@ -33,7 +34,7 @@ func (r *DiveRepository) GetDivesByUserID(userID int) ([]models.Dive, error) {
 
 	rows, err := r.db.Query(query, userID)
 	if err != nil {
-		log.Printf("Error querying dives: %v", err)
+		utils.LogError(ctx, "Error querying dives", err, utils.UserID(userID))
 		return nil, utils.ErrDatabaseError
 	}
 	defer rows.Close()
@@ -42,14 +43,14 @@ func (r *DiveRepository) GetDivesByUserID(userID int) ([]models.Dive, error) {
 	for rows.Next() {
 		dive, err := r.scanDive(rows)
 		if err != nil {
-			log.Printf("Error scanning dive: %v", err)
+			utils.LogError(ctx, "Error scanning dive", err, utils.UserID(userID))
 			continue
 		}
 		dives = append(dives, *dive)
 	}
 
 	if err = rows.Err(); err != nil {
-		log.Printf("Error iterating over dives: %v", err)
+		utils.LogError(ctx, "Error iterating over dives", err, utils.UserID(userID))
 		return nil, utils.ErrDatabaseError
 	}
 
@@ -57,18 +58,18 @@ func (r *DiveRepository) GetDivesByUserID(userID int) ([]models.Dive, error) {
 }
 
 // CreateDive creates a new dive
-func (r *DiveRepository) CreateDive(dive *models.Dive) error {
+func (r *DiveRepository) CreateDive(ctx context.Context, dive *models.Dive) error {
 	// Serialize samples to JSON
 	samplesJSON, err := utils.MarshalJSON(dive.Samples)
 	if err != nil {
-		log.Printf("Error marshaling samples: %v", err)
+		utils.LogError(ctx, "Error marshaling samples", err, utils.UserID(dive.UserID))
 		return utils.ErrProcessingFailed
 	}
 
 	// Serialize equipment to JSON
 	equipmentJSON, err := utils.MarshalJSON(dive.Equipment)
 	if err != nil {
-		log.Printf("Error marshaling equipment: %v", err)
+		utils.LogError(ctx, "Error marshaling equipment", err, utils.UserID(dive.UserID))
 		return utils.ErrProcessingFailed
 	}
 
@@ -88,7 +89,7 @@ func (r *DiveRepository) CreateDive(dive *models.Dive) error {
 	).Scan(&dive.ID, &dive.CreatedAt, &dive.UpdatedAt)
 
 	if err != nil {
-		log.Printf("Error creating dive: %v", err)
+		utils.LogError(ctx, "Error creating dive", err, utils.UserID(dive.UserID))
 		return utils.ErrDatabaseError
 	}
 
@@ -96,7 +97,7 @@ func (r *DiveRepository) CreateDive(dive *models.Dive) error {
 }
 
 // CreateMultipleDives creates multiple dives in a transaction
-func (r *DiveRepository) CreateMultipleDives(dives []*models.Dive) ([]models.Dive, []map[string]interface{}, error) {
+func (r *DiveRepository) CreateMultipleDives(ctx context.Context, dives []*models.Dive) ([]models.Dive, []map[string]interface{}, error) {
 	tx, err := r.db.Begin()
 	if err != nil {
 		return nil, nil, utils.ErrDatabaseError
@@ -111,13 +112,13 @@ func (r *DiveRepository) CreateMultipleDives(dives []*models.Dive) ([]models.Div
 		// Serialize samples and equipment
 		samplesJSON, err := utils.MarshalJSON(dive.Samples)
 		if err != nil {
-			log.Printf("Error marshaling samples in batch: %v", err)
+			utils.LogError(ctx, "Error marshaling samples in batch", err, slog.Int("dive_count", len(dives)))
 			return nil, nil, utils.ErrProcessingFailed
 		}
 
 		equipmentJSON, err := utils.MarshalJSON(dive.Equipment)
 		if err != nil {
-			log.Printf("Error marshaling equipment in batch: %v", err)
+			utils.LogError(ctx, "Error marshaling equipment in batch", err, slog.Int("dive_count", len(dives)))
 			return nil, nil, utils.ErrProcessingFailed
 		}
 
@@ -146,7 +147,7 @@ func (r *DiveRepository) CreateMultipleDives(dives []*models.Dive) ([]models.Div
 		).Scan(&dive.ID, &dive.CreatedAt, &dive.UpdatedAt)
 
 		if err != nil {
-			log.Printf("Error creating dive in batch: %v", err)
+			utils.LogError(ctx, "Error creating dive in batch", err, slog.Int("dive_count", len(dives)))
 			return nil, nil, utils.ErrDatabaseError
 		}
 
@@ -154,7 +155,7 @@ func (r *DiveRepository) CreateMultipleDives(dives []*models.Dive) ([]models.Div
 	}
 
 	if err = tx.Commit(); err != nil {
-		log.Printf("Error committing dive batch: %v", err)
+		utils.LogError(ctx, "Error committing dive batch", err, slog.Int("dive_count", len(dives)))
 		return nil, nil, utils.ErrDatabaseError
 	}
 
@@ -162,7 +163,7 @@ func (r *DiveRepository) CreateMultipleDives(dives []*models.Dive) ([]models.Div
 }
 
 // UpdateDive updates an existing dive
-func (r *DiveRepository) UpdateDive(diveID, userID int, dive *models.Dive) error {
+func (r *DiveRepository) UpdateDive(ctx context.Context, diveID, userID int, dive *models.Dive) error {
 	// Serialize samples and equipment
 	samplesJSON, err := utils.MarshalJSON(dive.Samples)
 	if err != nil {
@@ -212,7 +213,7 @@ func (r *DiveRepository) UpdateDive(diveID, userID int, dive *models.Dive) error
 		if err == sql.ErrNoRows {
 			return utils.ErrDiveNotFound
 		}
-		log.Printf("Error updating dive: %v", err)
+		utils.LogError(ctx, "Error updating dive", err, utils.UserID(userID), utils.DiveID(diveID))
 		return utils.ErrDatabaseError
 	}
 
@@ -228,17 +229,17 @@ func (r *DiveRepository) UpdateDive(diveID, userID int, dive *models.Dive) error
 }
 
 // DeleteDive deletes a dive
-func (r *DiveRepository) DeleteDive(diveID, userID int) error {
+func (r *DiveRepository) DeleteDive(ctx context.Context, diveID, userID int) error {
 	query := `DELETE FROM dives WHERE id = $1 AND user_id = $2`
 	result, err := r.db.Exec(query, diveID, userID)
 	if err != nil {
-		log.Printf("Error deleting dive: %v", err)
+		utils.LogError(ctx, "Error deleting dive", err, utils.UserID(userID), utils.DiveID(diveID))
 		return utils.ErrDatabaseError
 	}
 
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		log.Printf("Error getting rows affected: %v", err)
+		utils.LogError(ctx, "Error getting rows affected", err, utils.UserID(userID), utils.DiveID(diveID))
 		return utils.ErrDatabaseError
 	}
 
@@ -250,7 +251,7 @@ func (r *DiveRepository) DeleteDive(diveID, userID int) error {
 }
 
 // GetCurrentDive gets current dive info for comparison
-func (r *DiveRepository) GetCurrentDive(diveID, userID int) (*models.Dive, error) {
+func (r *DiveRepository) GetCurrentDive(ctx context.Context, diveID, userID int) (*models.Dive, error) {
 	query := `SELECT dive_datetime, latitude, longitude, location FROM dives WHERE id = $1 AND user_id = $2`
 
 	var dive models.Dive
@@ -269,7 +270,7 @@ func (r *DiveRepository) GetCurrentDive(diveID, userID int) (*models.Dive, error
 }
 
 // CheckDuplicateDive checks if a dive already exists for the same user, date, and dive site
-func (r *DiveRepository) CheckDuplicateDive(userID int, diveSiteID int, diveDateTime string) (bool, error) {
+func (r *DiveRepository) CheckDuplicateDive(ctx context.Context, userID int, diveSiteID int, diveDateTime string) (bool, error) {
 	// Parse the datetime and extract just the date part for comparison
 	dt := utils.ParseDateTime(diveDateTime)
 	dateOnly := dt.Format("2006-01-02")
@@ -287,7 +288,7 @@ func (r *DiveRepository) CheckDuplicateDive(userID int, diveSiteID int, diveDate
 }
 
 // CheckDuplicateDiveForUpdateByLocation checks if a dive already exists at the same location and date, excluding the current dive
-func (r *DiveRepository) CheckDuplicateDiveForUpdateByLocation(userID int, latitude, longitude float64, diveDateTime string, excludeDiveID int) (bool, error) {
+func (r *DiveRepository) CheckDuplicateDiveForUpdateByLocation(ctx context.Context, userID int, latitude, longitude float64, diveDateTime string, excludeDiveID int) (bool, error) {
 	dt := utils.ParseDateTime(diveDateTime)
 	dateOnly := dt.Format("2006-01-02")
 

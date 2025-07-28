@@ -2,10 +2,11 @@ package middleware
 
 import (
 	"bytes"
+	"divelog-backend/utils"
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -71,26 +72,16 @@ func logRequest(c *gin.Context, requestBody []byte, responseBody []byte, duratio
 		fullPath = fmt.Sprintf("%s?%s", path, query)
 	}
 
-	// Log the request/response
-	log.Printf(`
-=== API Request ===
-Method: %s
-Path: %s
-Status: %d
-Duration: %v
-Client IP: %s
-User-Agent: %s
-Request Body: %s
-Response Body: %s
-==================`,
-		method,
-		fullPath,
-		statusCode,
-		duration,
-		clientIP,
-		userAgent,
-		requestBodyStr,
-		responseBodyStr,
+	// Log the request/response using structured logging
+	utils.LogInfo(c.Request.Context(), "API Request",
+		slog.String("method", method),
+		slog.String("path", fullPath),
+		slog.Int("status", statusCode),
+		slog.Duration("duration", duration),
+		slog.String("client_ip", clientIP),
+		slog.String("user_agent", userAgent),
+		slog.String("request_body", requestBodyStr),
+		slog.String("response_body", responseBodyStr),
 	)
 }
 

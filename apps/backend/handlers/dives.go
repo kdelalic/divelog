@@ -5,7 +5,6 @@ import (
 	"divelog-backend/models"
 	"divelog-backend/repository"
 	"divelog-backend/utils"
-	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -30,9 +29,9 @@ func (h *DiveHandler) GetDives(c *gin.Context) {
 		return
 	}
 
-	dives, err := h.diveRepo.GetDivesByUserID(userID)
+	dives, err := h.diveRepo.GetDivesByUserID(c.Request.Context(), userID)
 	if err != nil {
-		log.Printf("Error getting dives for user %d: %v", userID, err)
+		utils.LogError(c.Request.Context(), "Error getting dives for user", err, utils.UserID(userID))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve dives"})
 		return
 	}
@@ -57,18 +56,18 @@ func (h *DiveHandler) CreateDive(c *gin.Context) {
 	dive := diveReq.ToDive(userID)
 
 	// Find or create dive site
-	diveSite, err := h.diveSiteRepo.FindOrCreateDiveSite(diveReq.Location, diveReq.Lat, diveReq.Lng)
+	diveSite, err := h.diveSiteRepo.FindOrCreateDiveSite(c.Request.Context(), diveReq.Location, diveReq.Lat, diveReq.Lng)
 	if err != nil {
-		log.Printf("Error finding/creating dive site: %v", err)
+		utils.LogError(c.Request.Context(), "Error finding/creating dive site", err, utils.UserID(userID))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process dive site"})
 		return
 	}
 	dive.DiveSiteID = &diveSite.ID
 
 	// Check for duplicate dive
-	isDuplicate, err := h.diveRepo.CheckDuplicateDive(userID, diveSite.ID, diveReq.DateTime)
+	isDuplicate, err := h.diveRepo.CheckDuplicateDive(c.Request.Context(), userID, diveSite.ID, diveReq.DateTime)
 	if err != nil {
-		log.Printf("Error checking duplicate dive: %v", err)
+		utils.LogError(c.Request.Context(), "Error checking duplicate dive", err, utils.UserID(userID))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check for duplicate dive"})
 		return
 	}
@@ -85,8 +84,8 @@ func (h *DiveHandler) CreateDive(c *gin.Context) {
 	}
 
 	// Create the dive
-	if err := h.diveRepo.CreateDive(dive); err != nil {
-		log.Printf("Error creating dive: %v", err)
+	if err := h.diveRepo.CreateDive(c.Request.Context(), dive); err != nil {
+		utils.LogError(c.Request.Context(), "Error creating dive", err, utils.UserID(userID))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create dive"})
 		return
 	}
@@ -125,18 +124,18 @@ func (h *DiveHandler) CreateMultipleDives(c *gin.Context) {
 		dive := diveReq.ToDive(userID)
 
 		// Find or create dive site
-		diveSite, err := h.diveSiteRepo.FindOrCreateDiveSite(diveReq.Location, diveReq.Lat, diveReq.Lng)
+		diveSite, err := h.diveSiteRepo.FindOrCreateDiveSite(c.Request.Context(), diveReq.Location, diveReq.Lat, diveReq.Lng)
 		if err != nil {
-			log.Printf("Error finding/creating dive site in batch: %v", err)
+			utils.LogError(c.Request.Context(), "Error finding/creating dive site in batch", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process dive site"})
 			return
 		}
 		dive.DiveSiteID = &diveSite.ID
 
 		// Check for duplicate dive
-		isDuplicate, err := h.diveRepo.CheckDuplicateDive(userID, diveSite.ID, diveReq.DateTime)
+		isDuplicate, err := h.diveRepo.CheckDuplicateDive(c.Request.Context(), userID, diveSite.ID, diveReq.DateTime)
 		if err != nil {
-			log.Printf("Error checking duplicate dive in batch: %v", err)
+			utils.LogError(c.Request.Context(), "Error checking duplicate dive in batch", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check for duplicate dive"})
 			return
 		}
@@ -160,9 +159,9 @@ func (h *DiveHandler) CreateMultipleDives(c *gin.Context) {
 	}
 
 	// Create the dives
-	createdDives, _, err := h.diveRepo.CreateMultipleDives(dives)
+	createdDives, _, err := h.diveRepo.CreateMultipleDives(c.Request.Context(), dives)
 	if err != nil {
-		log.Printf("Error creating multiple dives: %v", err)
+		utils.LogError(c.Request.Context(), "Error creating multiple dives", err, utils.UserID(userID))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save dives"})
 		return
 	}
@@ -200,13 +199,13 @@ func (h *DiveHandler) UpdateDive(c *gin.Context) {
 	}
 
 	// Get current dive to compare changes
-	currentDive, err := h.diveRepo.GetCurrentDive(diveID, userID)
+	currentDive, err := h.diveRepo.GetCurrentDive(c.Request.Context(), diveID, userID)
 	if err != nil {
 		if err == utils.ErrDiveNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Dive not found"})
 			return
 		}
-		log.Printf("Error getting current dive: %v", err)
+		utils.LogError(c.Request.Context(), "Error getting current dive", err, utils.UserID(userID), utils.DiveID(diveID))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get current dive"})
 		return
 	}
@@ -219,17 +218,17 @@ func (h *DiveHandler) UpdateDive(c *gin.Context) {
 	var diveSite *models.DiveSite
 	if locationChanged || dateChanged {
 		// Find or create dive site for updated dive
-		diveSite, err = h.diveSiteRepo.FindOrCreateDiveSite(diveReq.Location, diveReq.Lat, diveReq.Lng)
+		diveSite, err = h.diveSiteRepo.FindOrCreateDiveSite(c.Request.Context(), diveReq.Location, diveReq.Lat, diveReq.Lng)
 		if err != nil {
-			log.Printf("Error finding/creating dive site for update: %v", err)
+			utils.LogError(c.Request.Context(), "Error finding/creating dive site for update", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process dive site"})
 			return
 		}
 
 		// Check for duplicate dive (excluding current dive)
-		isDuplicate, err := h.diveRepo.CheckDuplicateDiveForUpdateByLocation(userID, diveReq.Lat, diveReq.Lng, diveReq.DateTime, diveID)
+		isDuplicate, err := h.diveRepo.CheckDuplicateDiveForUpdateByLocation(c.Request.Context(), userID, diveReq.Lat, diveReq.Lng, diveReq.DateTime, diveID)
 		if err != nil {
-			log.Printf("Error checking duplicate dive for update: %v", err)
+			utils.LogError(c.Request.Context(), "Error checking duplicate dive for update", err, utils.UserID(userID), utils.DiveID(diveID))
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check for duplicate dive"})
 			return
 		}
@@ -246,25 +245,25 @@ func (h *DiveHandler) UpdateDive(c *gin.Context) {
 		}
 	} else {
 		// Location and date haven't changed, get existing dive site
-		diveSiteID, err := h.diveSiteRepo.GetDiveSiteByDiveID(diveID)
+		diveSiteID, err := h.diveSiteRepo.GetDiveSiteByDiveID(c.Request.Context(), diveID)
 		if err != nil {
-			log.Printf("Error getting dive site ID: %v", err)
+			utils.LogError(c.Request.Context(), "Error getting dive site ID", err, utils.UserID(userID), utils.DiveID(diveID))
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get dive site"})
 			return
 		}
 
 		if diveSiteID != nil {
-			diveSite, err = h.diveSiteRepo.GetByID(*diveSiteID)
+			diveSite, err = h.diveSiteRepo.GetByID(c.Request.Context(), *diveSiteID)
 			if err != nil && err != utils.ErrDiveSiteNotFound {
-				log.Printf("Error loading existing dive site: %v", err)
+				utils.LogError(c.Request.Context(), "Error loading existing dive site", err, utils.UserID(userID), utils.DiveID(diveID))
 			}
 		}
 
 		// If we couldn't find the existing dive site, create one
 		if diveSite == nil {
-			diveSite, err = h.diveSiteRepo.FindOrCreateDiveSite(diveReq.Location, diveReq.Lat, diveReq.Lng)
+			diveSite, err = h.diveSiteRepo.FindOrCreateDiveSite(c.Request.Context(), diveReq.Location, diveReq.Lat, diveReq.Lng)
 			if err != nil {
-				log.Printf("Error finding/creating dive site for update: %v", err)
+				utils.LogError(c.Request.Context(), "Error finding/creating dive site for update", err)
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process dive site"})
 				return
 			}
@@ -276,12 +275,12 @@ func (h *DiveHandler) UpdateDive(c *gin.Context) {
 	dive.DiveSiteID = &diveSite.ID
 
 	// Update the dive
-	if err := h.diveRepo.UpdateDive(diveID, userID, dive); err != nil {
+	if err := h.diveRepo.UpdateDive(c.Request.Context(), diveID, userID, dive); err != nil {
 		if err == utils.ErrDiveNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Dive not found"})
 			return
 		}
-		log.Printf("Error updating dive: %v", err)
+		utils.LogError(c.Request.Context(), "Error updating dive", err, utils.UserID(userID), utils.DiveID(diveID))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update dive"})
 		return
 	}
@@ -306,12 +305,12 @@ func (h *DiveHandler) DeleteDive(c *gin.Context) {
 		return
 	}
 
-	if err := h.diveRepo.DeleteDive(diveID, userID); err != nil {
+	if err := h.diveRepo.DeleteDive(c.Request.Context(), diveID, userID); err != nil {
 		if err == utils.ErrDiveNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Dive not found"})
 			return
 		}
-		log.Printf("Error deleting dive: %v", err)
+		utils.LogError(c.Request.Context(), "Error deleting dive", err, utils.UserID(userID), utils.DiveID(diveID))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete dive"})
 		return
 	}
