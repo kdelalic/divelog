@@ -3,12 +3,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import useSettingsStore from '../store/settingsStore';
-import type { DepthUnit, TemperatureUnit, DistanceUnit, WeightUnit, PressureUnit, VolumeUnit } from '../lib/settings';
+import type { DepthUnit, TemperatureUnit, DistanceUnit, WeightUnit, PressureUnit, VolumeUnit, UnitPreference } from '../lib/settings';
 import { useEffect } from 'react';
 
 const Settings = () => {
   const { 
     settings, 
+    updateUnitPreference,
     updateUnitSettings, 
     updatePreferences, 
     updateDiveSettings, 
@@ -23,6 +24,10 @@ const Settings = () => {
   useEffect(() => {
     loadFromBackend();
   }, [loadFromBackend]);
+
+  const handleUnitPreferenceChange = (preference: UnitPreference) => {
+    updateUnitPreference(preference);
+  };
 
   const handleUnitChange = (unitType: keyof typeof settings.units, value: string) => {
     updateUnitSettings({ [unitType]: value });
@@ -107,13 +112,35 @@ const Settings = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Unit System</label>
+                  <select
+                    value={settings.unitPreference}
+                    onChange={(e) => handleUnitPreferenceChange(e.target.value as UnitPreference)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="metric">Metric (meters, celsius, bar, etc.)</option>
+                    <option value="imperial">Imperial (feet, fahrenheit, psi, etc.)</option>
+                    <option value="customize">Customize (choose individual units)</option>
+                  </select>
+                  <p className="text-xs text-muted-foreground">
+                    {settings.unitPreference === 'customize' 
+                      ? 'Individual unit settings below are enabled'
+                      : 'Individual unit settings are overridden by the selected preset'
+                    }
+                  </p>
+                </div>
+              </div>
+
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Depth</label>
                   <select
                     value={settings.units.depth}
                     onChange={(e) => handleUnitChange('depth', e.target.value as DepthUnit)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    disabled={settings.unitPreference !== 'customize'}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                   >
                     <option value="meters">Meters (m)</option>
                     <option value="feet">Feet (ft)</option>
@@ -125,7 +152,8 @@ const Settings = () => {
                   <select
                     value={settings.units.temperature}
                     onChange={(e) => handleUnitChange('temperature', e.target.value as TemperatureUnit)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    disabled={settings.unitPreference !== 'customize'}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                   >
                     <option value="celsius">Celsius (°C)</option>
                     <option value="fahrenheit">Fahrenheit (°F)</option>
@@ -137,7 +165,8 @@ const Settings = () => {
                   <select
                     value={settings.units.distance}
                     onChange={(e) => handleUnitChange('distance', e.target.value as DistanceUnit)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    disabled={settings.unitPreference !== 'customize'}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                   >
                     <option value="kilometers">Kilometers (km)</option>
                     <option value="miles">Miles (mi)</option>
@@ -149,7 +178,8 @@ const Settings = () => {
                   <select
                     value={settings.units.weight}
                     onChange={(e) => handleUnitChange('weight', e.target.value as WeightUnit)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    disabled={settings.unitPreference !== 'customize'}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                   >
                     <option value="kilograms">Kilograms (kg)</option>
                     <option value="pounds">Pounds (lbs)</option>
@@ -161,7 +191,8 @@ const Settings = () => {
                   <select
                     value={settings.units.pressure}
                     onChange={(e) => handleUnitChange('pressure', e.target.value as PressureUnit)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    disabled={settings.unitPreference !== 'customize'}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                   >
                     <option value="bar">Bar</option>
                     <option value="psi">PSI</option>
@@ -173,7 +204,8 @@ const Settings = () => {
                   <select
                     value={settings.units.volume}
                     onChange={(e) => handleUnitChange('volume', e.target.value as VolumeUnit)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    disabled={settings.unitPreference !== 'customize'}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                   >
                     <option value="liters">Liters (L)</option>
                     <option value="cubic_feet">Cubic Feet (ft³)</option>

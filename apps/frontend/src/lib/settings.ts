@@ -4,8 +4,10 @@ export type DistanceUnit = 'kilometers' | 'miles';
 export type WeightUnit = 'kilograms' | 'pounds';
 export type PressureUnit = 'bar' | 'psi';
 export type VolumeUnit = 'liters' | 'cubic_feet';
+export type UnitPreference = 'imperial' | 'metric' | 'customize';
 
 export interface UserSettings {
+  unitPreference: UnitPreference;
   units: {
     depth: DepthUnit;
     temperature: TemperatureUnit;
@@ -27,7 +29,27 @@ export interface UserSettings {
   };
 }
 
+export const unitPresets = {
+  metric: {
+    depth: 'meters' as DepthUnit,
+    temperature: 'celsius' as TemperatureUnit,
+    distance: 'kilometers' as DistanceUnit,
+    weight: 'kilograms' as WeightUnit,
+    pressure: 'bar' as PressureUnit,
+    volume: 'liters' as VolumeUnit,
+  },
+  imperial: {
+    depth: 'feet' as DepthUnit,
+    temperature: 'fahrenheit' as TemperatureUnit,
+    distance: 'miles' as DistanceUnit,
+    weight: 'pounds' as WeightUnit,
+    pressure: 'psi' as PressureUnit,
+    volume: 'cubic_feet' as VolumeUnit,
+  },
+} as const;
+
 export const defaultSettings: UserSettings = {
+  unitPreference: 'metric',
   units: {
     depth: 'meters',
     temperature: 'celsius',

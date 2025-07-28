@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import type { UserSettings } from '../lib/settings';
-import { defaultSettings } from '../lib/settings';
+import type { UserSettings, UnitPreference } from '../lib/settings';
+import { defaultSettings, unitPresets } from '../lib/settings';
 import { settingsApi } from '../lib/api';
 
 interface SettingsState {
@@ -11,6 +11,7 @@ interface SettingsState {
   
   // Actions
   updateSettings: (newSettings: Partial<UserSettings>) => Promise<void>;
+  updateUnitPreference: (preference: UnitPreference) => Promise<void>;
   updateUnitSettings: (units: Partial<UserSettings['units']>) => Promise<void>;
   updatePreferences: (preferences: Partial<UserSettings['preferences']>) => Promise<void>;
   updateDiveSettings: (dive: Partial<UserSettings['dive']>) => Promise<void>;
@@ -53,9 +54,27 @@ const useSettingsStore = create<SettingsState>()((set, get) => ({
     }
   },
 
+  updateUnitPreference: async (preference) => {
+    const currentSettings = get().settings;
+    let newUnits = currentSettings.units;
+    
+    // Apply preset if imperial or metric, keep current units if customize
+    if (preference === 'imperial') {
+      newUnits = unitPresets.imperial;
+    } else if (preference === 'metric') {
+      newUnits = unitPresets.metric;
+    }
+    
+    await get().updateSettings({ 
+      unitPreference: preference,
+      units: newUnits
+    });
+  },
+
   updateUnitSettings: async (units) => {
     const currentSettings = get().settings;
     await get().updateSettings({ 
+      unitPreference: 'customize',
       units: { ...currentSettings.units, ...units }
     });
   },

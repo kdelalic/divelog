@@ -10,6 +10,7 @@ type UserSettings struct {
 	UserID int `json:"user_id" db:"user_id"`
 
 	// Unit preferences
+	UnitPreference  string `json:"unit_preference" db:"unit_preference"`
 	DepthUnit       string `json:"depth_unit" db:"depth_unit"`
 	TemperatureUnit string `json:"temperature_unit" db:"temperature_unit"`
 	DistanceUnit    string `json:"distance_unit" db:"distance_unit"`
@@ -34,6 +35,7 @@ type UserSettings struct {
 
 // SettingsRequest represents the request body for updating settings
 type SettingsRequest struct {
+	UnitPreference string `json:"unitPreference"`
 	Units struct {
 		Depth       string `json:"depth"`
 		Temperature string `json:"temperature"`
@@ -59,6 +61,7 @@ type SettingsRequest struct {
 func (sr *SettingsRequest) ToUserSettings(userID int) *UserSettings {
 	return &UserSettings{
 		UserID:              userID,
+		UnitPreference:      sr.UnitPreference,
 		DepthUnit:           sr.Units.Depth,
 		TemperatureUnit:     sr.Units.Temperature,
 		DistanceUnit:        sr.Units.Distance,
@@ -78,6 +81,7 @@ func (sr *SettingsRequest) ToUserSettings(userID int) *UserSettings {
 // ToFrontendFormat converts UserSettings to the format expected by the frontend
 func (us *UserSettings) ToFrontendFormat() map[string]interface{} {
 	return map[string]interface{}{
+		"unitPreference": us.UnitPreference,
 		"units": map[string]string{
 			"depth":       us.DepthUnit,
 			"temperature": us.TemperatureUnit,

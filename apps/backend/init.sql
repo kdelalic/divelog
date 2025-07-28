@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS user_settings (
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
     
     -- Unit preferences
+    unit_preference VARCHAR(10) NOT NULL DEFAULT 'metric' CHECK (unit_preference IN ('imperial', 'metric', 'customize')),
     depth_unit VARCHAR(10) NOT NULL DEFAULT 'meters' CHECK (depth_unit IN ('meters', 'feet')),
     temperature_unit VARCHAR(10) NOT NULL DEFAULT 'celsius' CHECK (temperature_unit IN ('celsius', 'fahrenheit')),
     distance_unit VARCHAR(15) NOT NULL DEFAULT 'kilometers' CHECK (distance_unit IN ('kilometers', 'miles')),
