@@ -41,10 +41,11 @@ const EditDive = () => {
 
   useEffect(() => {
     if (diveToEdit) {
-      // Parse datetime back to date and time
-      const date = new Date(diveToEdit.datetime);
-      const dateStr = date.toISOString().split('T')[0];
-      const timeStr = date.toTimeString().substring(0, 5);
+      // Parse datetime string directly to avoid timezone conversion
+      const datetimeStr = diveToEdit.datetime;
+      const [dateStr, timeWithZ] = datetimeStr.split('T');
+      const timeWithSeconds = timeWithZ.split('.')[0]; // Remove milliseconds and Z
+      const timeStr = timeWithSeconds.substring(0, 5); // Extract HH:MM only
       
       setValue("date", dateStr);
       setValue("time", timeStr !== '00:00' ? timeStr : '');

@@ -5,10 +5,10 @@ export const convertDepth = (value: number, from: DepthUnit, to: DepthUnit): num
   if (from === to) return value;
   
   if (from === 'meters' && to === 'feet') {
-    return value * 3.28084;
+    return Math.round((value * 3.28084) * 10) / 10;
   }
   if (from === 'feet' && to === 'meters') {
-    return value * 0.3048;
+    return Math.round((value * 0.3048) * 10) / 10;
   }
   
   return value;
@@ -26,10 +26,10 @@ export const convertTemperature = (value: number, from: TemperatureUnit, to: Tem
   if (from === to) return value;
   
   if (from === 'celsius' && to === 'fahrenheit') {
-    return (value * 9/5) + 32;
+    return Math.round(((value * 9/5) + 32) * 10) / 10;
   }
   if (from === 'fahrenheit' && to === 'celsius') {
-    return (value - 32) * 5/9;
+    return Math.round(((value - 32) * 5/9) * 10) / 10;
   }
   
   return value;
@@ -47,10 +47,10 @@ export const convertDistance = (value: number, from: DistanceUnit, to: DistanceU
   if (from === to) return value;
   
   if (from === 'kilometers' && to === 'miles') {
-    return value * 0.621371;
+    return Math.round((value * 0.621371) * 10) / 10;
   }
   if (from === 'miles' && to === 'kilometers') {
-    return value * 1.60934;
+    return Math.round((value * 1.60934) * 10) / 10;
   }
   
   return value;
@@ -68,10 +68,10 @@ export const convertWeight = (value: number, from: WeightUnit, to: WeightUnit): 
   if (from === to) return value;
   
   if (from === 'kilograms' && to === 'pounds') {
-    return value * 2.20462;
+    return Math.round((value * 2.20462) * 10) / 10;
   }
   if (from === 'pounds' && to === 'kilograms') {
-    return value * 0.453592;
+    return Math.round((value * 0.453592) * 10) / 10;
   }
   
   return value;
@@ -89,10 +89,10 @@ export const convertPressure = (value: number, from: PressureUnit, to: PressureU
   if (from === to) return value;
   
   if (from === 'bar' && to === 'psi') {
-    return value * 14.5038;
+    return Math.round(value * 14.5038);
   }
   if (from === 'psi' && to === 'bar') {
-    return value * 0.0689476;
+    return Math.round((value * 0.0689476) * 10) / 10;
   }
   
   return value;
@@ -110,10 +110,10 @@ export const convertVolume = (value: number, from: VolumeUnit, to: VolumeUnit): 
   if (from === to) return value;
   
   if (from === 'liters' && to === 'cubic_feet') {
-    return value * 0.0353147;
+    return Math.round((value * 0.0353147) * 10) / 10;
   }
   if (from === 'cubic_feet' && to === 'liters') {
-    return value * 28.3168;
+    return Math.round((value * 28.3168) * 10) / 10;
   }
   
   return value;
