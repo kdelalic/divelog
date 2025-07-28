@@ -85,6 +85,12 @@ const EditDive = () => {
         lng: data.lng,
         datetime,
         equipment,
+        samples: diveToEdit.samples,
+        conditions: diveToEdit.conditions,
+        diveType: diveToEdit.diveType,
+        rating: diveToEdit.rating,
+        notes: diveToEdit.notes,
+        safetyStops: diveToEdit.safetyStops,
         id: diveToEdit.id
       };
       
