@@ -82,11 +82,11 @@ func TestUnmarshalJSON_WithInvalidJSON(t *testing.T) {
 
 func TestUnmarshalJSON_WithNilTarget(t *testing.T) {
 	jsonData := []byte(`{"name": "Test"}`)
-	
-	// This should panic or handle gracefully
-	assert.Panics(t, func() {
-		UnmarshalJSON(jsonData, nil)
-	})
+
+	// A nil target is reported as an error, not a panic
+	err := UnmarshalJSON(jsonData, nil)
+
+	assert.Error(t, err)
 }
 
 func TestUnmarshalJSON_WithStruct(t *testing.T) {

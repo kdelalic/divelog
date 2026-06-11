@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"divelog-backend/models"
-	"divelog-backend/repository"
 	"divelog-backend/utils"
 	"net/http"
 	"strconv"
@@ -11,10 +10,10 @@ import (
 )
 
 type SettingsHandler struct {
-	settingsRepo *repository.SettingsRepository
+	settingsRepo SettingsRepository
 }
 
-func NewSettingsHandler(settingsRepo *repository.SettingsRepository) *SettingsHandler {
+func NewSettingsHandler(settingsRepo SettingsRepository) *SettingsHandler {
 	return &SettingsHandler{
 		settingsRepo: settingsRepo,
 	}

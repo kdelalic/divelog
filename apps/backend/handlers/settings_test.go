@@ -3,11 +3,9 @@ package handlers
 import (
 	"context"
 	"divelog-backend/models"
-	"divelog-backend/repository"
 	"net/http"
 	"testing"
 
-	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -34,139 +32,113 @@ func (m *MockSettingsRepository) Update(ctx context.Context, settings *models.Us
 
 func setupSettingsHandler() (*SettingsHandler, *MockSettingsRepository) {
 	mockRepo := new(MockSettingsRepository)
-	handler := NewSettingsHandler((*repository.SettingsRepository)(mockRepo))
+	handler := NewSettingsHandler(mockRepo)
 	return handler, mockRepo
+}
+
+func testUserSettings() *models.UserSettings {
+	return &models.UserSettings{
+		ID:                1,
+		UserID:            1,
+		UnitPreference:    "metric",
+		DepthUnit:         "meters",
+		TemperatureUnit:   "celsius",
+		DistanceUnit:      "kilometers",
+		WeightUnit:        "kilograms",
+		PressureUnit:      "bar",
+		VolumeUnit:        "liters",
+		DateFormat:        "ISO",
+		TimeFormat:        "24h",
+		DefaultVisibility: "private",
+	}
 }
 
 func TestSettingsHandler_GetSettings(t *testing.T) {
 	handler, mockRepo := setupSettingsHandler()
-	
-	expectedSettings := &models.UserSettings{
-		ID:               1,
-		UserID:           1,
-		DistanceUnit:     "meters",
-		TemperatureUnit:  "celsius",
-		PressureUnit:     "bar",
-		WeightUnit:       "kg",
-		VolumeUnit:       "liters",
-		DiveNumbering:    "sequential",
-		DateFormat:       "yyyy-mm-dd",
-		Language:         "en",
-		Theme:            "light",
-	}
-	
-	mockRepo.On("GetOrCreateDefault", mock.Anything, 1).Return(expectedSettings, nil)
-	
+
+	mockRepo.On("GetOrCreateDefault", mock.Anything, 1).Return(testUserSettings(), nil)
+
 	c, w := setupGinContext("GET", "/settings?user_id=1", nil)
 	c.Request.URL.RawQuery = "user_id=1"
-	
+
 	handler.GetSettings(c)
-	
+
 	assert.Equal(t, http.StatusOK, w.Code)
 	mockRepo.AssertExpectations(t)
 }
 
 func TestSettingsHandler_GetSettings_DefaultUser(t *testing.T) {
 	handler, mockRepo := setupSettingsHandler()
-	
-	expectedSettings := &models.UserSettings{
-		ID:               1,
-		UserID:           1,
-		DistanceUnit:     "meters",
-		TemperatureUnit:  "celsius",
-		PressureUnit:     "bar",
-		WeightUnit:       "kg",
-		VolumeUnit:       "liters",
-		DiveNumbering:    "sequential",
-		DateFormat:       "yyyy-mm-dd",
-		Language:         "en",
-		Theme:            "light",
-	}
-	
-	mockRepo.On("GetOrCreateDefault", mock.Anything, 1).Return(expectedSettings, nil)
-	
+
+	mockRepo.On("GetOrCreateDefault", mock.Anything, 1).Return(testUserSettings(), nil)
+
 	c, w := setupGinContext("GET", "/settings", nil)
-	
+
 	handler.GetSettings(c)
-	
+
 	assert.Equal(t, http.StatusOK, w.Code)
 	mockRepo.AssertExpectations(t)
 }
 
 func TestSettingsHandler_GetSettings_InvalidUserID(t *testing.T) {
 	handler, _ := setupSettingsHandler()
-	
+
 	c, w := setupGinContext("GET", "/settings?user_id=invalid", nil)
 	c.Request.URL.RawQuery = "user_id=invalid"
-	
+
 	handler.GetSettings(c)
-	
+
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 
 func TestSettingsHandler_UpdateSettings(t *testing.T) {
 	handler, mockRepo := setupSettingsHandler()
-	
-	settingsReq := models.SettingsRequest{
-		DistanceUnit:     "feet",
-		TemperatureUnit:  "fahrenheit",
-		PressureUnit:     "psi",
-		WeightUnit:       "lbs",
-		VolumeUnit:       "cubic_feet",
-		DiveNumbering:    "continuous",
-		DateFormat:       "mm/dd/yyyy",
-		Language:         "en",
-		Theme:            "dark",
-	}
-	
-	updatedSettings := &models.UserSettings{
-		ID:               1,
-		UserID:           1,
-		DistanceUnit:     "feet",
-		TemperatureUnit:  "fahrenheit",
-		PressureUnit:     "psi",
-		WeightUnit:       "lbs",
-		VolumeUnit:       "cubic_feet",
-		DiveNumbering:    "continuous",
-		DateFormat:       "mm/dd/yyyy",
-		Language:         "en",
-		Theme:            "dark",
-	}
-	
+
+	settingsReq := models.SettingsRequest{}
+	settingsReq.UnitPreference = "imperial"
+	settingsReq.Units.Depth = "feet"
+	settingsReq.Units.Temperature = "fahrenheit"
+	settingsReq.Units.Distance = "miles"
+	settingsReq.Units.Weight = "pounds"
+	settingsReq.Units.Pressure = "psi"
+	settingsReq.Units.Volume = "cubic_feet"
+	settingsReq.Preferences.DateFormat = "US"
+	settingsReq.Preferences.TimeFormat = "12h"
+	settingsReq.Preferences.DefaultVisibility = "private"
+
 	mockRepo.On("Update", mock.Anything, mock.AnythingOfType("*models.UserSettings")).Return(nil)
-	mockRepo.On("GetByUserID", mock.Anything, 1).Return(updatedSettings, nil)
-	
+	mockRepo.On("GetByUserID", mock.Anything, 1).Return(testUserSettings(), nil)
+
 	c, w := setupGinContext("PUT", "/settings?user_id=1", settingsReq)
 	c.Request.URL.RawQuery = "user_id=1"
-	
+
 	handler.UpdateSettings(c)
-	
+
 	assert.Equal(t, http.StatusOK, w.Code)
 	mockRepo.AssertExpectations(t)
 }
 
 func TestSettingsHandler_UpdateSettings_InvalidJSON(t *testing.T) {
 	handler, _ := setupSettingsHandler()
-	
+
 	c, w := setupGinContext("PUT", "/settings?user_id=1", "invalid json")
 	c.Request.URL.RawQuery = "user_id=1"
-	
+
 	handler.UpdateSettings(c)
-	
+
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 
 func TestSettingsHandler_UpdateSettings_InvalidUserID(t *testing.T) {
 	handler, _ := setupSettingsHandler()
-	
-	settingsReq := models.SettingsRequest{
-		DistanceUnit: "feet",
-	}
-	
+
+	settingsReq := models.SettingsRequest{}
+	settingsReq.Units.Depth = "feet"
+
 	c, w := setupGinContext("PUT", "/settings?user_id=invalid", settingsReq)
 	c.Request.URL.RawQuery = "user_id=invalid"
-	
+
 	handler.UpdateSettings(c)
-	
+
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }

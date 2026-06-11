@@ -86,3 +86,6 @@ func TestDiveValidation(t *testing.T) {
 		t.Log("Correctly identified zero/negative duration as invalid")
 	}
 }
+func testStrPtr(s string) *string {
+	return &s
+}

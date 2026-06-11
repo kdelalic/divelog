@@ -2,10 +2,8 @@ package repository
 
 import (
 	"context"
-	"database/sql"
 	"divelog-backend/models"
 	"testing"
-	"time"
 
 	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
@@ -94,7 +92,7 @@ func TestDiveSiteRepository_Create(t *testing.T) {
 		Name:        "New Test Site",
 		Latitude:    40.7500,
 		Longitude:   -73.9857,
-		Description: "A test dive site",
+		Description: testStrPtr("A test dive site"),
 	}
 	
 	site, err := repo.Create(ctx, siteReq)
@@ -118,7 +116,7 @@ func TestDiveSiteRepository_Update(t *testing.T) {
 		Name:        "Updated Site",
 		Latitude:    40.7500,
 		Longitude:   -73.9857,
-		Description: "Updated description",
+		Description: testStrPtr("Updated description"),
 	}
 	
 	site, err := repo.Update(ctx, 999999, siteReq)

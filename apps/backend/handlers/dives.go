@@ -3,7 +3,6 @@ package handlers
 import (
 	"divelog-backend/middleware"
 	"divelog-backend/models"
-	"divelog-backend/repository"
 	"divelog-backend/utils"
 	"net/http"
 
@@ -11,11 +10,11 @@ import (
 )
 
 type DiveHandler struct {
-	diveRepo     *repository.DiveRepository
-	diveSiteRepo *repository.DiveSiteRepository
+	diveRepo     DiveRepository
+	diveSiteRepo DiveSiteResolver
 }
 
-func NewDiveHandler(diveRepo *repository.DiveRepository, diveSiteRepo *repository.DiveSiteRepository) *DiveHandler {
+func NewDiveHandler(diveRepo DiveRepository, diveSiteRepo DiveSiteResolver) *DiveHandler {
 	return &DiveHandler{
 		diveRepo:     diveRepo,
 		diveSiteRepo: diveSiteRepo,
