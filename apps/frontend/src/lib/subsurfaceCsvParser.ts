@@ -72,12 +72,12 @@ export function parseSubsurfaceCSV(csvText: string): Dive[] {
       }
       
       // Create row object
-      const row: any = {};
+      const row: Record<string, string> = {};
       headers.forEach((header, index) => {
         row[header] = values[index];
       });
       
-      const dive = parseSubsurfaceCSVRow(row as SubsurfaceCSVRow);
+      const dive = parseSubsurfaceCSVRow(row as unknown as SubsurfaceCSVRow);
       if (dive) {
         dives.push(dive);
       }
@@ -253,11 +253,9 @@ function parseSubsurfaceCSVRow(row: SubsurfaceCSVRow): Dive | null {
     const visibility = parseFloat(row.visibility?.trim() || '0');
     
     const conditions = (airTemp > 0 || waterTemp > 0 || visibility > 0) ? {
-      airTemp: airTemp > 0 ? airTemp : undefined,
-      waterTemp: waterTemp > 0 ? {
-        surface: waterTemp,
-        bottom: waterTemp
-      } : undefined,
+      air_temp: airTemp > 0 ? airTemp : undefined,
+      water_temp_surface: waterTemp > 0 ? waterTemp : undefined,
+      water_temp_bottom: waterTemp > 0 ? waterTemp : undefined,
       visibility: visibility > 0 ? visibility : undefined
     } : undefined;
     
@@ -279,7 +277,7 @@ function parseSubsurfaceCSVRow(row: SubsurfaceCSVRow): Dive | null {
       conditions,
       rating,
       notes: row.notes?.trim() || undefined,
-      diveType: 'recreational' // Default for CSV imports
+      dive_type: 'recreational' // Default for CSV imports
     };
     
     return dive;

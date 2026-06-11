@@ -13,8 +13,7 @@ import type { Dive } from "@/lib/dives";
 import { formatDuration } from "@/lib/diveStats";
 import { Link } from "react-router-dom";
 import useSettingsStore from "@/store/settingsStore";
-import { formatVolume } from "@/lib/unitConversions";
-import { formatDepth } from "@/lib/unitConversions";
+import { formatDepth, formatTemperature, formatVolume } from "@/lib/unitConversions";
 import { formatDiveDateTimeLong } from "@/lib/dateHelpers";
 import DiveProfile from "./DiveProfile";
 import { calculateSAC, getGasMixColor } from "@/lib/dives";
@@ -133,22 +132,28 @@ const DiveDetailModal = ({ dive, isOpen, onClose }: DiveDetailModalProps) => {
                 <CardContent className="space-y-3">
                   <div className="flex justify-between items-center">
                     <span className="text-muted-foreground">Overall:</span>
-                    <div className="flex">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <Star 
-                          key={star} 
-                          className="h-4 w-4 text-yellow-400 fill-current" 
-                        />
-                      ))}
-                    </div>
+                    {dive.rating ? (
+                      <div className="flex">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <Star
+                            key={star}
+                            className={star <= (dive.rating ?? 0)
+                              ? "h-4 w-4 text-yellow-400 fill-current"
+                              : "h-4 w-4 text-gray-300"}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="font-medium">—</span>
+                    )}
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Visibility:</span>
-                    <span className="font-medium">Excellent</span>
+                    <span className="text-muted-foreground">Dive Type:</span>
+                    <span className="font-medium capitalize">{dive.dive_type || '—'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Current:</span>
-                    <span className="font-medium">Mild</span>
+                    <span className="font-medium capitalize">{dive.conditions?.current_strength || '—'}</span>
                   </div>
                 </CardContent>
               </Card>
@@ -174,55 +179,106 @@ const DiveDetailModal = ({ dive, isOpen, onClose }: DiveDetailModalProps) => {
           </TabsContent>
 
           <TabsContent value="conditions" className="space-y-4 flex-1 overflow-y-auto">
-            <div className="grid gap-4 md:grid-cols-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Water Conditions</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Temperature:</span>
-                    <span className="font-medium">24°C</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Visibility:</span>
-                    <span className="font-medium">30m+</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Current:</span>
-                    <span className="font-medium">Mild (0.5 knots)</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Surge:</span>
-                    <span className="font-medium">None</span>
-                  </div>
-                </CardContent>
-              </Card>
+            {dive.conditions ? (
+              <div className="grid gap-4 md:grid-cols-2">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Water Conditions</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Surface Temp:</span>
+                      <span className="font-medium">
+                        {dive.conditions.water_temp_surface !== undefined
+                          ? formatTemperature(dive.conditions.water_temp_surface, settings.units.temperature)
+                          : '—'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Bottom Temp:</span>
+                      <span className="font-medium">
+                        {dive.conditions.water_temp_bottom !== undefined
+                          ? formatTemperature(dive.conditions.water_temp_bottom, settings.units.temperature)
+                          : '—'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Visibility:</span>
+                      <span className="font-medium">
+                        {dive.conditions.visibility !== undefined
+                          ? formatDepth(dive.conditions.visibility, settings.units.depth)
+                          : '—'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Current:</span>
+                      <span className="font-medium capitalize">
+                        {dive.conditions.current_strength
+                          ? `${dive.conditions.current_strength}${dive.conditions.current_direction ? ` (${dive.conditions.current_direction})` : ''}`
+                          : '—'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Surge:</span>
+                      <span className="font-medium capitalize">{dive.conditions.surge || '—'}</span>
+                    </div>
+                  </CardContent>
+                </Card>
 
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Weather Conditions</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Air Temperature:</span>
+                      <span className="font-medium">
+                        {dive.conditions.air_temp !== undefined
+                          ? formatTemperature(dive.conditions.air_temp, settings.units.temperature)
+                          : '—'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Weather:</span>
+                      <span className="font-medium capitalize">{dive.conditions.weather || '—'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Sea State:</span>
+                      <span className="font-medium">
+                        {dive.conditions.sea_state !== undefined ? `${dive.conditions.sea_state} / 9` : '—'}
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            ) : (
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Weather Conditions</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Air Temperature:</span>
-                    <span className="font-medium">28°C</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Weather:</span>
-                    <span className="font-medium">Sunny</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Wind:</span>
-                    <span className="font-medium">Light (5 knots)</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Sea State:</span>
-                    <span className="font-medium">Calm (1-2ft)</span>
+                <CardContent className="py-8">
+                  <div className="text-center text-muted-foreground">
+                    <p>No conditions recorded for this dive</p>
+                    <p className="text-sm mt-1">Conditions can be added when editing the dive</p>
                   </div>
                 </CardContent>
               </Card>
-            </div>
+            )}
+
+            {dive.safety_stops && dive.safety_stops.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Safety Stops</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {dive.safety_stops.map((stop, index) => (
+                    <div key={index} className="flex justify-between">
+                      <span className="text-muted-foreground">Stop {index + 1}:</span>
+                      <span className="font-medium">
+                        {formatDepth(stop.depth, settings.units.depth)} for {stop.duration} min
+                      </span>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           <TabsContent value="equipment" className="space-y-6 flex-1 overflow-y-auto">
@@ -376,37 +432,11 @@ const DiveDetailModal = ({ dive, isOpen, onClose }: DiveDetailModalProps) => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-muted-foreground">
-                  Amazing dive at {dive.location}! The visibility was incredible and we saw some fantastic marine life. 
-                  {dive.buddy && ` Had a great time diving with ${dive.buddy}.`} Water conditions were perfect 
-                  and the site lived up to its reputation. Definitely want to return to explore more of this area.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Marine Life Spotted</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-2 text-sm">
-                  <div className="flex justify-between">
-                    <span>🐠 Tropical Fish</span>
-                    <span className="text-muted-foreground">Many</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>🐢 Sea Turtle</span>
-                    <span className="text-muted-foreground">1</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>🦈 Reef Shark</span>
-                    <span className="text-muted-foreground">2</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>🪸 Coral Health</span>
-                    <span className="text-muted-foreground">Excellent</span>
-                  </div>
-                </div>
+                {dive.notes ? (
+                  <p className="text-muted-foreground whitespace-pre-wrap">{dive.notes}</p>
+                ) : (
+                  <p className="text-muted-foreground text-center py-4">No notes recorded for this dive</p>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

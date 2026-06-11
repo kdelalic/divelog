@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { useState } from "react";
+import { Star } from "lucide-react";
 import useDiveStore from "../store/diveStore";
 import { Button } from "@/components/ui/button";
 import {
@@ -109,6 +110,7 @@ const DiveLog = () => {
               </th>
               <th scope="col" className="w-1/6 px-8 py-4 text-left text-sm font-semibold text-slate-700 uppercase tracking-wider">Duration</th>
               <th scope="col" className="w-1/6 px-8 py-4 text-left text-sm font-semibold text-slate-700 uppercase tracking-wider">Buddy</th>
+              <th scope="col" className="w-1/6 px-8 py-4 text-left text-sm font-semibold text-slate-700 uppercase tracking-wider">Rating</th>
               <th scope="col" className="w-1/6 relative px-8 py-4">
                 <span className="sr-only">Actions</span>
               </th>
@@ -132,6 +134,22 @@ const DiveLog = () => {
                 </td>
                 <td className="px-8 py-5 whitespace-nowrap text-sm lg:text-base text-slate-600">{dive.duration} min</td>
                 <td className="px-8 py-5 whitespace-nowrap text-sm lg:text-base text-slate-600">{dive.buddy || '—'}</td>
+                <td className="px-8 py-5 whitespace-nowrap">
+                  {dive.rating ? (
+                    <div className="flex">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Star
+                          key={star}
+                          className={star <= (dive.rating ?? 0)
+                            ? "h-4 w-4 text-yellow-400 fill-current"
+                            : "h-4 w-4 text-slate-200"}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-sm text-slate-400">—</span>
+                  )}
+                </td>
                 <td className="px-8 py-5 whitespace-nowrap text-right text-sm font-medium">
                   <div className="flex justify-end gap-2">
                     <Button 

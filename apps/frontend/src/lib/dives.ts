@@ -39,20 +39,23 @@ export interface Equipment {
   notes?: string; // Additional equipment notes
 }
 
+// Field names match the backend's JSON tags (snake_case) so dive data
+// round-trips through the API without being silently dropped.
 export interface DiveConditions {
-  waterTemp?: {
-    surface?: number; // Surface temperature in celsius
-    bottom?: number; // Bottom temperature in celsius
-  };
-  airTemp?: number; // Air temperature in celsius
+  water_temp_surface?: number; // Surface temperature in celsius
+  water_temp_bottom?: number; // Bottom temperature in celsius
+  air_temp?: number; // Air temperature in celsius
   visibility?: number; // Visibility in meters
-  current?: {
-    strength: 'none' | 'light' | 'moderate' | 'strong';
-    direction?: string; // e.g., "NE", "incoming", "outgoing"
-  };
+  current_strength?: 'none' | 'light' | 'moderate' | 'strong';
+  current_direction?: string; // e.g., "NE", "incoming", "outgoing"
   weather?: 'sunny' | 'cloudy' | 'overcast' | 'rainy' | 'windy';
-  seaState?: number; // Sea state scale 0-9
+  sea_state?: number; // Sea state scale 0-9
   surge?: 'none' | 'light' | 'moderate' | 'heavy';
+}
+
+export interface SafetyStop {
+  depth: number; // Safety stop depth in meters
+  duration: number; // Safety stop duration in minutes
 }
 
 export interface Dive {
@@ -67,13 +70,10 @@ export interface Dive {
   samples?: DiveSample[]; // Dive profile sample data
   equipment?: Equipment; // Equipment used on dive
   conditions?: DiveConditions; // Environmental conditions
-  diveType?: 'recreational' | 'training' | 'technical' | 'work' | 'research';
+  dive_type?: 'recreational' | 'training' | 'technical' | 'work' | 'research';
   rating?: number; // Dive rating 1-5 stars
   notes?: string; // Dive notes and observations
-  safetyStops?: {
-    depth: number; // Safety stop depth in meters
-    duration: number; // Safety stop duration in minutes
-  }[];
+  safety_stops?: SafetyStop[];
 }
 
 // Utility functions for equipment calculations

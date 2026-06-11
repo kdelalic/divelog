@@ -11,7 +11,8 @@ export interface DiveSite {
   updated_at: string;
 }
 
-const API_BASE_URL = 'http://localhost:8080/api/v1';
+const SERVER_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+const API_BASE_URL = `${SERVER_URL}/api/v1`;
 const DEFAULT_USER_ID = 1; // Development user ID
 
 export interface ApiResponse<T> {
@@ -69,7 +70,7 @@ export const settingsApi = {
   // Check if backend is available
   async healthCheck(): Promise<boolean> {
     try {
-      const response = await fetch(`http://localhost:8080/health`, {
+      const response = await fetch(`${SERVER_URL}/health`, {
         method: 'GET',
         signal: AbortSignal.timeout(3000), // 3 second timeout
       });
