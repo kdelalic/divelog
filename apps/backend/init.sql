@@ -5,9 +5,26 @@ CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     email VARCHAR(255) UNIQUE NOT NULL,
     username VARCHAR(100) UNIQUE NOT NULL,
+    password_hash VARCHAR(255),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Idempotent upgrade for databases created before auth was added
+ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);
+
+-- Refresh tokens for JWT session renewal (stores SHA-256 hash, never the raw token)
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token_hash VARCHAR(64) UNIQUE NOT NULL,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    revoked BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens(user_id);
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_token_hash ON refresh_tokens(token_hash);
 
 -- Create user_settings table to store user preferences
 CREATE TABLE IF NOT EXISTS user_settings (
@@ -94,9 +111,14 @@ CREATE INDEX IF NOT EXISTS idx_dives_dive_type ON dives(dive_type);
 CREATE INDEX IF NOT EXISTS idx_dives_rating ON dives(rating);
 CREATE INDEX IF NOT EXISTS idx_user_settings_user_id ON user_settings(user_id);
 
--- Insert a default user for development
-INSERT INTO users (email, username) VALUES ('dev@example.com', 'developer') 
+-- Insert a default user for development (password: devpass123)
+INSERT INTO users (email, username, password_hash)
+VALUES ('dev@example.com', 'developer', '$2a$12$Y03dq4mcKIXsHAVxPup0ceJ0XduasSx33byBef33UVYzcjjSMgWXG')
 ON CONFLICT (email) DO NOTHING;
+
+-- Give the dev user a password if the row predates auth
+UPDATE users SET password_hash = '$2a$12$Y03dq4mcKIXsHAVxPup0ceJ0XduasSx33byBef33UVYzcjjSMgWXG'
+WHERE email = 'dev@example.com' AND password_hash IS NULL;
 
 -- Insert default settings for the development user
 INSERT INTO user_settings (user_id) 

@@ -39,11 +39,13 @@ func main() {
 	diveRepo := repository.NewDiveRepository(database.DB)
 	diveSiteRepo := repository.NewDiveSiteRepository(database.DB)
 	settingsRepo := repository.NewSettingsRepository(database.DB)
+	userRepo := repository.NewUserRepository(database.DB)
 
 	// Create handlers
 	diveHandler := handlers.NewDiveHandler(diveRepo, diveSiteRepo)
 	diveSiteHandler := handlers.NewDiveSiteHandler(diveSiteRepo)
 	settingsHandler := handlers.NewSettingsHandler(settingsRepo)
+	authHandler := handlers.NewAuthHandler(userRepo, cfg.JWTSecret, cfg.GinMode == "release")
 
 	// Create Gin router
 	r := gin.Default()
@@ -54,7 +56,7 @@ func main() {
 	r.Use(middleware.RequestSizeLimit(10 << 20)) // 10MB limit
 	r.Use(middleware.RateLimit(100))             // 100 requests per minute
 	r.Use(middleware.RequestResponseLogger())
-	r.Use(middleware.CORS())
+	r.Use(middleware.CORS(cfg.CORSOrigin))
 
 	// Health check endpoint with database check
 	r.GET("/health", func(c *gin.Context) {
@@ -81,13 +83,28 @@ func main() {
 	// API routes
 	api := r.Group("/api/v1")
 	{
-		// Settings endpoints
-		api.GET("/settings", settingsHandler.GetSettings)
-		api.PUT("/settings", settingsHandler.UpdateSettings)
+		// Auth endpoints (stricter rate limit to slow credential stuffing)
+		authRoutes := api.Group("/auth")
+		authRoutes.Use(middleware.RateLimit(10))
+		{
+			authRoutes.POST("/register", authHandler.Register)
+			authRoutes.POST("/login", authHandler.Login)
+			authRoutes.POST("/refresh", authHandler.Refresh)
+			authRoutes.POST("/logout", authHandler.Logout)
+			authRoutes.GET("/me", middleware.AuthMiddleware(cfg.JWTSecret), authHandler.Me)
+		}
 
-		// Dive endpoints with middleware
+		// Settings endpoints (authenticated)
+		settingsRoutes := api.Group("/settings")
+		settingsRoutes.Use(middleware.AuthMiddleware(cfg.JWTSecret))
+		{
+			settingsRoutes.GET("", settingsHandler.GetSettings)
+			settingsRoutes.PUT("", settingsHandler.UpdateSettings)
+		}
+
+		// Dive endpoints (authenticated)
 		diveRoutes := api.Group("/dives")
-		diveRoutes.Use(middleware.UserIDMiddleware())
+		diveRoutes.Use(middleware.AuthMiddleware(cfg.JWTSecret))
 		{
 			diveRoutes.GET("", diveHandler.GetDives)
 			diveRoutes.POST("", diveHandler.CreateDive)
@@ -96,15 +113,15 @@ func main() {
 			diveRoutes.DELETE("/:id", diveHandler.DeleteDive)
 		}
 
-		// Dive site endpoints (no user validation needed for these)
+		// Dive site endpoints (shared catalog: reads are public, writes require auth)
 		diveSiteRoutes := api.Group("/dive-sites")
 		{
 			diveSiteRoutes.GET("", diveSiteHandler.GetDiveSites)
 			diveSiteRoutes.GET("/search", diveSiteHandler.SearchDiveSites)
 			diveSiteRoutes.GET("/:id", diveSiteHandler.GetDiveSite)
-			diveSiteRoutes.POST("", diveSiteHandler.CreateDiveSite)
-			diveSiteRoutes.PUT("/:id", diveSiteHandler.UpdateDiveSite)
-			diveSiteRoutes.DELETE("/:id", diveSiteHandler.DeleteDiveSite)
+			diveSiteRoutes.POST("", middleware.AuthMiddleware(cfg.JWTSecret), diveSiteHandler.CreateDiveSite)
+			diveSiteRoutes.PUT("/:id", middleware.AuthMiddleware(cfg.JWTSecret), diveSiteHandler.UpdateDiveSite)
+			diveSiteRoutes.DELETE("/:id", middleware.AuthMiddleware(cfg.JWTSecret), diveSiteHandler.DeleteDiveSite)
 		}
 	}
 

@@ -1,27 +1,10 @@
 package middleware
 
 import (
-	"divelog-backend/utils"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
-
-// UserIDMiddleware validates and extracts user ID from query parameters
-func UserIDMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		userID, err := utils.ValidateUserID(c)
-		if err != nil {
-			// Error response already sent by ValidateUserID
-			c.Abort()
-			return
-		}
-
-		// Store user ID in context for handlers to use
-		c.Set("userID", userID)
-		c.Next()
-	}
-}
 
 // GetUserIDFromContext retrieves the user ID from the Gin context
 func GetUserIDFromContext(c *gin.Context) (int, bool) {

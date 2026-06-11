@@ -58,37 +58,12 @@ func TestSettingsHandler_GetSettings(t *testing.T) {
 
 	mockRepo.On("GetOrCreateDefault", mock.Anything, 1).Return(testUserSettings(), nil)
 
-	c, w := setupGinContext("GET", "/settings?user_id=1", nil)
-	c.Request.URL.RawQuery = "user_id=1"
-
-	handler.GetSettings(c)
-
-	assert.Equal(t, http.StatusOK, w.Code)
-	mockRepo.AssertExpectations(t)
-}
-
-func TestSettingsHandler_GetSettings_DefaultUser(t *testing.T) {
-	handler, mockRepo := setupSettingsHandler()
-
-	mockRepo.On("GetOrCreateDefault", mock.Anything, 1).Return(testUserSettings(), nil)
-
 	c, w := setupGinContext("GET", "/settings", nil)
 
 	handler.GetSettings(c)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 	mockRepo.AssertExpectations(t)
-}
-
-func TestSettingsHandler_GetSettings_InvalidUserID(t *testing.T) {
-	handler, _ := setupSettingsHandler()
-
-	c, w := setupGinContext("GET", "/settings?user_id=invalid", nil)
-	c.Request.URL.RawQuery = "user_id=invalid"
-
-	handler.GetSettings(c)
-
-	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 
 func TestSettingsHandler_UpdateSettings(t *testing.T) {
@@ -109,8 +84,7 @@ func TestSettingsHandler_UpdateSettings(t *testing.T) {
 	mockRepo.On("Update", mock.Anything, mock.AnythingOfType("*models.UserSettings")).Return(nil)
 	mockRepo.On("GetByUserID", mock.Anything, 1).Return(testUserSettings(), nil)
 
-	c, w := setupGinContext("PUT", "/settings?user_id=1", settingsReq)
-	c.Request.URL.RawQuery = "user_id=1"
+	c, w := setupGinContext("PUT", "/settings", settingsReq)
 
 	handler.UpdateSettings(c)
 
@@ -121,22 +95,7 @@ func TestSettingsHandler_UpdateSettings(t *testing.T) {
 func TestSettingsHandler_UpdateSettings_InvalidJSON(t *testing.T) {
 	handler, _ := setupSettingsHandler()
 
-	c, w := setupGinContext("PUT", "/settings?user_id=1", "invalid json")
-	c.Request.URL.RawQuery = "user_id=1"
-
-	handler.UpdateSettings(c)
-
-	assert.Equal(t, http.StatusBadRequest, w.Code)
-}
-
-func TestSettingsHandler_UpdateSettings_InvalidUserID(t *testing.T) {
-	handler, _ := setupSettingsHandler()
-
-	settingsReq := models.SettingsRequest{}
-	settingsReq.Units.Depth = "feet"
-
-	c, w := setupGinContext("PUT", "/settings?user_id=invalid", settingsReq)
-	c.Request.URL.RawQuery = "user_id=invalid"
+	c, w := setupGinContext("PUT", "/settings", "invalid json")
 
 	handler.UpdateSettings(c)
 

@@ -4,9 +4,7 @@ import "errors"
 
 // Common validation errors
 var (
-	ErrMissingUserID = errors.New("user_id is required")
-	ErrInvalidUserID = errors.New("invalid user_id")
-	ErrInvalidID     = errors.New("invalid ID")
+	ErrInvalidID = errors.New("invalid ID")
 )
 
 // Database errors
@@ -21,4 +19,12 @@ var (
 var (
 	ErrInvalidInput     = errors.New("invalid input data")
 	ErrProcessingFailed = errors.New("processing failed")
+)
+
+// Authentication errors
+var (
+	ErrUserNotFound        = errors.New("user not found")
+	ErrUserAlreadyExists   = errors.New("user already exists")
+	ErrInvalidCredentials  = errors.New("invalid credentials")
+	ErrInvalidRefreshToken = errors.New("invalid refresh token")
 )

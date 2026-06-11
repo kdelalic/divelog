@@ -8,9 +8,11 @@ import (
 
 func TestErrorConstants(t *testing.T) {
 	// Test that error constants are not nil and have meaningful messages
-	assert.NotNil(t, ErrMissingUserID)
-	assert.NotNil(t, ErrInvalidUserID)
 	assert.NotNil(t, ErrInvalidID)
+	assert.NotNil(t, ErrUserNotFound)
+	assert.NotNil(t, ErrUserAlreadyExists)
+	assert.NotNil(t, ErrInvalidCredentials)
+	assert.NotNil(t, ErrInvalidRefreshToken)
 	assert.NotNil(t, ErrDiveNotFound)
 	assert.NotNil(t, ErrDiveSiteNotFound)
 	assert.NotNil(t, ErrDuplicateDive)
@@ -31,7 +33,7 @@ func TestErrorEquality(t *testing.T) {
 	// Test that error constants can be compared
 	assert.Equal(t, ErrDiveNotFound, ErrDiveNotFound)
 	assert.NotEqual(t, ErrDiveNotFound, ErrDiveSiteNotFound)
-	assert.NotEqual(t, ErrMissingUserID, ErrInvalidUserID)
+	assert.NotEqual(t, ErrUserNotFound, ErrUserAlreadyExists)
 }
 
 func TestErrorStringRepresentation(t *testing.T) {

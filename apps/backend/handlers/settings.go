@@ -1,10 +1,10 @@
 package handlers
 
 import (
+	"divelog-backend/middleware"
 	"divelog-backend/models"
 	"divelog-backend/utils"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -21,10 +21,8 @@ func NewSettingsHandler(settingsRepo SettingsRepository) *SettingsHandler {
 
 // GetSettings retrieves user settings
 func (h *SettingsHandler) GetSettings(c *gin.Context) {
-	userIDStr := c.DefaultQuery("user_id", "1") // Default to user 1 for development
-	userID, err := strconv.Atoi(userIDStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+	userID, ok := middleware.RequireUserID(c)
+	if !ok {
 		return
 	}
 
@@ -40,10 +38,8 @@ func (h *SettingsHandler) GetSettings(c *gin.Context) {
 
 // UpdateSettings updates user settings
 func (h *SettingsHandler) UpdateSettings(c *gin.Context) {
-	userIDStr := c.DefaultQuery("user_id", "1") // Default to user 1 for development
-	userID, err := strconv.Atoi(userIDStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+	userID, ok := middleware.RequireUserID(c)
+	if !ok {
 		return
 	}
 
@@ -55,7 +51,7 @@ func (h *SettingsHandler) UpdateSettings(c *gin.Context) {
 
 	settings := req.ToUserSettings(userID)
 
-	err = h.settingsRepo.Update(c.Request.Context(), settings)
+	err := h.settingsRepo.Update(c.Request.Context(), settings)
 	if err != nil {
 		utils.LogError(c.Request.Context(), "Error updating settings for user", err, utils.UserID(userID))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update settings"})

@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"divelog-backend/auth"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -8,6 +9,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )
+
+const testJWTSecret = "test-secret"
 
 func TestRequireUserID_Success(t *testing.T) {
 	gin.SetMode(gin.TestMode)
@@ -49,11 +52,9 @@ func TestRequireUserID_WrongType(t *testing.T) {
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 }
 
-func TestUserIDMiddleware_ValidQueryParam(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
+func authTestRouter() *gin.Engine {
 	router := gin.New()
-	router.Use(UserIDMiddleware())
+	router.Use(AuthMiddleware(testJWTSecret))
 	router.GET("/test", func(c *gin.Context) {
 		userID, ok := RequireUserID(c)
 		if !ok {
@@ -61,43 +62,66 @@ func TestUserIDMiddleware_ValidQueryParam(t *testing.T) {
 		}
 		c.JSON(http.StatusOK, gin.H{"user_id": userID})
 	})
+	return router
+}
 
-	req, _ := http.NewRequest("GET", "/test?user_id=5", nil)
+func TestAuthMiddleware_ValidToken(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	token, err := auth.GenerateAccessToken(5, testJWTSecret)
+	assert.NoError(t, err)
+
+	req, _ := http.NewRequest("GET", "/test", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
 	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
+	authTestRouter().ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 	assert.Contains(t, w.Body.String(), "\"user_id\":5")
 }
 
-func TestUserIDMiddleware_MissingQueryParam(t *testing.T) {
+func TestAuthMiddleware_MissingHeader(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-
-	router := gin.New()
-	router.Use(UserIDMiddleware())
-	router.GET("/test", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"ok": true})
-	})
 
 	req, _ := http.NewRequest("GET", "/test", nil)
 	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
+	authTestRouter().ServeHTTP(w, req)
 
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
 }
 
-func TestUserIDMiddleware_InvalidQueryParam(t *testing.T) {
+func TestAuthMiddleware_MalformedHeader(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	router := gin.New()
-	router.Use(UserIDMiddleware())
-	router.GET("/test", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"ok": true})
-	})
-
-	req, _ := http.NewRequest("GET", "/test?user_id=invalid", nil)
+	req, _ := http.NewRequest("GET", "/test", nil)
+	req.Header.Set("Authorization", "NotBearer something")
 	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
+	authTestRouter().ServeHTTP(w, req)
 
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestAuthMiddleware_InvalidToken(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	req, _ := http.NewRequest("GET", "/test", nil)
+	req.Header.Set("Authorization", "Bearer not-a-real-token")
+	w := httptest.NewRecorder()
+	authTestRouter().ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestAuthMiddleware_WrongSecret(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	token, err := auth.GenerateAccessToken(5, "different-secret")
+	assert.NoError(t, err)
+
+	req, _ := http.NewRequest("GET", "/test", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	authTestRouter().ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
 }
