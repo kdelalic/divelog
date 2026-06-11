@@ -1,6 +1,11 @@
 import { Outlet, Link } from "react-router-dom";
+import { LogOut } from "lucide-react";
+import useAuthStore from "../store/authStore";
+import { Button } from "@/components/ui/button";
 
 const Layout = () => {
+  const { user, logout } = useAuthStore();
+
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-40">
@@ -30,12 +35,26 @@ const Layout = () => {
               >
                 Dive Sites
               </Link>
-              <Link 
-                to="/settings" 
+              <Link
+                to="/settings"
                 className="text-slate-600 hover:text-slate-900 font-medium px-4 py-2 rounded-lg transition-colors hover:bg-slate-100 text-base lg:text-lg cursor-pointer"
               >
                 Settings
               </Link>
+            </div>
+            <div className="flex items-center gap-3">
+              {user && (
+                <span className="hidden sm:inline text-sm text-slate-500">{user.username}</span>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => logout()}
+                className="text-slate-600 hover:text-slate-900 gap-2"
+              >
+                <LogOut className="h-4 w-4" />
+                Sign out
+              </Button>
             </div>
           </div>
         </nav>

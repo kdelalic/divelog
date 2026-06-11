@@ -11,60 +11,144 @@ export interface DiveSite {
   updated_at: string;
 }
 
+export interface User {
+  id: number;
+  email: string;
+  username: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AuthResponse {
+  access_token: string;
+  user: User;
+}
+
 const SERVER_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 const API_BASE_URL = `${SERVER_URL}/api/v1`;
-const DEFAULT_USER_ID = 1; // Development user ID
 
 export interface ApiResponse<T> {
   data?: T;
   error?: string;
+  status?: number;
 }
 
-// API utility functions for settings
-export const settingsApi = {
-  // Fetch settings from backend
-  async fetchSettings(): Promise<ApiResponse<UserSettings>> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/settings?user_id=${DEFAULT_USER_ID}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+// The access token lives in memory only (never localStorage) and is
+// managed by the auth store via setAccessToken.
+let accessToken: string | null = null;
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+export const setAccessToken = (token: string | null) => {
+  accessToken = token;
+};
+
+// The auth store registers a refresh handler so apiFetch can transparently
+// renew an expired access token and retry once on 401.
+let refreshHandler: (() => Promise<string | null>) | null = null;
+
+export const setRefreshHandler = (handler: () => Promise<string | null>) => {
+  refreshHandler = handler;
+};
+
+// apiFetch wraps fetch with auth headers, JSON handling, and a single
+// refresh-and-retry on 401.
+async function apiFetch<T>(path: string, options: RequestInit = {}, retried = false): Promise<ApiResponse<T>> {
+  try {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...(options.headers as Record<string, string> | undefined),
+    };
+    if (accessToken) {
+      headers['Authorization'] = `Bearer ${accessToken}`;
+    }
+
+    const response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
+
+    if (response.status === 401 && !retried && refreshHandler) {
+      const newToken = await refreshHandler();
+      if (newToken) {
+        return apiFetch<T>(path, options, true);
       }
+    }
 
+    if (!response.ok) {
+      let message = `HTTP error! status: ${response.status}`;
+      try {
+        const body = await response.json();
+        if (body?.error) message = body.error;
+      } catch {
+        // Non-JSON error body; keep the generic message
+      }
+      return { error: message, status: response.status };
+    }
+
+    if (response.status === 204) {
+      return { data: undefined, status: response.status };
+    }
+
+    const data = await response.json();
+    return { data, status: response.status };
+  } catch (error) {
+    console.error(`API request failed: ${path}`, error);
+    return { error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
+
+// API utility functions for authentication.
+// Auth requests use credentials: 'include' so the httpOnly refresh
+// token cookie is sent and stored by the browser.
+export const authApi = {
+  async register(email: string, username: string, password: string): Promise<ApiResponse<AuthResponse>> {
+    return apiFetch<AuthResponse>('/auth/register', {
+      method: 'POST',
+      credentials: 'include',
+      body: JSON.stringify({ email, username, password }),
+    });
+  },
+
+  async login(email: string, password: string): Promise<ApiResponse<AuthResponse>> {
+    return apiFetch<AuthResponse>('/auth/login', {
+      method: 'POST',
+      credentials: 'include',
+      body: JSON.stringify({ email, password }),
+    });
+  },
+
+  // Refresh deliberately bypasses apiFetch's retry logic to avoid loops
+  async refresh(): Promise<ApiResponse<AuthResponse>> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        return { error: 'Session expired', status: response.status };
+      }
       const data = await response.json();
-      return { data };
+      return { data, status: response.status };
     } catch (error) {
-      console.error('Failed to fetch settings:', error);
       return { error: error instanceof Error ? error.message : 'Unknown error' };
     }
   },
 
-  // Update settings on backend
+  async logout(): Promise<ApiResponse<void>> {
+    return apiFetch<void>('/auth/logout', {
+      method: 'POST',
+      credentials: 'include',
+    });
+  },
+};
+
+// API utility functions for settings
+export const settingsApi = {
+  async fetchSettings(): Promise<ApiResponse<UserSettings>> {
+    return apiFetch<UserSettings>('/settings', { method: 'GET' });
+  },
+
   async updateSettings(settings: UserSettings): Promise<ApiResponse<UserSettings>> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/settings?user_id=${DEFAULT_USER_ID}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(settings),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return { data };
-    } catch (error) {
-      console.error('Failed to update settings:', error);
-      return { error: error instanceof Error ? error.message : 'Unknown error' };
-    }
+    return apiFetch<UserSettings>('/settings', {
+      method: 'PUT',
+      body: JSON.stringify(settings),
+    });
   },
 
   // Check if backend is available
@@ -84,257 +168,72 @@ export const settingsApi = {
 
 // API utility functions for dives
 export const divesApi = {
-  // Fetch all dives from backend
   async fetchDives(): Promise<ApiResponse<Dive[]>> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/dives?user_id=${DEFAULT_USER_ID}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return { data };
-    } catch (error) {
-      console.error('Failed to fetch dives:', error);
-      return { error: error instanceof Error ? error.message : 'Unknown error' };
-    }
+    return apiFetch<Dive[]>('/dives', { method: 'GET' });
   },
 
-  // Create a single dive
   async createDive(dive: Omit<Dive, 'id'>): Promise<ApiResponse<Dive>> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/dives?user_id=${DEFAULT_USER_ID}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(dive),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return { data };
-    } catch (error) {
-      console.error('Failed to create dive:', error);
-      return { error: error instanceof Error ? error.message : 'Unknown error' };
-    }
+    return apiFetch<Dive>('/dives', {
+      method: 'POST',
+      body: JSON.stringify(dive),
+    });
   },
 
   // Create multiple dives (for imports)
   async createMultipleDives(dives: Omit<Dive, 'id'>[]): Promise<ApiResponse<Dive[]>> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/dives/batch?user_id=${DEFAULT_USER_ID}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(dives),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return { data };
-    } catch (error) {
-      console.error('Failed to create multiple dives:', error);
-      return { error: error instanceof Error ? error.message : 'Unknown error' };
-    }
+    return apiFetch<Dive[]>('/dives/batch', {
+      method: 'POST',
+      body: JSON.stringify(dives),
+    });
   },
 
-  // Update a dive
   async updateDive(dive: Dive): Promise<ApiResponse<Dive>> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/dives/${dive.id}?user_id=${DEFAULT_USER_ID}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(dive),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return { data };
-    } catch (error) {
-      console.error('Failed to update dive:', error);
-      return { error: error instanceof Error ? error.message : 'Unknown error' };
-    }
+    return apiFetch<Dive>(`/dives/${dive.id}`, {
+      method: 'PUT',
+      body: JSON.stringify(dive),
+    });
   },
 
-  // Delete a dive
   async deleteDive(diveId: number): Promise<ApiResponse<void>> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/dives/${diveId}?user_id=${DEFAULT_USER_ID}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      return { data: undefined };
-    } catch (error) {
-      console.error('Failed to delete dive:', error);
-      return { error: error instanceof Error ? error.message : 'Unknown error' };
-    }
+    return apiFetch<void>(`/dives/${diveId}`, { method: 'DELETE' });
   },
 };
 
 // API utility functions for dive sites
 export const diveSitesApi = {
-  // Fetch all dive sites
   async fetchDiveSites(): Promise<ApiResponse<DiveSite[]>> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/dive-sites`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return { data };
-    } catch (error) {
-      console.error('Failed to fetch dive sites:', error);
-      return { error: error instanceof Error ? error.message : 'Unknown error' };
-    }
+    return apiFetch<DiveSite[]>('/dive-sites', { method: 'GET' });
   },
 
-  // Search dive sites by name
   async searchDiveSites(query: string): Promise<ApiResponse<DiveSite[]>> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/dive-sites/search?q=${encodeURIComponent(query)}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return { data };
-    } catch (error) {
-      console.error('Failed to search dive sites:', error);
-      return { error: error instanceof Error ? error.message : 'Unknown error' };
-    }
+    return apiFetch<DiveSite[]>(`/dive-sites/search?q=${encodeURIComponent(query)}`, { method: 'GET' });
   },
 
-  // Get a specific dive site
   async getDiveSite(id: number): Promise<ApiResponse<DiveSite>> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/dive-sites/${id}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return { data };
-    } catch (error) {
-      console.error('Failed to get dive site:', error);
-      return { error: error instanceof Error ? error.message : 'Unknown error' };
-    }
+    return apiFetch<DiveSite>(`/dive-sites/${id}`, { method: 'GET' });
   },
 
-  // Create a new dive site
   async createDiveSite(site: Omit<DiveSite, 'id' | 'created_at' | 'updated_at'>): Promise<ApiResponse<DiveSite>> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/dive-sites`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(site),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return { data };
-    } catch (error) {
-      console.error('Failed to create dive site:', error);
-      return { error: error instanceof Error ? error.message : 'Unknown error' };
-    }
+    return apiFetch<DiveSite>('/dive-sites', {
+      method: 'POST',
+      body: JSON.stringify(site),
+    });
   },
 
-  // Update a dive site
   async updateDiveSite(site: DiveSite): Promise<ApiResponse<DiveSite>> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/dive-sites/${site.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: site.name,
-          latitude: site.latitude,
-          longitude: site.longitude,
-          description: site.description,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return { data };
-    } catch (error) {
-      console.error('Failed to update dive site:', error);
-      return { error: error instanceof Error ? error.message : 'Unknown error' };
-    }
+    return apiFetch<DiveSite>(`/dive-sites/${site.id}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        name: site.name,
+        latitude: site.latitude,
+        longitude: site.longitude,
+        description: site.description,
+      }),
+    });
   },
 
-  // Delete a dive site
   async deleteDiveSite(id: number): Promise<ApiResponse<void>> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/dive-sites/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      return { data: undefined };
-    } catch (error) {
-      console.error('Failed to delete dive site:', error);
-      return { error: error instanceof Error ? error.message : 'Unknown error' };
-    }
+    return apiFetch<void>(`/dive-sites/${id}`, { method: 'DELETE' });
   },
 };
 
