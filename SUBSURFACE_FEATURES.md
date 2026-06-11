@@ -50,15 +50,16 @@ This document tracks our progress in implementing Subsurface dive logging featur
 - [x] Gas mix validation and nitrogen calculation
 - [ ] Equipment maintenance tracking
 
-### 3. Enhanced Dive Data
-- [ ] Water temperature (surface/bottom)
-- [ ] Detailed visibility tracking
-- [ ] Current strength and direction
-- [ ] Weather conditions integration
-- [ ] Sea state conditions
-- [ ] Dive type classification (recreational, training, work)
-- [ ] Dive rating system
-- [ ] Safety stop tracking
+### 3. Enhanced Dive Data ✅ COMPLETED
+- [x] Water temperature (surface/bottom)
+- [x] Detailed visibility tracking
+- [x] Current strength and direction
+- [x] Weather conditions (sunny/cloudy/overcast/rainy/windy)
+- [x] Sea state conditions
+- [x] Dive type classification (recreational, training, technical, work, research)
+- [x] Dive rating system (1-5 stars)
+- [x] Safety stop tracking
+- [x] Dive notes entry and display
 
 ## 🎯 Medium Priority Features
 
@@ -137,6 +138,6 @@ This document tracks our progress in implementing Subsurface dive logging featur
 - **Total Features**: 60+ features planned
 
 ## Next Sprint Focus
-1. **Enhanced Dive Data** - Temperature, conditions, and dive types
-2. **Advanced Analytics** - Statistics and trend analysis
-3. **Import/Export Enhancements** - Enhanced UDDF and CSV support
+1. **Authentication & Multi-User** - Replace dev user with real accounts (see DESIGN.md Phase 2)
+2. **Deployment Readiness** - Dockerfiles, CI, environment config (see DESIGN.md Phase 3)
+3. **Advanced Analytics** - Statistics and trend analysis
