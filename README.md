@@ -4,6 +4,23 @@
 
 A modern, web-based version of Subsurface focused on usability, accessibility, and sync support.
 
+## Quick Start (Docker)
+
+Requires Docker and Docker Compose.
+
+```bash
+cp .env.example .env   # set JWT_SECRET (e.g. `openssl rand -base64 32`)
+docker compose up --build
+```
+
+This starts PostgreSQL, the Go API (`http://localhost:8080`), and the
+frontend (`http://localhost:5173`). The backend applies database migrations
+automatically on startup and, outside of `GIN_MODE=release`, seeds a
+development account (`dev@example.com` / `devpass123`).
+
+For local development without Docker, see `apps/backend/README.md` and
+`apps/frontend/README.md`.
+
 ## Tech Stack
 
 ### Frontend

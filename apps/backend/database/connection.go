@@ -15,6 +15,19 @@ import (
 
 var DB *sql.DB
 
+// defaultDatabaseURL is used when DATABASE_URL is not set, matching the
+// docker-compose default for local development.
+const defaultDatabaseURL = "postgres://dev:devpass@localhost:5432/subsurface?sslmode=disable"
+
+// ResolveDatabaseURL returns databaseURL, falling back to the local
+// development default when it is empty.
+func ResolveDatabaseURL(databaseURL string) string {
+	if databaseURL == "" {
+		return defaultDatabaseURL
+	}
+	return databaseURL
+}
+
 type Config struct {
 	MaxOpenConns    int
 	MaxIdleConns    int
@@ -24,10 +37,7 @@ type Config struct {
 
 // InitDBWithConfig initializes the database connection with connection pooling
 func InitDBWithConfig(cfg *Config) error {
-	databaseURL := os.Getenv("DATABASE_URL")
-	if databaseURL == "" {
-		databaseURL = "postgres://dev:devpass@localhost:5432/subsurface?sslmode=disable"
-	}
+	databaseURL := ResolveDatabaseURL(os.Getenv("DATABASE_URL"))
 
 	var err error
 	DB, err = sql.Open("postgres", databaseURL)

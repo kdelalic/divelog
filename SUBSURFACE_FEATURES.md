@@ -137,7 +137,11 @@ This document tracks our progress in implementing Subsurface dive logging featur
 - **High Priority Remaining**: 15+ features
 - **Total Features**: 60+ features planned
 
+## Recently Completed
+- ✅ **Authentication & Multi-User** - JWT-based registration/login replacing the hardcoded dev user (see DESIGN.md Phase 2)
+- ✅ **Deployment Readiness** - Dockerfiles, docker-compose, CI, and ordered DB migrations (see DESIGN.md Phase 3)
+
 ## Next Sprint Focus
-1. **Authentication & Multi-User** - Replace dev user with real accounts (see DESIGN.md Phase 2)
-2. **Deployment Readiness** - Dockerfiles, CI, environment config (see DESIGN.md Phase 3)
+1. **Frontend test suite** - Vitest + React Testing Library (see DESIGN.md Phase 4)
+2. **Offline queue persistence** - localForage-backed Zustand store (see DESIGN.md Phase 4)
 3. **Advanced Analytics** - Statistics and trend analysis

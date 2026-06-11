@@ -23,12 +23,26 @@ func main() {
 	// Initialize structured logging
 	utils.InitLogger(cfg.GinMode)
 
+	// Apply database schema migrations
+	if err := database.RunMigrations(database.ResolveDatabaseURL(cfg.DatabaseURL)); err != nil {
+		utils.LogError(nil, "Failed to run database migrations", err)
+		log.Fatal("Database migration failed:", err)
+	}
+
 	// Initialize database with improved connection pooling
 	if err := database.InitDBWithConfig(nil); err != nil {
 		utils.LogError(nil, "Failed to initialize database", err)
 		log.Fatal("Database initialization failed:", err)
 	}
 	defer database.CloseDB()
+
+	// Seed the local development account outside of release mode
+	if cfg.GinMode != "release" {
+		if err := database.SeedDevUser(); err != nil {
+			utils.LogError(nil, "Failed to seed development user", err)
+			log.Fatal("Database seeding failed:", err)
+		}
+	}
 
 	// Set Gin mode
 	if cfg.GinMode == "release" {

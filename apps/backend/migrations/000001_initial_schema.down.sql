@@ -1,0 +1,4 @@
+DROP TABLE IF EXISTS dives;
+DROP TABLE IF EXISTS dive_sites;
+DROP TABLE IF EXISTS user_settings;
+DROP TABLE IF EXISTS users;
