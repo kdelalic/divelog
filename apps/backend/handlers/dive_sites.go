@@ -1,8 +1,8 @@
 package handlers
 
 import (
+	"divelog-backend/middleware"
 	"divelog-backend/models"
-	"divelog-backend/repository"
 	"divelog-backend/utils"
 	"log/slog"
 	"net/http"
@@ -11,10 +11,10 @@ import (
 )
 
 type DiveSiteHandler struct {
-	diveSiteRepo *repository.DiveSiteRepository
+	diveSiteRepo diveSiteRepository
 }
 
-func NewDiveSiteHandler(diveSiteRepo *repository.DiveSiteRepository) *DiveSiteHandler {
+func NewDiveSiteHandler(diveSiteRepo diveSiteRepository) *DiveSiteHandler {
 	return &DiveSiteHandler{
 		diveSiteRepo: diveSiteRepo,
 	}
@@ -74,8 +74,7 @@ func (h *DiveSiteHandler) GetDiveSite(c *gin.Context) {
 // CreateDiveSite creates a new dive site
 func (h *DiveSiteHandler) CreateDiveSite(c *gin.Context) {
 	var siteReq models.DiveSiteRequest
-	if err := c.ShouldBindJSON(&siteReq); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if !middleware.BindAndValidateJSON(c, &siteReq) {
 		return
 	}
 
@@ -104,8 +103,7 @@ func (h *DiveSiteHandler) UpdateDiveSite(c *gin.Context) {
 	}
 
 	var siteReq models.DiveSiteRequest
-	if err := c.ShouldBindJSON(&siteReq); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if !middleware.BindAndValidateJSON(c, &siteReq) {
 		return
 	}
 

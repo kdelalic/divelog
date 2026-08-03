@@ -39,13 +39,20 @@ func TestValidateUserID(t *testing.T) {
 			expectedStatus: http.StatusBadRequest,
 			shouldError:    true,
 		},
+		{
+			name:           "Non-positive user ID",
+			userID:         "0",
+			expectedID:     0,
+			expectedStatus: http.StatusBadRequest,
+			shouldError:    true,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			w := httptest.NewRecorder()
 			c, _ := gin.CreateTestContext(w)
-			
+
 			req := httptest.NewRequest("GET", "/?user_id="+tt.userID, nil)
 			c.Request = req
 
@@ -90,6 +97,13 @@ func TestValidateIDParam(t *testing.T) {
 		{
 			name:           "Invalid ID parameter",
 			paramValue:     "xyz",
+			expectedID:     0,
+			expectedStatus: http.StatusBadRequest,
+			shouldError:    true,
+		},
+		{
+			name:           "Non-positive ID parameter",
+			paramValue:     "-1",
 			expectedID:     0,
 			expectedStatus: http.StatusBadRequest,
 			shouldError:    true,

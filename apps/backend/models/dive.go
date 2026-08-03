@@ -146,13 +146,13 @@ type Dive struct {
 
 // DiveRequest represents the request body for creating/updating dives
 type DiveRequest struct {
-	DateTime    string          `json:"datetime" binding:"required"` // ISO 8601 format
-	Location    string          `json:"location" binding:"required"`
-	Depth       float64         `json:"depth" binding:"required"`
-	Duration    int             `json:"duration" binding:"required"`
+	DateTime    string          `json:"datetime"` // ISO 8601 format
+	Location    string          `json:"location"`
+	Depth       float64         `json:"depth"`
+	Duration    int             `json:"duration"`
 	Buddy       *string         `json:"buddy,omitempty"`
-	Lat         float64         `json:"lat" binding:"required"`
-	Lng         float64         `json:"lng" binding:"required"`
+	Lat         float64         `json:"lat"`
+	Lng         float64         `json:"lng"`
 	WaterTemp   *float64        `json:"water_temperature,omitempty"`
 	Visibility  *int            `json:"visibility,omitempty"`
 	Notes       *string         `json:"notes,omitempty"`
@@ -200,9 +200,9 @@ type DiveSite struct {
 
 // DiveSiteRequest represents the request body for creating/updating dive sites
 type DiveSiteRequest struct {
-	Name        string  `json:"name" binding:"required"`
-	Latitude    float64 `json:"latitude" binding:"required"`
-	Longitude   float64 `json:"longitude" binding:"required"`
+	Name        string  `json:"name"`
+	Latitude    float64 `json:"latitude"`
+	Longitude   float64 `json:"longitude"`
 	Description *string `json:"description,omitempty"`
 }
 

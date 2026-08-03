@@ -16,7 +16,7 @@ func ValidateUserID(c *gin.Context) (int, error) {
 	}
 
 	userID, err := strconv.Atoi(userIDStr)
-	if err != nil {
+	if err != nil || userID <= 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user_id"})
 		return 0, ErrInvalidUserID
 	}
@@ -28,7 +28,7 @@ func ValidateUserID(c *gin.Context) (int, error) {
 func ValidateIDParam(c *gin.Context, paramName string) (int, error) {
 	idStr := c.Param(paramName)
 	id, err := strconv.Atoi(idStr)
-	if err != nil {
+	if err != nil || id <= 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid " + paramName})
 		return 0, ErrInvalidID
 	}

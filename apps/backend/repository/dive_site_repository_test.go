@@ -2,10 +2,8 @@ package repository
 
 import (
 	"context"
-	"database/sql"
 	"divelog-backend/models"
 	"testing"
-	"time"
 
 	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
@@ -20,7 +18,7 @@ func TestDiveSiteRepository_FindOrCreateDiveSite(t *testing.T) {
 
 	repo := NewDiveSiteRepository(db)
 	ctx := context.Background()
-	
+
 	// Test creating a new dive site
 	site, err := repo.FindOrCreateDiveSite(ctx, "Test Site", 40.7128, -74.0060)
 	assert.NoError(t, err)
@@ -40,7 +38,7 @@ func TestDiveSiteRepository_GetAll(t *testing.T) {
 
 	repo := NewDiveSiteRepository(db)
 	ctx := context.Background()
-	
+
 	sites, err := repo.GetAll(ctx)
 	assert.NoError(t, err)
 	assert.NotNil(t, sites)
@@ -57,7 +55,7 @@ func TestDiveSiteRepository_Search(t *testing.T) {
 
 	repo := NewDiveSiteRepository(db)
 	ctx := context.Background()
-	
+
 	sites, err := repo.Search(ctx, "test")
 	assert.NoError(t, err)
 	assert.NotNil(t, sites)
@@ -73,7 +71,7 @@ func TestDiveSiteRepository_GetByID(t *testing.T) {
 
 	repo := NewDiveSiteRepository(db)
 	ctx := context.Background()
-	
+
 	// Test getting non-existent site
 	site, err := repo.GetByID(ctx, 999999)
 	assert.Error(t, err)
@@ -89,14 +87,14 @@ func TestDiveSiteRepository_Create(t *testing.T) {
 
 	repo := NewDiveSiteRepository(db)
 	ctx := context.Background()
-	
+	description := "A test dive site"
 	siteReq := &models.DiveSiteRequest{
 		Name:        "New Test Site",
 		Latitude:    40.7500,
 		Longitude:   -73.9857,
-		Description: "A test dive site",
+		Description: &description,
 	}
-	
+
 	site, err := repo.Create(ctx, siteReq)
 	assert.NoError(t, err)
 	assert.NotNil(t, site)
@@ -112,15 +110,15 @@ func TestDiveSiteRepository_Update(t *testing.T) {
 
 	repo := NewDiveSiteRepository(db)
 	ctx := context.Background()
-	
+	description := "Updated description"
 	// Test updating non-existent site
 	siteReq := &models.DiveSiteRequest{
 		Name:        "Updated Site",
 		Latitude:    40.7500,
 		Longitude:   -73.9857,
-		Description: "Updated description",
+		Description: &description,
 	}
-	
+
 	site, err := repo.Update(ctx, 999999, siteReq)
 	assert.Error(t, err)
 	assert.Nil(t, site)
@@ -135,7 +133,7 @@ func TestDiveSiteRepository_Delete(t *testing.T) {
 
 	repo := NewDiveSiteRepository(db)
 	ctx := context.Background()
-	
+
 	// Test deleting non-existent site
 	err := repo.Delete(ctx, 999999)
 	assert.Error(t, err)
@@ -150,7 +148,7 @@ func TestDiveSiteRepository_GetDiveSiteByDiveID(t *testing.T) {
 
 	repo := NewDiveSiteRepository(db)
 	ctx := context.Background()
-	
+
 	// Test getting dive site for non-existent dive
 	siteID, err := repo.GetDiveSiteByDiveID(ctx, 999999)
 	assert.Error(t, err)
@@ -161,7 +159,7 @@ func TestDiveSiteRepository_GetDiveSiteByDiveID(t *testing.T) {
 func TestCalculateDistance(t *testing.T) {
 	// Test distance between New York and Los Angeles (approximate)
 	distance := calculateDistance(40.7128, -74.0060, 34.0522, -118.2437)
-	
+
 	// Distance should be approximately 3944 km
 	assert.Greater(t, distance, 3900.0)
 	assert.Less(t, distance, 4000.0)

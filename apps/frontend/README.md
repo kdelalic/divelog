@@ -1,54 +1,38 @@
-# React + TypeScript + Vite
+# Dive Log Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React and TypeScript frontend for Subsurface Web, built with Vite, Tailwind CSS, Zustand, Leaflet, and Chart.js.
 
-Currently, two official plugins are available:
+## Start the local development server
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### Prerequisites
 
-## Expanding the ESLint configuration
+- [Bun](https://bun.sh/)
+- The backend running at `http://localhost:8080`; see [the backend README](../backend/README.md)
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+From this directory:
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+```bash
+bun install
+bun dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Open the URL printed by Vite, normally `http://localhost:5173`.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+The frontend currently sends API requests to `http://localhost:8080/api/v1` and uses development user ID `1`.
 
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
+## Useful commands
+
+```bash
+bun dev          # Start the Vite development server
+bun run lint     # Run ESLint
+bun run build    # Type-check and create a production build
+bun run preview  # Preview the production build locally
 ```
+
+## Main source areas
+
+- `src/pages/` — routed application pages
+- `src/components/` — dive features and reusable UI components
+- `src/store/` — Zustand state stores
+- `src/lib/api.ts` — REST API client
+- `src/lib/uddfParser.ts` and `src/lib/subsurfaceCsvParser.ts` — import parsers

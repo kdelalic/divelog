@@ -31,18 +31,23 @@ func TestParseDateTimeWithVariousFormats(t *testing.T) {
 			input:    "2023-12-25T14:30:45Z",
 			expected: "2023-12-25T14:30:45",
 		},
+		{
+			name:     "With timezone offset",
+			input:    "2023-12-25T14:30:45+00:00",
+			expected: "2023-12-25T14:30:45",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := ParseDateTime(tt.input)
-			
+
 			// Try different layouts for parsing expected result
 			layouts := []string{
 				"2006-01-02T15:04:05.000",
 				"2006-01-02T15:04:05",
 			}
-			
+
 			var expected time.Time
 			var err error
 			for _, layout := range layouts {
@@ -51,11 +56,11 @@ func TestParseDateTimeWithVariousFormats(t *testing.T) {
 					break
 				}
 			}
-			
+
 			if err != nil {
 				t.Fatalf("Failed to parse expected time %s: %v", tt.expected, err)
 			}
-			
+
 			if !result.Equal(expected) {
 				t.Errorf("ParseDateTime(%s) = %v, want %v", tt.input, result, expected)
 			}
@@ -64,12 +69,18 @@ func TestParseDateTimeWithVariousFormats(t *testing.T) {
 }
 
 func TestParseDateTimeInvalidFormat(t *testing.T) {
-	// Test with invalid format - should return current time (approximately)
-	before := time.Now()
 	result := ParseDateTime("invalid-date")
-	after := time.Now()
-	
-	if result.Before(before) || result.After(after.Add(time.Second)) {
-		t.Errorf("ParseDateTime with invalid input should return current time, got %v", result)
+	if !result.IsZero() {
+		t.Errorf("ParseDateTime with invalid input should return zero time, got %v", result)
+	}
+}
+
+func TestParseDateTimeStrictInvalidFormat(t *testing.T) {
+	result, err := ParseDateTimeStrict("invalid-date")
+	if err == nil {
+		t.Fatal("ParseDateTimeStrict should reject invalid input")
+	}
+	if !result.IsZero() {
+		t.Errorf("ParseDateTimeStrict with invalid input should return zero time, got %v", result)
 	}
 }

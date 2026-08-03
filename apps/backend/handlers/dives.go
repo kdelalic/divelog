@@ -3,19 +3,19 @@ package handlers
 import (
 	"divelog-backend/middleware"
 	"divelog-backend/models"
-	"divelog-backend/repository"
 	"divelog-backend/utils"
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
 type DiveHandler struct {
-	diveRepo     *repository.DiveRepository
-	diveSiteRepo *repository.DiveSiteRepository
+	diveRepo     diveRepository
+	diveSiteRepo diveSiteRepository
 }
 
-func NewDiveHandler(diveRepo *repository.DiveRepository, diveSiteRepo *repository.DiveSiteRepository) *DiveHandler {
+func NewDiveHandler(diveRepo diveRepository, diveSiteRepo diveSiteRepository) *DiveHandler {
 	return &DiveHandler{
 		diveRepo:     diveRepo,
 		diveSiteRepo: diveSiteRepo,
@@ -47,8 +47,7 @@ func (h *DiveHandler) CreateDive(c *gin.Context) {
 	}
 
 	var diveReq models.DiveRequest
-	if err := c.ShouldBindJSON(&diveReq); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if !middleware.BindAndValidateJSON(c, &diveReq) {
 		return
 	}
 
@@ -106,13 +105,18 @@ func (h *DiveHandler) CreateMultipleDives(c *gin.Context) {
 	}
 
 	var diveReqs []models.DiveRequest
-	if err := c.ShouldBindJSON(&diveReqs); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if !middleware.BindJSON(c, &diveReqs) {
 		return
 	}
 
+	validationErrors := utils.ValidationErrors{}
 	if len(diveReqs) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "no dives provided"})
+		validationErrors.Add("dives", "must contain at least one dive")
+	}
+	for i := range diveReqs {
+		validationErrors.Merge(fmt.Sprintf("dives[%d]", i), diveReqs[i].Validate())
+	}
+	if !middleware.RespondValidationErrors(c, validationErrors) {
 		return
 	}
 
@@ -193,8 +197,7 @@ func (h *DiveHandler) UpdateDive(c *gin.Context) {
 	}
 
 	var diveReq models.DiveRequest
-	if err := c.ShouldBindJSON(&diveReq); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if !middleware.BindAndValidateJSON(c, &diveReq) {
 		return
 	}
 

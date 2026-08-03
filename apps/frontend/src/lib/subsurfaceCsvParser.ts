@@ -72,12 +72,12 @@ export function parseSubsurfaceCSV(csvText: string): Dive[] {
       }
       
       // Create row object
-      const row: any = {};
+      const row: Record<string, string> = {};
       headers.forEach((header, index) => {
         row[header] = values[index];
       });
       
-      const dive = parseSubsurfaceCSVRow(row as SubsurfaceCSVRow);
+      const dive = parseSubsurfaceCSVRow(row as unknown as SubsurfaceCSVRow);
       if (dive) {
         dives.push(dive);
       }

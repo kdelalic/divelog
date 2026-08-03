@@ -1,8 +1,8 @@
 package handlers
 
 import (
+	"divelog-backend/middleware"
 	"divelog-backend/models"
-	"divelog-backend/repository"
 	"divelog-backend/utils"
 	"net/http"
 	"strconv"
@@ -11,10 +11,10 @@ import (
 )
 
 type SettingsHandler struct {
-	settingsRepo *repository.SettingsRepository
+	settingsRepo settingsRepository
 }
 
-func NewSettingsHandler(settingsRepo *repository.SettingsRepository) *SettingsHandler {
+func NewSettingsHandler(settingsRepo settingsRepository) *SettingsHandler {
 	return &SettingsHandler{
 		settingsRepo: settingsRepo,
 	}
@@ -24,13 +24,13 @@ func NewSettingsHandler(settingsRepo *repository.SettingsRepository) *SettingsHa
 func (h *SettingsHandler) GetSettings(c *gin.Context) {
 	userIDStr := c.DefaultQuery("user_id", "1") // Default to user 1 for development
 	userID, err := strconv.Atoi(userIDStr)
-	if err != nil {
+	if err != nil || userID <= 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
 		return
 	}
 
 	settings, err := h.settingsRepo.GetOrCreateDefault(c.Request.Context(), userID)
-	if err != nil {
+	if err != nil || userID <= 0 {
 		utils.LogError(c.Request.Context(), "Error getting/creating settings for user", err, utils.UserID(userID))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve settings"})
 		return
@@ -49,8 +49,7 @@ func (h *SettingsHandler) UpdateSettings(c *gin.Context) {
 	}
 
 	var req models.SettingsRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+	if !middleware.BindAndValidateJSON(c, &req) {
 		return
 	}
 

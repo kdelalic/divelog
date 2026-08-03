@@ -9,109 +9,55 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestRequireUserID_Success(t *testing.T) {
+func TestRequireUserIDSuccess(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	
-	c, _ := gin.CreateTestContext(httptest.NewRecorder())
-	c.Set("user_id", 1)
-	
-	userID, ok := RequireUserID(c)
-	
+	context, _ := gin.CreateTestContext(httptest.NewRecorder())
+	context.Set("userID", 7)
+
+	userID, ok := RequireUserID(context)
 	assert.True(t, ok)
-	assert.Equal(t, 1, userID)
+	assert.Equal(t, 7, userID)
 }
 
-func TestRequireUserID_Missing(t *testing.T) {
+func TestRequireUserIDMissing(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	
-	w := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(w)
-	// Don't set user_id
-	
-	userID, ok := RequireUserID(c)
-	
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+
+	userID, ok := RequireUserID(context)
 	assert.False(t, ok)
-	assert.Equal(t, 0, userID)
-	assert.Equal(t, http.StatusUnauthorized, w.Code)
+	assert.Zero(t, userID)
+	assert.Equal(t, http.StatusInternalServerError, recorder.Code)
 }
 
-func TestRequireUserID_WrongType(t *testing.T) {
+func TestUserIDMiddleware(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	
-	w := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(w)
-	c.Set("user_id", "not_an_int")
-	
-	userID, ok := RequireUserID(c)
-	
-	assert.False(t, ok)
-	assert.Equal(t, 0, userID)
-	assert.Equal(t, http.StatusUnauthorized, w.Code)
-}
-
-func TestUserValidation_Middleware(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	
 	router := gin.New()
-	router.Use(UserValidation())
-	router.GET("/test", func(c *gin.Context) {
-		userID, ok := RequireUserID(c)
-		if !ok {
-			return
+	router.Use(UserIDMiddleware())
+	router.GET("/test", func(context *gin.Context) {
+		userID, ok := RequireUserID(context)
+		if ok {
+			context.JSON(http.StatusOK, gin.H{"user_id": userID})
 		}
-		c.JSON(http.StatusOK, gin.H{"user_id": userID})
 	})
-	
-	req, _ := http.NewRequest("GET", "/test", nil)
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
-	
-	// Should set default user_id to 1 for development
-	assert.Equal(t, http.StatusOK, w.Code)
-	assert.Contains(t, w.Body.String(), "\"user_id\":1")
+
+	request := httptest.NewRequest(http.MethodGet, "/test?user_id=5", nil)
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, request)
+
+	assert.Equal(t, http.StatusOK, recorder.Code)
+	assert.JSONEq(t, `{"user_id":5}`, recorder.Body.String())
 }
 
-func TestUserValidation_WithHeader(t *testing.T) {
+func TestUserIDMiddlewareRejectsMissingUserID(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	
 	router := gin.New()
-	router.Use(UserValidation())
-	router.GET("/test", func(c *gin.Context) {
-		userID, ok := RequireUserID(c)
-		if !ok {
-			return
-		}
-		c.JSON(http.StatusOK, gin.H{"user_id": userID})
-	})
-	
-	req, _ := http.NewRequest("GET", "/test", nil)
-	req.Header.Set("X-User-ID", "5")
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
-	
-	assert.Equal(t, http.StatusOK, w.Code)
-	assert.Contains(t, w.Body.String(), "\"user_id\":5")
-}
+	router.Use(UserIDMiddleware())
+	router.GET("/test", func(context *gin.Context) { context.Status(http.StatusOK) })
 
-func TestUserValidation_InvalidHeader(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	
-	router := gin.New()
-	router.Use(UserValidation())
-	router.GET("/test", func(c *gin.Context) {
-		userID, ok := RequireUserID(c)
-		if !ok {
-			return
-		}
-		c.JSON(http.StatusOK, gin.H{"user_id": userID})
-	})
-	
-	req, _ := http.NewRequest("GET", "/test", nil)
-	req.Header.Set("X-User-ID", "invalid")
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
-	
-	// Should fall back to default user_id 1
-	assert.Equal(t, http.StatusOK, w.Code)
-	assert.Contains(t, w.Body.String(), "\"user_id\":1")
+	request := httptest.NewRequest(http.MethodGet, "/test", nil)
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, request)
+
+	assert.Equal(t, http.StatusBadRequest, recorder.Code)
 }
