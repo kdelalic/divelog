@@ -25,7 +25,20 @@ bun dev              # Start development server
 bun run build        # Build for production (runs tsc -b && vite build)  
 bun run lint         # Run ESLint
 bun run preview      # Preview production build
+bun run test         # Run the Vitest suite once
+bun run test:watch   # Run Vitest in watch mode
+
+# Coverage must run under Node, not Bun - Bun's runtime does not implement the
+# node:inspector coverage API that @vitest/coverage-v8 depends on.
+npx vitest run --coverage
 ```
+
+### Frontend Testing
+- **Runner**: Vitest, `node` environment (the covered modules are pure logic, no DOM)
+- Tests live beside their module as `src/**/*.test.ts`
+- The suite runs with `TZ=Pacific/Kiritimati` (UTC+14) on purpose: dive times are
+  wall-clock times at the dive site, so an accidental UTC conversion shifts the
+  date and fails a test instead of passing by luck on a UTC machine
 
 ### Backend (apps/backend/)
 ```bash

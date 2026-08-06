@@ -84,7 +84,7 @@ export const settingsApi = {
 // The API uses snake_case field names, while the client models are camelCase.
 // Sending a Dive verbatim silently drops conditions, dive type and safety stops,
 // since Go ignores unknown JSON keys.
-const serializeDive = (dive: Omit<Dive, 'id'>) => {
+export const serializeDive = (dive: Omit<Dive, 'id'>) => {
   const { conditions, diveType, safetyStops, ...rest } = dive;
 
   return {

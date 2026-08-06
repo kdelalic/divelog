@@ -16,6 +16,13 @@ interface UDDFDivesite {
   site: UDDFSite | UDDFSite[];
 }
 
+interface UDDFBuddy {
+  personal?: {
+    firstname?: string;
+    lastname?: string;
+  };
+}
+
 interface UDDFDive {
   '@_id': string;
   informationbeforedive?: {
@@ -29,12 +36,7 @@ interface UDDFDive {
   informationafterdive?: {
     greatestdepth?: number;
     diveduration?: number;
-    buddy?: {
-      personal?: {
-        firstname?: string;
-        lastname?: string;
-      };
-    }[];
+    buddy?: UDDFBuddy | UDDFBuddy[];
   };
   samples?: {
     waypoint?: Array<{
@@ -192,10 +194,12 @@ const parseUDDFDive = (
   const durationSeconds = Number(afterDive?.diveduration) || 0;
   const duration = Math.round(durationSeconds / 60); // Convert seconds to minutes
 
-  // Extract buddy information
+  // Extract buddy information. A lone <buddy> element parses to an object
+  // rather than an array, which is by far the most common case.
   let buddy = '';
-  if (afterDive?.buddy && Array.isArray(afterDive.buddy)) {
-    const buddyInfo = afterDive.buddy[0]?.personal;
+  if (afterDive?.buddy) {
+    const buddies = Array.isArray(afterDive.buddy) ? afterDive.buddy : [afterDive.buddy];
+    const buddyInfo = buddies[0]?.personal;
     if (buddyInfo) {
       buddy = `${buddyInfo.firstname || ''} ${buddyInfo.lastname || ''}`.trim();
     }
@@ -269,10 +273,16 @@ const parseUDDFDive = (
 const KELVIN_OFFSET = 273.15;
 const PASCAL_PER_BAR = 100000;
 
+// A dropped-out sensor typically reports 0 K, which is why the lower bound is a
+// plausible ambient temperature rather than absolute zero: -273.15 is a missing
+// reading, not a cold dive.
+const MIN_PLAUSIBLE_CELSIUS = -20;
+const MAX_PLAUSIBLE_CELSIUS = 100;
+
 const kelvinToCelsius = (kelvin: number): number | undefined => {
   const celsius = kelvin - KELVIN_OFFSET;
   // Guard against sensor dropouts, so one bad sample can't fail the whole import
-  if (!Number.isFinite(celsius) || celsius < -273.15 || celsius > 100) {
+  if (!Number.isFinite(celsius) || celsius < MIN_PLAUSIBLE_CELSIUS || celsius > MAX_PLAUSIBLE_CELSIUS) {
     return undefined;
   }
   return Math.round(celsius * 100) / 100;
