@@ -40,6 +40,11 @@ func (m *mockDiveRepository) DeleteDive(ctx context.Context, diveID, userID int)
 	return m.Called(ctx, diveID, userID).Error(0)
 }
 
+func (m *mockDiveRepository) DeleteAllDives(ctx context.Context, userID int) (int64, error) {
+	args := m.Called(ctx, userID)
+	return args.Get(0).(int64), args.Error(1)
+}
+
 func (m *mockDiveRepository) GetCurrentDive(ctx context.Context, diveID, userID int) (*models.Dive, error) {
 	args := m.Called(ctx, diveID, userID)
 	if args.Get(0) == nil {
@@ -215,4 +220,35 @@ func TestDiveHandlerCreateDiveRejectsMalformedJSON(t *testing.T) {
 
 	assert.Equal(t, http.StatusBadRequest, recorder.Code)
 	assert.JSONEq(t, `{"error":"invalid_request","message":"Request body must contain valid JSON"}`, recorder.Body.String())
+}
+
+func TestDiveHandlerDeleteAllDivesReturnsDeletedCount(t *testing.T) {
+	diveRepo := new(mockDiveRepository)
+	handler := NewDiveHandler(diveRepo, new(mockDiveSiteRepository))
+
+	diveRepo.On("DeleteAllDives", mock.Anything, 1).Return(int64(12), nil)
+
+	context, recorder := setupGinContext(http.MethodDelete, "/dives", nil)
+	handler.DeleteAllDives(context)
+
+	assert.Equal(t, http.StatusOK, recorder.Code)
+	var response struct {
+		DeletedCount int64 `json:"deleted_count"`
+	}
+	assert.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &response))
+	assert.Equal(t, int64(12), response.DeletedCount)
+	diveRepo.AssertExpectations(t)
+}
+
+func TestDiveHandlerDeleteAllDivesReportsRepositoryFailure(t *testing.T) {
+	diveRepo := new(mockDiveRepository)
+	handler := NewDiveHandler(diveRepo, new(mockDiveSiteRepository))
+
+	diveRepo.On("DeleteAllDives", mock.Anything, 1).Return(int64(0), assert.AnError)
+
+	context, recorder := setupGinContext(http.MethodDelete, "/dives", nil)
+	handler.DeleteAllDives(context)
+
+	assert.Equal(t, http.StatusInternalServerError, recorder.Code)
+	diveRepo.AssertExpectations(t)
 }

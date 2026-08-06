@@ -140,8 +140,9 @@ function parseSubsurfaceCSVRow(row: SubsurfaceCSVRow): Dive | null {
       throw new Error(`Missing date or time: date="${dateStr}", time="${timeStr}"`);
     }
     
-    // Combine date and time (Subsurface format: YYYY-MM-DD and HH:MM:SS)
-    const datetime = `${dateStr}T${timeStr}.000Z`;
+    // Combine date and time (Subsurface format: YYYY-MM-DD and HH:MM:SS).
+    // These are wall-clock times at the dive site, so no timezone is attached.
+    const datetime = `${dateStr}T${timeStr}`;
     
     // Parse location
     const location = row.location?.trim();

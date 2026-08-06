@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -23,12 +25,19 @@ const DiveLog = () => {
   const dives = useDiveStore((state) => state.dives);
   const deleteDive = useDiveStore((state) => state.deleteDive);
   const importDives = useDiveStore((state) => state.importDives);
+  const clearAllDives = useDiveStore((state) => state.clearAllDives);
+  const clearError = useDiveStore((state) => state.error);
   const { settings } = useSettingsStore();
   const stats = calculateDiveStatistics(dives);
   const [selectedDive, setSelectedDive] = useState<Dive | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
+  const [clearFailed, setClearFailed] = useState(false);
 
+  // The matching backend route only exists outside release mode
+  const isDevBuild = import.meta.env.DEV;
 
   const handleRowClick = (dive: Dive) => {
     setSelectedDive(dive);
@@ -45,6 +54,27 @@ const DiveLog = () => {
     setShowImport(false);
   };
 
+  const handleClearAllDives = async () => {
+    setIsClearing(true);
+    setClearFailed(false);
+    try {
+      const cleared = await clearAllDives();
+      if (cleared) {
+        setShowClearConfirm(false);
+      } else {
+        setClearFailed(true);
+      }
+    } finally {
+      setIsClearing(false);
+    }
+  };
+
+  const handleClearDialogChange = (open: boolean) => {
+    if (isClearing) return;
+    setShowClearConfirm(open);
+    if (!open) setClearFailed(false);
+  };
+
   return (
     <div className="space-y-8">
       {/* Hero Section */}
@@ -59,12 +89,27 @@ const DiveLog = () => {
                 Track and analyze your diving adventures with comprehensive logging and insights
               </p>
             </div>
-            <div className="flex lg:flex-shrink-0">
-              <Button 
-                variant="outline" 
+            <div className="flex flex-wrap gap-3 lg:flex-shrink-0 lg:justify-end">
+              {isDevBuild && (
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={() => {
+                    setClearFailed(false);
+                    setShowClearConfirm(true);
+                  }}
+                  disabled={dives.length === 0}
+                  title="Development only: removes every dive from the database"
+                  className="bg-white border-red-300 text-red-700 hover:bg-red-50 hover:text-red-800 px-8 py-4 text-base font-medium shadow-sm"
+                >
+                  Delete All Dives (dev)
+                </Button>
+              )}
+              <Button
+                variant="outline"
                 size="lg"
                 onClick={() => setShowImport(true)}
-                className="bg-white border-slate-300 text-slate-700 hover:bg-slate-50 px-8 py-4 text-base font-medium shadow-sm mr-6"
+                className="bg-white border-slate-300 text-slate-700 hover:bg-slate-50 px-8 py-4 text-base font-medium shadow-sm"
               >
                 Import
               </Button>
@@ -178,8 +223,42 @@ const DiveLog = () => {
           <DiveImport onImport={handleImportDives} />
         </DialogContent>
       </Dialog>
+
+      <Dialog open={showClearConfirm} onOpenChange={handleClearDialogChange}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete all dives?</DialogTitle>
+            <DialogDescription>
+              This permanently deletes all {dives.length} dive
+              {dives.length === 1 ? "" : "s"} from the database. It cannot be
+              undone. Dive sites and settings are kept.
+            </DialogDescription>
+            {clearFailed && (
+              <p role="alert" className="text-sm text-red-600">
+                Could not delete the dives. {clearError ?? "Please try again."}
+              </p>
+            )}
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowClearConfirm(false)}
+              disabled={isClearing}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleClearAllDives}
+              disabled={isClearing}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {isClearing ? "Clearing..." : `Delete ${dives.length} dive${dives.length === 1 ? "" : "s"}`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
 
-export default DiveLog; 
+export default DiveLog;

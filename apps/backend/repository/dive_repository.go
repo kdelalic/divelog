@@ -17,12 +17,43 @@ func NewDiveRepository(db *sql.DB) *DiveRepository {
 	return &DiveRepository{db: db}
 }
 
+// jsonbParam returns a value for a JSONB column, storing NULL for empty payloads.
+func jsonbParam(payload []byte) interface{} {
+	if len(payload) == 0 {
+		return nil
+	}
+	return payload
+}
+
+// marshalDiveJSON serializes the JSONB-backed fields of a dive.
+func marshalDiveJSON(dive *models.Dive) (samples, equipment, conditions, safetyStops interface{}, err error) {
+	samplesJSON, err := utils.MarshalJSON(dive.Samples)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+	equipmentJSON, err := utils.MarshalJSON(dive.Equipment)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+	conditionsJSON, err := utils.MarshalJSON(dive.Conditions)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+	safetyStopsJSON, err := utils.MarshalJSON(dive.SafetyStops)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+	return jsonbParam(samplesJSON), jsonbParam(equipmentJSON),
+		jsonbParam(conditionsJSON), jsonbParam(safetyStopsJSON), nil
+}
+
 // GetDivesByUserID retrieves all dives for a user
 func (r *DiveRepository) GetDivesByUserID(ctx context.Context, userID int) ([]models.Dive, error) {
 	query := `
 		SELECT 
 			d.id, d.user_id, d.dive_site_id, d.dive_datetime, d.max_depth, d.duration, 
-			d.buddy, d.water_temperature, d.visibility, d.notes, d.samples, d.equipment, d.created_at, d.updated_at,
+			d.buddy, d.water_temperature, d.visibility, d.notes, d.samples, d.equipment,
+			d.conditions, d.dive_type, d.rating, d.safety_stops, d.created_at, d.updated_at,
 			COALESCE(ds.latitude, d.latitude, 0.0) as latitude,
 			COALESCE(ds.longitude, d.longitude, 0.0) as longitude,
 			COALESCE(ds.name, d.location, 'Unknown Location') as location
@@ -59,23 +90,15 @@ func (r *DiveRepository) GetDivesByUserID(ctx context.Context, userID int) ([]mo
 
 // CreateDive creates a new dive
 func (r *DiveRepository) CreateDive(ctx context.Context, dive *models.Dive) error {
-	// Serialize samples to JSON
-	samplesJSON, err := utils.MarshalJSON(dive.Samples)
+	samplesParam, equipmentParam, conditionsParam, safetyStopsParam, err := marshalDiveJSON(dive)
 	if err != nil {
-		utils.LogError(ctx, "Error marshaling samples", err, utils.UserID(dive.UserID))
-		return utils.ErrProcessingFailed
-	}
-
-	// Serialize equipment to JSON
-	equipmentJSON, err := utils.MarshalJSON(dive.Equipment)
-	if err != nil {
-		utils.LogError(ctx, "Error marshaling equipment", err, utils.UserID(dive.UserID))
+		utils.LogError(ctx, "Error marshaling dive JSON fields", err, utils.UserID(dive.UserID))
 		return utils.ErrProcessingFailed
 	}
 
 	query := `
-		INSERT INTO dives (user_id, dive_site_id, dive_datetime, max_depth, duration, buddy, latitude, longitude, location, water_temperature, visibility, notes, samples, equipment, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+		INSERT INTO dives (user_id, dive_site_id, dive_datetime, max_depth, duration, buddy, latitude, longitude, location, water_temperature, visibility, notes, samples, equipment, conditions, dive_type, rating, safety_stops, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
 		RETURNING id, created_at, updated_at
 	`
 
@@ -84,7 +107,8 @@ func (r *DiveRepository) CreateDive(ctx context.Context, dive *models.Dive) erro
 		query,
 		dive.UserID, dive.DiveSiteID, dive.DateTime, dive.MaxDepth, dive.Duration,
 		dive.Buddy, dive.Latitude, dive.Longitude, dive.Location,
-		dive.WaterTemp, dive.Visibility, dive.Notes, samplesJSON, equipmentJSON,
+		dive.WaterTemp, dive.Visibility, dive.Notes, samplesParam, equipmentParam,
+		conditionsParam, dive.DiveType, dive.Rating, safetyStopsParam,
 		now, now,
 	).Scan(&dive.ID, &dive.CreatedAt, &dive.UpdatedAt)
 
@@ -109,40 +133,24 @@ func (r *DiveRepository) CreateMultipleDives(ctx context.Context, dives []*model
 	now := time.Now()
 
 	for _, dive := range dives {
-		// Serialize samples and equipment
-		samplesJSON, err := utils.MarshalJSON(dive.Samples)
+		samplesParam, equipmentParam, conditionsParam, safetyStopsParam, err := marshalDiveJSON(dive)
 		if err != nil {
-			utils.LogError(ctx, "Error marshaling samples in batch", err, slog.Int("dive_count", len(dives)))
-			return nil, nil, utils.ErrProcessingFailed
-		}
-
-		equipmentJSON, err := utils.MarshalJSON(dive.Equipment)
-		if err != nil {
-			utils.LogError(ctx, "Error marshaling equipment in batch", err, slog.Int("dive_count", len(dives)))
+			utils.LogError(ctx, "Error marshaling dive JSON fields in batch", err, slog.Int("dive_count", len(dives)))
 			return nil, nil, utils.ErrProcessingFailed
 		}
 
 		query := `
-			INSERT INTO dives (user_id, dive_site_id, dive_datetime, max_depth, duration, buddy, latitude, longitude, location, water_temperature, visibility, notes, samples, equipment, created_at, updated_at)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+			INSERT INTO dives (user_id, dive_site_id, dive_datetime, max_depth, duration, buddy, latitude, longitude, location, water_temperature, visibility, notes, samples, equipment, conditions, dive_type, rating, safety_stops, created_at, updated_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
 			RETURNING id, created_at, updated_at
 		`
-
-		var samplesParam interface{} = nil
-		if len(samplesJSON) > 0 {
-			samplesParam = samplesJSON
-		}
-
-		var equipmentParam interface{} = nil
-		if len(equipmentJSON) > 0 {
-			equipmentParam = equipmentJSON
-		}
 
 		err = tx.QueryRow(
 			query,
 			dive.UserID, dive.DiveSiteID, dive.DateTime, dive.MaxDepth, dive.Duration,
 			dive.Buddy, dive.Latitude, dive.Longitude, dive.Location,
 			dive.WaterTemp, dive.Visibility, dive.Notes, samplesParam, equipmentParam,
+			conditionsParam, dive.DiveType, dive.Rating, safetyStopsParam,
 			now, now,
 		).Scan(&dive.ID, &dive.CreatedAt, &dive.UpdatedAt)
 
@@ -164,48 +172,38 @@ func (r *DiveRepository) CreateMultipleDives(ctx context.Context, dives []*model
 
 // UpdateDive updates an existing dive
 func (r *DiveRepository) UpdateDive(ctx context.Context, diveID, userID int, dive *models.Dive) error {
-	// Serialize samples and equipment
-	samplesJSON, err := utils.MarshalJSON(dive.Samples)
-	if err != nil {
-		return utils.ErrProcessingFailed
-	}
-
-	equipmentJSON, err := utils.MarshalJSON(dive.Equipment)
+	samplesParam, equipmentParam, conditionsParam, safetyStopsParam, err := marshalDiveJSON(dive)
 	if err != nil {
 		return utils.ErrProcessingFailed
 	}
 
 	query := `
-		UPDATE dives 
-		SET dive_site_id = $1, dive_datetime = $2, max_depth = $3, duration = $4, buddy = $5, 
-		    latitude = $6, longitude = $7, location = $8, water_temperature = $9, visibility = $10, notes = $11, samples = $12, equipment = $13, updated_at = $14
-		WHERE id = $15 AND user_id = $16
-		RETURNING id, user_id, dive_datetime, max_depth, duration, buddy, 
-		          water_temperature, visibility, notes, samples, equipment, created_at, updated_at
+		UPDATE dives
+		SET dive_site_id = $1, dive_datetime = $2, max_depth = $3, duration = $4, buddy = $5,
+		    latitude = $6, longitude = $7, location = $8, water_temperature = $9, visibility = $10, notes = $11, samples = $12, equipment = $13,
+		    conditions = $14, dive_type = $15, rating = $16, safety_stops = $17, updated_at = $18
+		WHERE id = $19 AND user_id = $20
+		RETURNING id, user_id, dive_datetime, max_depth, duration, buddy,
+		          water_temperature, visibility, notes, samples, equipment,
+		          conditions, dive_type, rating, safety_stops, created_at, updated_at
 	`
 
 	var samplesJSONOut []byte
 	var equipmentJSONOut []byte
+	var conditionsJSONOut []byte
+	var safetyStopsJSONOut []byte
 	now := time.Now()
-
-	var samplesParam interface{} = nil
-	if len(samplesJSON) > 0 {
-		samplesParam = samplesJSON
-	}
-
-	var equipmentParam interface{} = nil
-	if len(equipmentJSON) > 0 {
-		equipmentParam = equipmentJSON
-	}
 
 	err = r.db.QueryRow(
 		query,
 		dive.DiveSiteID, dive.DateTime, dive.MaxDepth, dive.Duration, dive.Buddy,
-		dive.Latitude, dive.Longitude, dive.Location, dive.WaterTemp, dive.Visibility, dive.Notes, samplesParam, equipmentParam, now,
+		dive.Latitude, dive.Longitude, dive.Location, dive.WaterTemp, dive.Visibility, dive.Notes, samplesParam, equipmentParam,
+		conditionsParam, dive.DiveType, dive.Rating, safetyStopsParam, now,
 		diveID, userID,
 	).Scan(
 		&dive.ID, &dive.UserID, &dive.DateTime, &dive.MaxDepth, &dive.Duration,
 		&dive.Buddy, &dive.WaterTemp, &dive.Visibility, &dive.Notes, &samplesJSONOut, &equipmentJSONOut,
+		&conditionsJSONOut, &dive.DiveType, &dive.Rating, &safetyStopsJSONOut,
 		&dive.CreatedAt, &dive.UpdatedAt,
 	)
 
@@ -217,15 +215,31 @@ func (r *DiveRepository) UpdateDive(ctx context.Context, diveID, userID int, div
 		return utils.ErrDatabaseError
 	}
 
-	// Parse samples and equipment JSON
-	if samplesJSONOut != nil {
-		utils.UnmarshalJSON(samplesJSONOut, &dive.Samples)
-	}
-	if equipmentJSONOut != nil {
-		utils.UnmarshalJSON(equipmentJSONOut, &dive.Equipment)
-	}
+	// Parse the JSONB-backed fields
+	utils.UnmarshalJSON(samplesJSONOut, &dive.Samples)
+	utils.UnmarshalJSON(equipmentJSONOut, &dive.Equipment)
+	utils.UnmarshalJSON(conditionsJSONOut, &dive.Conditions)
+	utils.UnmarshalJSON(safetyStopsJSONOut, &dive.SafetyStops)
 
 	return nil
+}
+
+// DeleteAllDives removes every dive belonging to a user and reports how many
+// rows were removed. Intended for resetting local test data.
+func (r *DiveRepository) DeleteAllDives(ctx context.Context, userID int) (int64, error) {
+	result, err := r.db.ExecContext(ctx, `DELETE FROM dives WHERE user_id = $1`, userID)
+	if err != nil {
+		utils.LogError(ctx, "Error deleting all dives", err, utils.UserID(userID))
+		return 0, utils.ErrDatabaseError
+	}
+
+	deleted, err := result.RowsAffected()
+	if err != nil {
+		utils.LogError(ctx, "Error getting rows affected", err, utils.UserID(userID))
+		return 0, utils.ErrDatabaseError
+	}
+
+	return deleted, nil
 }
 
 // DeleteDive deletes a dive
@@ -269,17 +283,17 @@ func (r *DiveRepository) GetCurrentDive(ctx context.Context, diveID, userID int)
 	return &dive, nil
 }
 
-// CheckDuplicateDive checks if a dive already exists for the same user, date, and dive site
+// CheckDuplicateDive checks if a dive already exists for the same user, start
+// time, and dive site. Matching on the full timestamp rather than the date
+// keeps repeat dives at one site on the same day as distinct dives.
 func (r *DiveRepository) CheckDuplicateDive(ctx context.Context, userID int, diveSiteID int, diveDateTime string) (bool, error) {
-	// Parse the datetime and extract just the date part for comparison
 	dt := utils.ParseDateTime(diveDateTime)
-	dateOnly := dt.Format("2006-01-02")
 
-	query := `SELECT COUNT(*) FROM dives 
-			  WHERE user_id = $1 AND dive_site_id = $2 AND DATE(dive_datetime) = $3`
+	query := `SELECT COUNT(*) FROM dives
+			  WHERE user_id = $1 AND dive_site_id = $2 AND dive_datetime = $3`
 
 	var count int
-	err := r.db.QueryRow(query, userID, diveSiteID, dateOnly).Scan(&count)
+	err := r.db.QueryRow(query, userID, diveSiteID, dt).Scan(&count)
 	if err != nil {
 		return false, utils.ErrDatabaseError
 	}
@@ -320,24 +334,26 @@ func (r *DiveRepository) scanDive(rows *sql.Rows) (*models.Dive, error) {
 	var dive models.Dive
 	var samplesJSON []byte
 	var equipmentJSON []byte
+	var conditionsJSON []byte
+	var safetyStopsJSON []byte
 
 	err := rows.Scan(
 		&dive.ID, &dive.UserID, &dive.DiveSiteID, &dive.DateTime, &dive.MaxDepth,
 		&dive.Duration, &dive.Buddy, &dive.WaterTemp, &dive.Visibility,
-		&dive.Notes, &samplesJSON, &equipmentJSON, &dive.CreatedAt, &dive.UpdatedAt,
+		&dive.Notes, &samplesJSON, &equipmentJSON,
+		&conditionsJSON, &dive.DiveType, &dive.Rating, &safetyStopsJSON,
+		&dive.CreatedAt, &dive.UpdatedAt,
 		&dive.Latitude, &dive.Longitude, &dive.Location,
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	// Parse samples and equipment JSON
-	if samplesJSON != nil {
-		utils.UnmarshalJSON(samplesJSON, &dive.Samples)
-	}
-	if equipmentJSON != nil {
-		utils.UnmarshalJSON(equipmentJSON, &dive.Equipment)
-	}
+	// Parse the JSONB-backed fields
+	utils.UnmarshalJSON(samplesJSON, &dive.Samples)
+	utils.UnmarshalJSON(equipmentJSON, &dive.Equipment)
+	utils.UnmarshalJSON(conditionsJSON, &dive.Conditions)
+	utils.UnmarshalJSON(safetyStopsJSON, &dive.SafetyStops)
 
 	return &dive, nil
 }

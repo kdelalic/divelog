@@ -5,6 +5,7 @@ import (
 	"divelog-backend/models"
 	"divelog-backend/utils"
 	"fmt"
+	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -319,4 +320,28 @@ func (h *DiveHandler) DeleteDive(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Dive deleted successfully"})
+}
+
+// DeleteAllDives removes every dive for the user. This is a development-only
+// helper for resetting test data and is not registered in release mode.
+func (h *DiveHandler) DeleteAllDives(c *gin.Context) {
+	userID, ok := middleware.RequireUserID(c)
+	if !ok {
+		return
+	}
+
+	deleted, err := h.diveRepo.DeleteAllDives(c.Request.Context(), userID)
+	if err != nil {
+		utils.LogError(c.Request.Context(), "Error deleting all dives", err, utils.UserID(userID))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete dives"})
+		return
+	}
+
+	utils.LogInfo(c.Request.Context(), "Deleted all dives for user",
+		utils.UserID(userID), slog.Int64("deleted_count", deleted))
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":       "All dives deleted successfully",
+		"deleted_count": deleted,
+	})
 }

@@ -94,6 +94,12 @@ func main() {
 			diveRoutes.POST("/batch", diveHandler.CreateMultipleDives)
 			diveRoutes.PUT("/:id", diveHandler.UpdateDive)
 			diveRoutes.DELETE("/:id", diveHandler.DeleteDive)
+
+			// Development-only helper for wiping test data. Deliberately not
+			// registered in release mode, so it cannot be reached in production.
+			if cfg.GinMode != "release" {
+				diveRoutes.DELETE("", diveHandler.DeleteAllDives)
+			}
 		}
 
 		// Dive site endpoints (no user validation needed for these)
