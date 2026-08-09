@@ -10,8 +10,8 @@ This is "Subsurface Web" - a modern dive log application with React frontend and
 
 - **Monorepo structure** using `apps/` for applications and `packages/` for shared code
 - **Frontend**: React + TypeScript + Vite app in `apps/frontend/`
-- **Backend**: Go + Gin API server in `apps/backend/` with PostgreSQL 17 database
-- **Database**: PostgreSQL 17 running in Docker with comprehensive schema
+- **Backend**: Go + Gin API server in `apps/backend/` with PostgreSQL 18 database
+- **Database**: PostgreSQL 18 running in Docker with comprehensive schema
 - **State Management**: Zustand stores for client state, API integration for persistence
 - **UI Framework**: ShadCN UI components with Tailwind CSS v4
 - **Maps**: OpenStreetMap with Leaflet (replaced Google Maps for cost/licensing)
@@ -42,7 +42,7 @@ npx vitest run --coverage
 
 ### Backend (apps/backend/)
 ```bash
-docker-compose up -d # Start PostgreSQL 17 database
+docker-compose up -d # Start PostgreSQL 18 database
 go mod tidy         # Install Go dependencies
 go run main.go      # Start Go API server on :8080
 ```
@@ -97,15 +97,15 @@ go run main.go      # Start Go API server on :8080
 - **Package Manager**: Bun
 
 ### Backend
-- **Language**: Go 1.21+
+- **Language**: Go 1.25+
 - **Framework**: Gin HTTP framework
-- **Database**: PostgreSQL 17 with proper constraints
+- **Database**: PostgreSQL 18 with proper constraints
 - **Database Driver**: lib/pq
 - **Environment**: godotenv for configuration
 - **CORS**: Built-in middleware for frontend integration
 
 ### Infrastructure
-- **Database**: Docker Compose for PostgreSQL 17
+- **Database**: Docker Compose for PostgreSQL 18
 - **API**: RESTful endpoints at `/api/v1/`
 - **Development**: Hot reload for both frontend and backend
 

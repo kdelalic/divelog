@@ -32,8 +32,8 @@ const EditDive = () => {
   const { dives, editDive } = useDiveStore();
   const { settings } = useSettingsStore();
   const diveToEdit = dives.find((d) => d.id === Number(id));
-  const [equipment, setEquipment] = useState<Equipment | undefined>();
-  const [isEquipmentOpen, setIsEquipmentOpen] = useState(false);
+  const [equipment, setEquipment] = useState<Equipment | undefined>(() => diveToEdit?.equipment);
+  const [isEquipmentOpen, setIsEquipmentOpen] = useState(() => Boolean(diveToEdit?.equipment));
 
   const { register, handleSubmit, formState: { errors }, setValue } = useForm<DiveFormValues>({
     resolver: zodResolver(diveSchema),
@@ -57,12 +57,6 @@ const EditDive = () => {
       setValue("buddy", diveToEdit.buddy);
       setValue("lat", diveToEdit.lat);
       setValue("lng", diveToEdit.lng);
-      
-      // Set equipment data
-      setEquipment(diveToEdit.equipment);
-      if (diveToEdit.equipment) {
-        setIsEquipmentOpen(true);
-      }
     }
   }, [diveToEdit, setValue, settings.units.depth]);
 
@@ -180,4 +174,4 @@ const EditDive = () => {
   );
 };
 
-export default EditDive; 
+export default EditDive;

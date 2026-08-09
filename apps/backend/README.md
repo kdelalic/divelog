@@ -6,7 +6,7 @@ Go/Gin REST API for Subsurface Web with PostgreSQL storage.
 
 ### Prerequisites
 
-- Go 1.21 or newer
+- Go 1.25 or newer
 - Docker with Docker Compose
 
 From this directory:
@@ -23,11 +23,16 @@ The API listens on `http://localhost:8080`. Confirm the server and database are 
 curl http://localhost:8080/health
 ```
 
-The Compose service starts PostgreSQL 17 on `localhost:5432` and initializes the schema from `init.sql`. The default development connection is:
+The Compose service starts PostgreSQL 18 on `localhost:5432` and initializes the schema from `init.sql`. The default development connection is:
 
 ```text
 postgres://dev:devpass@localhost:5432/subsurface?sslmode=disable
 ```
+
+PostgreSQL major versions cannot reuse each other's data directory directly. If
+your `postgres_data` volume was created by PostgreSQL 17, dump and restore it or
+run `pg_upgrade` before starting PostgreSQL 18. For disposable local data, reset
+the volume with `docker compose down -v` and let Compose initialize a new one.
 
 Stop PostgreSQL without deleting its data:
 

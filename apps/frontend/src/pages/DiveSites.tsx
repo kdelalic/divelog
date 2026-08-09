@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { MapPin, Plus, Edit, Trash2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -31,12 +31,7 @@ const DiveSites = () => {
     description: '',
   });
 
-  useEffect(() => {
-    loadDiveSites();
-  }, []);
-
-  const loadDiveSites = async () => {
-    setIsLoading(true);
+  const loadDiveSites = useCallback(async () => {
     const result = await diveSitesApi.fetchDiveSites();
     if (result.error) {
       setError(result.error);
@@ -44,7 +39,26 @@ const DiveSites = () => {
       setDiveSites(result.data || []);
     }
     setIsLoading(false);
-  };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void diveSitesApi.fetchDiveSites().then((result) => {
+      if (cancelled) return;
+
+      if (result.error) {
+        setError(result.error);
+      } else {
+        setDiveSites(result.data || []);
+      }
+      setIsLoading(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleCreate = () => {
     setEditingSite(null);

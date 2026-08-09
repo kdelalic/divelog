@@ -83,15 +83,11 @@ export const calculateNitrogen = (oxygen: number, helium = 0): number => {
 
 export const createGasMix = (oxygen: number, helium = 0): GasMix => {
   const nitrogen = calculateNitrogen(oxygen, helium);
-  let name = '';
-  
-  if (helium > 0) {
-    name = `Trimix ${oxygen}/${helium}`;
-  } else if (oxygen === 21) {
-    name = 'Air';
-  } else {
-    name = `EANx${oxygen}`;
-  }
+  const name = helium > 0
+    ? `Trimix ${oxygen}/${helium}`
+    : oxygen === 21
+      ? 'Air'
+      : `EANx${oxygen}`;
   
   return { oxygen, helium, nitrogen, name };
 };
@@ -125,6 +121,3 @@ export const getGasMixColor = (gasMix: GasMix): string => {
     return '#6B7280'; // Gray for air
   };
 };
-
-
- 

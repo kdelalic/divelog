@@ -5,7 +5,7 @@ A modern web dive log focused on usability, dive-computer imports, interactive p
 ## Tech stack
 
 - **Frontend:** React 19, TypeScript, Vite, Tailwind CSS, ShadCN/Radix UI, Zustand, Leaflet, and Chart.js
-- **Backend:** Go 1.21+, Gin, and PostgreSQL 17
+- **Backend:** Go 1.25+, Gin, and PostgreSQL 18
 - **Local infrastructure:** Docker Compose for PostgreSQL
 
 ## Local development
@@ -13,7 +13,7 @@ A modern web dive log focused on usability, dive-computer imports, interactive p
 ### Prerequisites
 
 - [Bun](https://bun.sh/)
-- Go 1.21 or newer
+- Go 1.25 or newer
 - Docker with Docker Compose
 
 ### 1. Start the backend and database
@@ -34,6 +34,10 @@ curl http://localhost:8080/health
 ```
 
 PostgreSQL is initialized automatically with a development user and sample settings. The default local connection is `postgres://dev:devpass@localhost:5432/subsurface?sslmode=disable`.
+
+If an existing `postgres_data` volume was created by PostgreSQL 17, migrate it
+with a dump/restore or `pg_upgrade` before starting PostgreSQL 18. Disposable
+local data can instead be recreated with `docker compose down -v`.
 
 ### 2. Start the frontend
 

@@ -268,18 +268,23 @@ const DiveProfile: React.FC<DiveProfileProps> = ({
             },
             label: (context: TooltipItem<'line'>) => {
               const { dataset, parsed } = context;
-              
+              const value = parsed.y;
+
+              if (value === null) {
+                return `${dataset.label}: No data`;
+              }
+
               if (dataset.yAxisID === 'depth') {
-                const depth = Math.abs(parsed.y);
+                const depth = Math.abs(value);
                 return `Depth: ${depth.toFixed(1)} ${settings.units.depth}`;
               } else if (dataset.yAxisID === 'temperature') {
                 const unit = settings.units.temperature === 'celsius' ? '°C' : '°F';
-                return `Temperature: ${parsed.y.toFixed(1)}${unit}`;
+                return `Temperature: ${value.toFixed(1)}${unit}`;
               } else if (dataset.yAxisID === 'pressure') {
-                return `Pressure: ${parsed.y.toFixed(0)} ${settings.units.pressure}`;
+                return `Pressure: ${value.toFixed(0)} ${settings.units.pressure}`;
               }
               
-              return `${dataset.label}: ${parsed.y}`;
+              return `${dataset.label}: ${value}`;
             },
             afterBody: (tooltipItems: TooltipItem<'line'>[]) => {
               const index = tooltipItems[0]?.dataIndex;
