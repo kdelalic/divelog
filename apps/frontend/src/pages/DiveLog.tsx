@@ -1,5 +1,5 @@
-import { Link } from "react-router-dom";
-import { useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import { useMemo, useState } from "react";
 import useDiveStore from "../store/diveStore";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,7 +15,17 @@ import DiveChart from "@/components/DiveChart";
 import RecentDives from "@/components/RecentDives";
 import DiveDetailModal from "@/components/DiveDetailModal";
 import DiveImport from "@/components/DiveImport";
+import DiveFilters from "@/components/DiveFilters";
 import { calculateDiveStatistics } from "@/lib/diveStats";
+import {
+  EMPTY_DIVE_FILTERS,
+  countActiveDiveFilters,
+  diveFiltersFromSearchParams,
+  diveFiltersToSearchParams,
+  filterDives,
+  sortDivesNewestFirst,
+  type DiveFilters as DiveFilterValues,
+} from "@/lib/diveFilters";
 import type { Dive } from "@/lib/dives";
 import useSettingsStore from "@/store/settingsStore";
 import { formatDepth } from "@/lib/unitConversions";
@@ -31,6 +41,17 @@ const DiveLog = () => {
   const clearError = useDiveStore((state) => state.error);
   const { settings } = useSettingsStore();
   const stats = calculateDiveStatistics(dives);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const filterQuery = searchParams.toString();
+  const filters = useMemo(
+    () => diveFiltersFromSearchParams(new URLSearchParams(filterQuery)),
+    [filterQuery],
+  );
+  const filteredDives = useMemo(
+    () => sortDivesNewestFirst(filterDives(dives, filters, settings.units.depth)),
+    [dives, filters, settings.units.depth],
+  );
+  const hasActiveFilters = countActiveDiveFilters(filters) > 0;
   const [selectedDive, setSelectedDive] = useState<Dive | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showImport, setShowImport] = useState(false);
@@ -95,6 +116,14 @@ const DiveLog = () => {
     if (isClearing) return;
     setShowClearConfirm(open);
     if (!open) setClearFailed(false);
+  };
+
+  const handleFiltersChange = (nextFilters: DiveFilterValues) => {
+    setSearchParams(diveFiltersToSearchParams(nextFilters), { replace: true });
+  };
+
+  const handleClearFilters = () => {
+    setSearchParams(diveFiltersToSearchParams(EMPTY_DIVE_FILTERS), { replace: true });
   };
 
   return (
@@ -166,69 +195,102 @@ const DiveLog = () => {
           <h3 className="text-xl font-semibold text-slate-900">All Dives</h3>
           <p className="mt-1 text-sm text-slate-600">Complete history of your dive activities</p>
         </div>
-        <table className="min-w-full divide-y divide-slate-200">
-          <thead className="bg-slate-50">
-            <tr>
-              <th scope="col" className="w-1/6 px-8 py-4 text-left text-sm font-semibold text-slate-700 uppercase tracking-wider">Date</th>
-              <th scope="col" className="w-2/6 px-8 py-4 text-left text-sm font-semibold text-slate-700 uppercase tracking-wider">Location</th>
-              <th scope="col" className="w-1/6 px-8 py-4 text-left text-sm font-semibold text-slate-700 uppercase tracking-wider">
-                Depth ({settings.units.depth === 'meters' ? 'm' : 'ft'})
-              </th>
-              <th scope="col" className="w-1/6 px-8 py-4 text-left text-sm font-semibold text-slate-700 uppercase tracking-wider">Duration</th>
-              <th scope="col" className="w-1/6 px-8 py-4 text-left text-sm font-semibold text-slate-700 uppercase tracking-wider">Buddy</th>
-              <th scope="col" className="w-1/6 relative px-8 py-4">
-                <span className="sr-only">Actions</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-slate-100">
-            {dives
-              .sort((a, b) => new Date(b.datetime).getTime() - new Date(a.datetime).getTime())
-              .map((dive) => (
-              <tr 
-                key={dive.id} 
-                className="hover:bg-slate-50 cursor-pointer transition-colors duration-150"
-                onClick={() => handleRowClick(dive)}
-              >
-                <td className="px-8 py-5 whitespace-nowrap text-sm lg:text-base font-medium text-slate-900">
-                  {formatDiveDateTime(dive.datetime, settings)}
-                </td>
-                <td className="px-8 py-5 whitespace-nowrap text-sm lg:text-base text-slate-600 font-medium">{dive.location}</td>
-                <td className="px-8 py-5 whitespace-nowrap text-sm lg:text-base text-slate-600 font-semibold text-blue-600">
-                  {formatDepth(dive.depth, settings.units.depth, 0)}
-                </td>
-                <td className="px-8 py-5 whitespace-nowrap text-sm lg:text-base text-slate-600">{dive.duration} min</td>
-                <td className="px-8 py-5 whitespace-nowrap text-sm lg:text-base text-slate-600">{dive.buddy || '—'}</td>
-                <td className="px-8 py-5 whitespace-nowrap text-right text-sm font-medium">
-                  <div className="flex justify-end gap-2">
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      asChild
-                      onClick={(e) => e.stopPropagation()}
-                      className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-3 py-1"
-                    >
-                      <Link to={`/edit/${dive.id}`}>Edit</Link>
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50 px-3 py-1" 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (window.confirm("Are you sure you want to delete this dive?")) {
-                          deleteDive(dive.id);
-                        }
-                      }}
-                    >
-                      Delete
-                    </Button>
-                  </div>
-                </td>
+        <DiveFilters
+          filters={filters}
+          depthUnit={settings.units.depth}
+          resultCount={filteredDives.length}
+          totalCount={dives.length}
+          onChange={handleFiltersChange}
+          onClear={handleClearFilters}
+        />
+        <div className="overflow-x-auto border-t border-slate-200">
+          <table className="min-w-full divide-y divide-slate-200">
+            <thead className="bg-slate-50">
+              <tr>
+                <th scope="col" className="w-1/6 px-8 py-4 text-left text-sm font-semibold text-slate-700 uppercase tracking-wider">Date</th>
+                <th scope="col" className="w-2/6 px-8 py-4 text-left text-sm font-semibold text-slate-700 uppercase tracking-wider">Location</th>
+                <th scope="col" className="w-1/6 px-8 py-4 text-left text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                  Depth ({settings.units.depth === 'meters' ? 'm' : 'ft'})
+                </th>
+                <th scope="col" className="w-1/6 px-8 py-4 text-left text-sm font-semibold text-slate-700 uppercase tracking-wider">Duration</th>
+                <th scope="col" className="w-1/6 px-8 py-4 text-left text-sm font-semibold text-slate-700 uppercase tracking-wider">Buddy</th>
+                <th scope="col" className="w-1/6 relative px-8 py-4">
+                  <span className="sr-only">Actions</span>
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="bg-white divide-y divide-slate-100">
+              {filteredDives.map((dive) => (
+                <tr
+                  key={dive.id}
+                  className="hover:bg-slate-50 cursor-pointer transition-colors duration-150"
+                  onClick={() => handleRowClick(dive)}
+                >
+                  <td className="px-8 py-5 whitespace-nowrap text-sm lg:text-base font-medium text-slate-900">
+                    {formatDiveDateTime(dive.datetime, settings)}
+                  </td>
+                  <td className="px-8 py-5 whitespace-nowrap text-sm lg:text-base text-slate-600 font-medium">{dive.location}</td>
+                  <td className="px-8 py-5 whitespace-nowrap text-sm lg:text-base text-slate-600 font-semibold text-blue-600">
+                    {formatDepth(dive.depth, settings.units.depth, 0)}
+                  </td>
+                  <td className="px-8 py-5 whitespace-nowrap text-sm lg:text-base text-slate-600">{dive.duration} min</td>
+                  <td className="px-8 py-5 whitespace-nowrap text-sm lg:text-base text-slate-600">{dive.buddy || '—'}</td>
+                  <td className="px-8 py-5 whitespace-nowrap text-right text-sm font-medium">
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        asChild
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-3 py-1"
+                      >
+                        <Link to={`/edit/${dive.id}`}>Edit</Link>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50 px-3 py-1"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (window.confirm("Are you sure you want to delete this dive?")) {
+                            deleteDive(dive.id);
+                          }
+                        }}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {filteredDives.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="px-8 py-14 text-center">
+                    <p className="font-semibold text-slate-900">
+                      {hasActiveFilters ? 'No dives match these filters' : 'No dives logged yet'}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-600">
+                      {hasActiveFilters
+                        ? 'Try widening the date or depth range, or clear the filters.'
+                        : 'Add or import a dive to start your logbook.'}
+                    </p>
+                    {hasActiveFilters && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleClearFilters}
+                        className="mt-4"
+                      >
+                        Clear filters
+                      </Button>
+                    )}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <DiveDetailModal 
