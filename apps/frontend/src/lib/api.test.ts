@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { serializeDive } from './api';
+import { deserializeDive, serializeDive } from './api';
 import type { Dive } from './dives';
 
 // The client models are camelCase and the Go API is snake_case. Go silently
@@ -130,5 +130,64 @@ describe('serializeDive', () => {
     expect(body).not.toHaveProperty('dive_type');
     expect(body).not.toHaveProperty('safety_stops');
     expect(body).not.toHaveProperty('water_temperature');
+  });
+});
+
+describe('deserializeDive', () => {
+  it('normalizes enhanced API fields into the client model', () => {
+    const result = deserializeDive({
+      id: 3,
+      datetime: '2024-03-15T09:30:00',
+      location: 'Blue Hole',
+      depth: 28.4,
+      duration: 45,
+      lat: 28.5721,
+      lng: 34.5372,
+      dive_type: 'technical',
+      safety_stops: [{ depth: 5, duration: 3 }],
+      conditions: {
+        water_temp_surface: 24,
+        water_temp_bottom: 18,
+        air_temp: 26,
+        visibility: 20,
+        current_strength: 'moderate',
+        current_direction: 'NE',
+        weather: 'sunny',
+        sea_state: 2,
+        surge: 'light',
+      },
+    });
+
+    expect(result).toMatchObject({
+      diveType: 'technical',
+      safetyStops: [{ depth: 5, duration: 3 }],
+      conditions: {
+        waterTemp: { surface: 24, bottom: 18 },
+        airTemp: 26,
+        visibility: 20,
+        current: { strength: 'moderate', direction: 'NE' },
+        weather: 'sunny',
+        seaState: 2,
+        surge: 'light',
+      },
+    });
+    expect(result).not.toHaveProperty('dive_type');
+    expect(result).not.toHaveProperty('safety_stops');
+  });
+
+  it('does not invent nested condition groups when the API omits them', () => {
+    const result = deserializeDive({
+      id: 4,
+      datetime: '2024-03-16T10:00:00',
+      location: 'The Wall',
+      depth: 20,
+      duration: 35,
+      lat: 0,
+      lng: 0,
+    });
+
+    expect(result.conditions).toBeUndefined();
+    expect(result.diveType).toBeUndefined();
+    expect(result.safetyStops).toBeUndefined();
   });
 });

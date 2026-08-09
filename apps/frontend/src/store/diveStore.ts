@@ -17,8 +17,8 @@ interface DiveState {
   offlineQueue: OfflineOperation[];
   
   // Actions
-  addDive: (dive: Omit<Dive, 'id'>) => Promise<void>;
-  editDive: (dive: Dive) => Promise<void>;
+  addDive: (dive: Omit<Dive, 'id'>) => Promise<boolean>;
+  editDive: (dive: Dive) => Promise<boolean>;
   deleteDive: (id: number) => Promise<void>;
   importDives: (dives: Dive[]) => Promise<void>;
   clearAllDives: () => Promise<boolean>;
@@ -40,6 +40,10 @@ const useDiveStore = create<DiveState>()((set, get) => ({
     if (get().isOnline) {
       const result = await divesApi.createDive(dive);
       if (result.error) {
+        if (result.status !== undefined) {
+          set({ error: result.error, isLoading: false });
+          return false;
+        }
         // Add to offline queue and update online status
         const operation: OfflineOperation = {
           id: crypto.randomUUID(),
@@ -53,9 +57,11 @@ const useDiveStore = create<DiveState>()((set, get) => ({
           error: 'Network error - operation queued for retry',
           isLoading: false
         }));
+        return true;
       } else if (result.data) {
         // Success - reload from backend to get fresh data
         await get().loadFromBackend();
+        return true;
       }
     } else {
       // Add to offline queue
@@ -69,7 +75,11 @@ const useDiveStore = create<DiveState>()((set, get) => ({
         offlineQueue: [...state.offlineQueue, operation],
         isLoading: false
       }));
+      return true;
     }
+
+    set({ error: 'The dive could not be saved', isLoading: false });
+    return false;
   },
 
   editDive: async (updatedDive) => {
@@ -78,6 +88,10 @@ const useDiveStore = create<DiveState>()((set, get) => ({
     if (get().isOnline) {
       const result = await divesApi.updateDive(updatedDive);
       if (result.error) {
+        if (result.status !== undefined) {
+          set({ error: result.error, isLoading: false });
+          return false;
+        }
         const operation: OfflineOperation = {
           id: crypto.randomUUID(),
           type: 'update',
@@ -90,8 +104,10 @@ const useDiveStore = create<DiveState>()((set, get) => ({
           error: 'Network error - operation queued for retry',
           isLoading: false
         }));
+        return true;
       } else {
         await get().loadFromBackend();
+        return true;
       }
     } else {
       const operation: OfflineOperation = {
@@ -104,6 +120,7 @@ const useDiveStore = create<DiveState>()((set, get) => ({
         offlineQueue: [...state.offlineQueue, operation],
         isLoading: false
       }));
+      return true;
     }
   },
 

@@ -35,7 +35,7 @@ This document tracks our progress in implementing Subsurface dive logging featur
 - [x] Pressure overlay
 - [x] Integrate into dive detail modal
 - [ ] Event markers on timeline
-- [ ] Zoom and pan functionality
+- [x] Zoom and pan functionality
 - [ ] Multiple dive comparison
 
 ### 2. Equipment Management ✅ COMPLETED
@@ -51,14 +51,14 @@ This document tracks our progress in implementing Subsurface dive logging featur
 - [ ] Equipment maintenance tracking
 
 ### 3. Enhanced Dive Data
-- [ ] Water temperature (surface/bottom)
-- [ ] Detailed visibility tracking
-- [ ] Current strength and direction
-- [ ] Weather conditions integration
-- [ ] Sea state conditions
-- [ ] Dive type classification (recreational, training, work)
-- [ ] Dive rating system
-- [ ] Safety stop tracking
+- [x] Water temperature (surface/bottom)
+- [x] Detailed visibility tracking
+- [x] Current strength and direction
+- [x] Weather conditions tracking
+- [x] Sea state conditions
+- [x] Dive type classification (recreational, training, technical, work, research)
+- [x] Dive rating system
+- [x] Safety stop tracking
 
 ## 🎯 Medium Priority Features
 
@@ -137,6 +137,6 @@ This document tracks our progress in implementing Subsurface dive logging featur
 - **Total Features**: 60+ features planned
 
 ## Next Sprint Focus
-1. **Enhanced Dive Data** - Temperature, conditions, and dive types
-2. **Advanced Analytics** - Statistics and trend analysis
-3. **Import/Export Enhancements** - Enhanced UDDF and CSV support
+1. **Advanced Search & Filtering** - Find dives by date, site, depth, buddy, type, and rating
+2. **Import/Export Enhancements** - CSV/UDDF export and backup
+3. **Advanced Analytics** - Statistics and trend analysis

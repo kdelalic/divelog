@@ -17,7 +17,24 @@ const DEFAULT_USER_ID = 1; // Development user ID
 export interface ApiResponse<T> {
   data?: T;
   error?: string;
+  status?: number;
 }
+
+const readApiError = async (response: Response): Promise<string> => {
+  try {
+    const body = await response.json() as {
+      error?: string;
+      message?: string;
+      fields?: Record<string, string>;
+    };
+    const fieldErrors = body.fields
+      ? Object.entries(body.fields).map(([field, message]) => `${field}: ${message}`).join('; ')
+      : '';
+    return [body.message || body.error, fieldErrors].filter(Boolean).join(' — ') || `Request failed (${response.status})`;
+  } catch {
+    return `Request failed (${response.status})`;
+  }
+};
 
 // API utility functions for settings
 export const settingsApi = {
@@ -32,7 +49,7 @@ export const settingsApi = {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        return { error: await readApiError(response), status: response.status };
       }
 
       const data = await response.json();
@@ -55,7 +72,7 @@ export const settingsApi = {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        return { error: await readApiError(response), status: response.status };
       }
 
       const data = await response.json();
@@ -108,6 +125,60 @@ export const serializeDive = (dive: Omit<Dive, 'id'>) => {
   };
 };
 
+interface ApiDiveConditions {
+  water_temp_surface?: number;
+  water_temp_bottom?: number;
+  air_temp?: number;
+  visibility?: number;
+  current_strength?: 'none' | 'light' | 'moderate' | 'strong';
+  current_direction?: string;
+  weather?: 'sunny' | 'cloudy' | 'overcast' | 'rainy' | 'windy';
+  sea_state?: number;
+  surge?: 'none' | 'light' | 'moderate' | 'heavy';
+}
+
+type ApiDive = Omit<Dive, 'conditions' | 'diveType' | 'safetyStops'> & {
+  conditions?: ApiDiveConditions;
+  dive_type?: Dive['diveType'];
+  safety_stops?: Dive['safetyStops'];
+};
+
+// Normalize the Go API's snake_case response fields into the client model.
+// Without this read-side mapping, enhanced data appears to save successfully
+// and then vanishes from the UI on the next backend reload.
+export const deserializeDive = (apiDive: ApiDive): Dive => {
+  const { conditions, dive_type, safety_stops, ...rest } = apiDive;
+  const waterTemp = conditions?.water_temp_surface !== undefined || conditions?.water_temp_bottom !== undefined
+    ? {
+        surface: conditions.water_temp_surface,
+        bottom: conditions.water_temp_bottom,
+      }
+    : undefined;
+  const current = conditions?.current_strength
+    ? {
+        strength: conditions.current_strength,
+        direction: conditions.current_direction,
+      }
+    : undefined;
+
+  return {
+    ...rest,
+    diveType: dive_type,
+    safetyStops: safety_stops,
+    conditions: conditions
+      ? {
+          waterTemp,
+          airTemp: conditions.air_temp,
+          visibility: conditions.visibility,
+          current,
+          weather: conditions.weather,
+          seaState: conditions.sea_state,
+          surge: conditions.surge,
+        }
+      : undefined,
+  };
+};
+
 // API utility functions for dives
 export const divesApi = {
   // Fetch all dives from backend
@@ -124,8 +195,8 @@ export const divesApi = {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json();
-      return { data };
+      const data = await response.json() as ApiDive[];
+      return { data: data.map(deserializeDive) };
     } catch (error) {
       console.error('Failed to fetch dives:', error);
       return { error: error instanceof Error ? error.message : 'Unknown error' };
@@ -144,11 +215,11 @@ export const divesApi = {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        return { error: await readApiError(response), status: response.status };
       }
 
-      const data = await response.json();
-      return { data };
+      const data = await response.json() as ApiDive;
+      return { data: deserializeDive(data) };
     } catch (error) {
       console.error('Failed to create dive:', error);
       return { error: error instanceof Error ? error.message : 'Unknown error' };
@@ -170,8 +241,8 @@ export const divesApi = {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json();
-      return { data };
+      const data = await response.json() as { created?: ApiDive[] };
+      return { data: (data.created ?? []).map(deserializeDive) };
     } catch (error) {
       console.error('Failed to create multiple dives:', error);
       return { error: error instanceof Error ? error.message : 'Unknown error' };
@@ -190,11 +261,11 @@ export const divesApi = {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        return { error: await readApiError(response), status: response.status };
       }
 
-      const data = await response.json();
-      return { data };
+      const data = await response.json() as ApiDive;
+      return { data: deserializeDive(data) };
     } catch (error) {
       console.error('Failed to update dive:', error);
       return { error: error instanceof Error ? error.message : 'Unknown error' };
