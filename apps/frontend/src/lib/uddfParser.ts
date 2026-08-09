@@ -16,6 +16,13 @@ interface UDDFDivesite {
   site: UDDFSite | UDDFSite[];
 }
 
+interface UDDFBuddy {
+  personal?: {
+    firstname?: string;
+    lastname?: string;
+  };
+}
+
 interface UDDFDive {
   '@_id': string;
   informationbeforedive?: {
@@ -29,12 +36,7 @@ interface UDDFDive {
   informationafterdive?: {
     greatestdepth?: number;
     diveduration?: number;
-    buddy?: {
-      personal?: {
-        firstname?: string;
-        lastname?: string;
-      };
-    }[];
+    buddy?: UDDFBuddy | UDDFBuddy[];
   };
   samples?: {
     waypoint?: Array<{
@@ -192,10 +194,12 @@ const parseUDDFDive = (
   const durationSeconds = Number(afterDive?.diveduration) || 0;
   const duration = Math.round(durationSeconds / 60); // Convert seconds to minutes
 
-  // Extract buddy information
+  // Extract buddy information. A lone <buddy> element parses to an object
+  // rather than an array, which is by far the most common case.
   let buddy = '';
-  if (afterDive?.buddy && Array.isArray(afterDive.buddy)) {
-    const buddyInfo = afterDive.buddy[0]?.personal;
+  if (afterDive?.buddy) {
+    const buddies = Array.isArray(afterDive.buddy) ? afterDive.buddy : [afterDive.buddy];
+    const buddyInfo = buddies[0]?.personal;
     if (buddyInfo) {
       buddy = `${buddyInfo.firstname || ''} ${buddyInfo.lastname || ''}`.trim();
     }
@@ -233,10 +237,10 @@ const parseUDDFDive = (
     samples = waypoints
       .filter(wp => wp.divetime !== undefined && wp.depth !== undefined)
       .map(wp => ({
-        time: Number(wp.divetime!), // Ensure time is a number
+        time: Math.round(Number(wp.divetime!)), // Whole seconds from dive start
         depth: Number(wp.depth!), // Ensure depth is a number
-        temperature: wp.temperature !== undefined ? Number(wp.temperature) : undefined, // Convert to number if present
-        pressure: wp.tankpressure !== undefined ? Number(wp.tankpressure) : undefined, // Convert to number if present
+        temperature: wp.temperature !== undefined ? kelvinToCelsius(Number(wp.temperature)) : undefined,
+        pressure: wp.tankpressure !== undefined ? pascalToBar(Number(wp.tankpressure)) : undefined,
       }))
       .sort((a, b) => a.time - b.time); // Sort by time
     
@@ -264,19 +268,59 @@ const parseUDDFDive = (
   };
 };
 
-const parseUDDFDateTime = (dateString: string): string => {
-  try {
-    // UDDF dates can be in various formats, commonly ISO 8601
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) {
-      throw new Error('Invalid date');
-    }
-    
-    return date.toISOString();
-  } catch {
-    // Fallback to current date if parsing fails
-    return new Date().toISOString();
+// UDDF stores measurements in SI base units: temperature in Kelvin and
+// pressure in Pascal. The rest of the app works in celsius and bar.
+const KELVIN_OFFSET = 273.15;
+const PASCAL_PER_BAR = 100000;
+
+// A dropped-out sensor typically reports 0 K, which is why the lower bound is a
+// plausible ambient temperature rather than absolute zero: -273.15 is a missing
+// reading, not a cold dive.
+const MIN_PLAUSIBLE_CELSIUS = -20;
+const MAX_PLAUSIBLE_CELSIUS = 100;
+
+const kelvinToCelsius = (kelvin: number): number | undefined => {
+  const celsius = kelvin - KELVIN_OFFSET;
+  // Guard against sensor dropouts, so one bad sample can't fail the whole import
+  if (!Number.isFinite(celsius) || celsius < MIN_PLAUSIBLE_CELSIUS || celsius > MAX_PLAUSIBLE_CELSIUS) {
+    return undefined;
   }
+  return Math.round(celsius * 100) / 100;
+};
+
+const pascalToBar = (pascal: number): number | undefined => {
+  const bar = pascal / PASCAL_PER_BAR;
+  if (!Number.isFinite(bar) || bar < 0 || bar > 1000) {
+    return undefined;
+  }
+  return Math.round(bar * 100) / 100;
+};
+
+// Dive times are wall-clock times at the dive site, and the rest of the app
+// stores them that way. UDDF timestamps carry either no zone at all or the
+// computer's own offset, so keep the components as written rather than letting
+// them get shifted into UTC by the importing machine's timezone.
+const UDDF_DATETIME = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/;
+
+const parseUDDFDateTime = (dateString: string): string => {
+  const match = UDDF_DATETIME.exec(dateString.trim());
+  if (match) {
+    const [, year, month, day, hours, minutes, seconds = '00'] = match;
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+  }
+
+  // Fallback for any format we don't recognise
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) {
+    return formatLocalDateTime(new Date());
+  }
+  return formatLocalDateTime(date);
+};
+
+const formatLocalDateTime = (date: Date): string => {
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
+    `T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 };
 
 export const validateUDDFFile = (file: File): boolean => {

@@ -81,6 +81,33 @@ export const settingsApi = {
   },
 };
 
+// The API uses snake_case field names, while the client models are camelCase.
+// Sending a Dive verbatim silently drops conditions, dive type and safety stops,
+// since Go ignores unknown JSON keys.
+export const serializeDive = (dive: Omit<Dive, 'id'>) => {
+  const { conditions, diveType, safetyStops, ...rest } = dive;
+
+  return {
+    ...rest,
+    dive_type: diveType,
+    safety_stops: safetyStops,
+    water_temperature: conditions?.waterTemp?.bottom ?? conditions?.waterTemp?.surface,
+    // The API models visibility as a whole number of meters
+    visibility: conditions?.visibility !== undefined ? Math.round(conditions.visibility) : undefined,
+    conditions: conditions && {
+      water_temp_surface: conditions.waterTemp?.surface,
+      water_temp_bottom: conditions.waterTemp?.bottom,
+      air_temp: conditions.airTemp,
+      visibility: conditions.visibility,
+      current_strength: conditions.current?.strength,
+      current_direction: conditions.current?.direction,
+      weather: conditions.weather,
+      sea_state: conditions.seaState,
+      surge: conditions.surge,
+    },
+  };
+};
+
 // API utility functions for dives
 export const divesApi = {
   // Fetch all dives from backend
@@ -113,7 +140,7 @@ export const divesApi = {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(dive),
+        body: JSON.stringify(serializeDive(dive)),
       });
 
       if (!response.ok) {
@@ -136,7 +163,7 @@ export const divesApi = {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(dives),
+        body: JSON.stringify(dives.map(serializeDive)),
       });
 
       if (!response.ok) {
@@ -159,7 +186,7 @@ export const divesApi = {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(dive),
+        body: JSON.stringify(serializeDive(dive)),
       });
 
       if (!response.ok) {
@@ -191,6 +218,29 @@ export const divesApi = {
       return { data: undefined };
     } catch (error) {
       console.error('Failed to delete dive:', error);
+      return { error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  },
+
+  // Delete every dive for the user. Development only - the backend does not
+  // register this route in release mode.
+  async deleteAllDives(): Promise<ApiResponse<{ deleted_count: number }>> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/dives?user_id=${DEFAULT_USER_ID}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return { data };
+    } catch (error) {
+      console.error('Failed to delete all dives:', error);
       return { error: error instanceof Error ? error.message : 'Unknown error' };
     }
   },

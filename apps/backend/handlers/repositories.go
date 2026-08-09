@@ -11,6 +11,7 @@ type diveRepository interface {
 	CreateMultipleDives(context.Context, []*models.Dive) ([]models.Dive, []map[string]interface{}, error)
 	UpdateDive(context.Context, int, int, *models.Dive) error
 	DeleteDive(context.Context, int, int) error
+	DeleteAllDives(context.Context, int) (int64, error)
 	GetCurrentDive(context.Context, int, int) (*models.Dive, error)
 	CheckDuplicateDive(context.Context, int, int, string) (bool, error)
 	CheckDuplicateDiveForUpdateByLocation(context.Context, int, float64, float64, string, int) (bool, error)

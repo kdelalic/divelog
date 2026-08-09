@@ -21,6 +21,7 @@ interface DiveState {
   editDive: (dive: Dive) => Promise<void>;
   deleteDive: (id: number) => Promise<void>;
   importDives: (dives: Dive[]) => Promise<void>;
+  clearAllDives: () => Promise<boolean>;
   loadFromBackend: () => Promise<void>;
   processOfflineQueue: () => Promise<void>;
   setOnlineStatus: (online: boolean) => void;
@@ -176,6 +177,20 @@ const useDiveStore = create<DiveState>()((set, get) => ({
     }
   },
 
+  clearAllDives: async () => {
+    set({ isLoading: true, error: null });
+
+    const result = await divesApi.deleteAllDives();
+    if (result.error) {
+      set({ error: result.error, isLoading: false });
+      return false;
+    }
+
+    // Drop any queued work as well, so a reset does not resurrect old dives
+    set({ dives: [], offlineQueue: [], isLoading: false, error: null });
+    return true;
+  },
+
   loadFromBackend: async () => {
     set({ isLoading: true, error: null });
 
@@ -241,4 +256,4 @@ const useDiveStore = create<DiveState>()((set, get) => ({
   },
 }));
 
-export default useDiveStore; 
+export default useDiveStore;
