@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { deserializeDive, divesApi, serializeDive } from './api';
+import { chunkDivesForUpload, deserializeDive, divesApi, serializeDive } from './api';
 import type { Dive } from './dives';
 
 // The client models are camelCase and the Go API is snake_case. Go silently
@@ -189,6 +189,34 @@ describe('deserializeDive', () => {
     expect(result.conditions).toBeUndefined();
     expect(result.diveType).toBeUndefined();
     expect(result.safetyStops).toBeUndefined();
+  });
+});
+
+describe('chunkDivesForUpload', () => {
+  it('keeps each serialized request within the configured byte limit', () => {
+    const dives = [
+      dive({ notes: 'a'.repeat(80) }),
+      dive({ notes: 'b'.repeat(80) }),
+      dive({ notes: 'c'.repeat(80) }),
+    ];
+    const oneDiveBytes = new TextEncoder().encode(JSON.stringify(serializeDive(dives[0]))).byteLength;
+    const chunks = chunkDivesForUpload(dives, oneDiveBytes + 2);
+
+    expect(chunks).toHaveLength(3);
+    for (const chunk of chunks) {
+      const wireBytes = new TextEncoder().encode(JSON.stringify(chunk.map(serializeDive))).byteLength;
+      expect(wireBytes).toBeLessThanOrEqual(oneDiveBytes + 2);
+    }
+  });
+
+  it('preserves order and uses no empty chunks', () => {
+    const dives = [dive({ location: 'First' }), dive({ location: 'Second' })];
+    expect(chunkDivesForUpload(dives).flat().map(({ location }) => location)).toEqual(['First', 'Second']);
+    expect(chunkDivesForUpload([])).toEqual([]);
+  });
+
+  it('rejects a single profile that cannot fit in a request', () => {
+    expect(() => chunkDivesForUpload([dive({ notes: 'large' })], 10)).toThrow(/single dive profile/);
   });
 });
 

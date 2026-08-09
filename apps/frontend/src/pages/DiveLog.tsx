@@ -16,6 +16,7 @@ import RecentDives from "@/components/RecentDives";
 import DiveDetailModal from "@/components/DiveDetailModal";
 import DiveImport from "@/components/DiveImport";
 import DiveFilters from "@/components/DiveFilters";
+import DataTransferDialog from "@/components/DataTransferDialog";
 import { calculateDiveStatistics } from "@/lib/diveStats";
 import {
   EMPTY_DIVE_FILTERS,
@@ -32,6 +33,8 @@ import { formatDepth } from "@/lib/unitConversions";
 import { formatDiveDateTime } from "@/lib/dateHelpers";
 import { diveSitesApi } from "@/lib/api";
 import type { ImportedDiveSite } from "@/lib/subsurfaceXmlParser";
+import type { BackupDive, BackupDiveSite } from "@/lib/dataTransfer";
+import type { UserSettings } from "@/lib/settings";
 
 const DiveLog = () => {
   const dives = useDiveStore((state) => state.dives);
@@ -39,7 +42,8 @@ const DiveLog = () => {
   const importDives = useDiveStore((state) => state.importDives);
   const clearAllDives = useDiveStore((state) => state.clearAllDives);
   const clearError = useDiveStore((state) => state.error);
-  const { settings } = useSettingsStore();
+  const settings = useSettingsStore((state) => state.settings);
+  const updateSettings = useSettingsStore((state) => state.updateSettings);
   const stats = calculateDiveStatistics(dives);
   const [searchParams, setSearchParams] = useSearchParams();
   const filterQuery = searchParams.toString();
@@ -55,6 +59,7 @@ const DiveLog = () => {
   const [selectedDive, setSelectedDive] = useState<Dive | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [showDataTransfer, setShowDataTransfer] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
   const [clearFailed, setClearFailed] = useState(false);
@@ -95,6 +100,40 @@ const DiveLog = () => {
       );
     }
     setShowImport(false);
+  };
+
+  const loadDiveSitesForTransfer = async () => {
+    const result = await diveSitesApi.fetchDiveSites();
+    if (result.error) throw new Error(result.error);
+    return result.data ?? [];
+  };
+
+  const handleRestoreDives = async (backupDives: BackupDive[]) => {
+    const restored = await importDives(backupDives);
+    if (!restored) {
+      throw new Error(
+        useDiveStore.getState().error ?? 'The dives could not be restored. Please try again.',
+      );
+    }
+  };
+
+  const handleRestoreSites = async (sites: BackupDiveSite[]) => {
+    const failures: string[] = [];
+    for (const site of sites) {
+      const result = await diveSitesApi.createDiveSite(site);
+      if (result.error && result.status !== 409) failures.push(`${site.name}: ${result.error}`);
+    }
+    if (failures.length > 0) {
+      throw new Error(
+        `Could not restore ${failures.length} site${failures.length === 1 ? '' : 's'}: ${failures[0]}`,
+      );
+    }
+  };
+
+  const handleRestoreSettings = async (backupSettings: UserSettings) => {
+    await updateSettings(backupSettings);
+    const settingsError = useSettingsStore.getState().error;
+    if (settingsError) throw new Error(`Could not restore settings: ${settingsError}`);
   };
 
   const handleClearAllDives = async () => {
@@ -156,6 +195,14 @@ const DiveLog = () => {
                   Delete All Dives (dev)
                 </Button>
               )}
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={() => setShowDataTransfer(true)}
+                className="bg-white border-slate-300 text-slate-700 hover:bg-slate-50 px-8 py-4 text-base font-medium shadow-sm"
+              >
+                Backup &amp; Export
+              </Button>
               <Button
                 variant="outline"
                 size="lg"
@@ -307,6 +354,19 @@ const DiveLog = () => {
           <DiveImport onImportDives={handleImportDives} onImportSites={handleImportSites} />
         </DialogContent>
       </Dialog>
+
+      <DataTransferDialog
+        open={showDataTransfer}
+        onOpenChange={setShowDataTransfer}
+        dives={dives}
+        filteredDives={filteredDives}
+        hasActiveFilters={hasActiveFilters}
+        settings={settings}
+        loadDiveSites={loadDiveSitesForTransfer}
+        restoreDives={handleRestoreDives}
+        restoreDiveSites={handleRestoreSites}
+        restoreSettings={handleRestoreSettings}
+      />
 
       <Dialog open={showClearConfirm} onOpenChange={handleClearDialogChange}>
         <DialogContent className="max-w-md">

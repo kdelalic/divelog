@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { Dive } from '../lib/dives';
-import { divesApi } from '../lib/api';
+import { chunkDivesForUpload, divesApi } from '../lib/api';
 
 interface OfflineOperation {
   id: string;
@@ -20,7 +20,7 @@ interface DiveState {
   addDive: (dive: Omit<Dive, 'id'>) => Promise<boolean>;
   editDive: (dive: Dive) => Promise<boolean>;
   deleteDive: (id: number) => Promise<void>;
-  importDives: (dives: Dive[]) => Promise<boolean>;
+  importDives: (dives: Omit<Dive, 'id'>[]) => Promise<boolean>;
   clearAllDives: () => Promise<boolean>;
   loadFromBackend: () => Promise<void>;
   processOfflineQueue: () => Promise<void>;
@@ -162,18 +162,34 @@ const useDiveStore = create<DiveState>()((set, get) => ({
   importDives: async (importedDives) => {
     set({ isLoading: true, error: null });
 
-    // Always probe the API. `isOnline` reflects the last backend request, not
-    // whether the browser has network access, and the backend may have restarted.
-    const result = await divesApi.createMultipleDives(importedDives);
-    if (result.error) {
+    let batches: Omit<Dive, 'id'>[][];
+    try {
+      batches = chunkDivesForUpload(importedDives);
+    } catch (caught) {
       set({
-        isOnline: result.status === undefined ? false : get().isOnline,
-        error: result.status === undefined
-          ? `Could not reach the dive-log backend: ${result.error}`
-          : result.error,
+        error: caught instanceof Error ? caught.message : 'The dives could not be prepared for import',
         isLoading: false,
       });
       return false;
+    }
+
+    // Always probe the API. `isOnline` reflects the last backend request, not
+    // whether the browser has network access, and the backend may have restarted.
+    for (const batch of batches) {
+      const result = await divesApi.createMultipleDives(batch);
+      if (result.error) {
+        // Earlier chunks may have succeeded, so refresh before reporting the
+        // partial failure and leave the successfully restored data visible.
+        await get().loadFromBackend();
+        set({
+          isOnline: result.status === undefined ? false : get().isOnline,
+          error: result.status === undefined
+            ? `Could not reach the dive-log backend: ${result.error}`
+            : result.error,
+          isLoading: false,
+        });
+        return false;
+      }
     }
 
     await get().loadFromBackend();

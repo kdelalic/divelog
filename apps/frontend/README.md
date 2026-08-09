@@ -36,4 +36,5 @@ bun run preview  # Preview the production build locally
 - `src/store/` — Zustand state stores
 - `src/lib/api.ts` — REST API client
 - `src/lib/diveImportParser.ts` — content-based import detection and routing
+- `src/lib/dataTransfer.ts` — lossless JSON backup/restore and spreadsheet CSV export
 - `src/lib/uddfParser.ts`, `src/lib/subsurfaceXmlParser.ts`, and the Subsurface CSV parsers — format-specific import logic

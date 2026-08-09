@@ -125,6 +125,41 @@ export const serializeDive = (dive: Omit<Dive, 'id'>) => {
   };
 };
 
+// Leave headroom below the backend's 10 MB request limit for headers and any
+// small wire-shape changes. Profile-heavy backups can otherwise exceed the
+// limit even when the backup file itself is valid.
+export const MAX_DIVE_BATCH_BYTES = 8 * 1024 * 1024;
+
+export const chunkDivesForUpload = (
+  dives: Omit<Dive, 'id'>[],
+  maximumBytes = MAX_DIVE_BATCH_BYTES,
+): Omit<Dive, 'id'>[][] => {
+  const encoder = new TextEncoder();
+  const batches: Omit<Dive, 'id'>[][] = [];
+  let batch: Omit<Dive, 'id'>[] = [];
+  let batchBytes = 2; // Opening and closing JSON array brackets.
+
+  for (const dive of dives) {
+    const diveBytes = encoder.encode(JSON.stringify(serializeDive(dive))).byteLength;
+    if (diveBytes + 2 > maximumBytes) {
+      throw new Error('A single dive profile is too large for the backend request limit');
+    }
+
+    const separatorBytes = batch.length > 0 ? 1 : 0;
+    if (batch.length > 0 && batchBytes + separatorBytes + diveBytes > maximumBytes) {
+      batches.push(batch);
+      batch = [];
+      batchBytes = 2;
+    }
+
+    batch.push(dive);
+    batchBytes += (batch.length > 1 ? 1 : 0) + diveBytes;
+  }
+
+  if (batch.length > 0) batches.push(batch);
+  return batches;
+};
+
 interface ApiDiveConditions {
   water_temp_surface?: number;
   water_temp_bottom?: number;

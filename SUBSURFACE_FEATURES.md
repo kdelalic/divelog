@@ -76,11 +76,11 @@ This document tracks our progress in implementing Subsurface dive logging featur
 
 ### 5. Import/Export Enhancements
 - [ ] Enhanced UDDF support (full specification)
-- [ ] CSV import/export
+- [x] CSV import/export
 - [ ] Dive computer direct integration
 - [x] Subsurface file format support
 - [ ] PDF logbook export
-- [ ] Backup/restore functionality
+- [x] Backup/restore functionality
 - [ ] Print capabilities
 
 ### 6. Safety Features
@@ -141,5 +141,6 @@ This document tracks our progress in implementing Subsurface dive logging featur
 
 ## Next Sprint Focus
 1. ✅ **Advanced Search & Filtering** - Find dives by date, site, depth, buddy, type, and rating
-2. **Import/Export Enhancements** - CSV/UDDF export and backup
-3. **Advanced Analytics** - Statistics and trend analysis
+2. ✅ **Backup & CSV Export** - Lossless JSON restore and all/filtered spreadsheet export
+3. **UDDF Export** - Portable interchange with Subsurface and dive software
+4. **Advanced Analytics** - Statistics and trend analysis

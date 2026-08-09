@@ -91,6 +91,7 @@ bun run build
 
 - Dive log CRUD and duplicate detection
 - UDDF, native Subsurface XML/SSRF, summary/profile CSV, and dive-site XML imports
+- Lossless JSON backup/restore and spreadsheet CSV export for all or filtered dives
 - Interactive dive-profile charts
 - Dive-site management and Leaflet maps
 - Equipment and gas-mix tracking

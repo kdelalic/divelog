@@ -65,6 +65,7 @@ go run main.go      # Start Go API server on :8080
 - `src/lib/dives.ts` - Core Dive interface and mock data
 - `src/lib/settings.ts` - User settings types and defaults
 - `src/lib/diveImportParser.ts` - Content-based import format detection and routing
+- `src/lib/dataTransfer.ts` - Versioned JSON backup/restore, duplicate planning, and CSV export
 - `src/lib/uddfParser.ts` - UDDF file parser for dive computer data import
 - `src/lib/subsurfaceXmlParser.ts` - Native Subsurface XML/SSRF and dive-site parser
 - `src/lib/unitConversions.ts` - Unit conversion utilities (meters/feet, celsius/fahrenheit, etc.)
@@ -131,6 +132,8 @@ go run main.go      # Start Go API server on :8080
 - Parses dive sites, coordinates, depth, duration, and buddy information
 - Handles duration conversion (seconds → minutes) and validates data
 - Preview/confirmation flow before importing
+- Versioned JSON backups preserve dives, profiles, equipment, conditions, sites, and settings
+- CSV exports can include all dives or only the current filtered result set
 
 ### Settings Architecture
 - Frontend: Zustand store with localStorage (transitioning to API)

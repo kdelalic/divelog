@@ -18,29 +18,15 @@ func NewDiveSiteRepository(db *sql.DB) *DiveSiteRepository {
 
 // FindOrCreateDiveSite finds an existing dive site or creates a new one
 func (r *DiveSiteRepository) FindOrCreateDiveSite(ctx context.Context, name string, latitude, longitude float64) (*models.DiveSite, error) {
-	// Try to find an existing dive site with the same name and close coordinates
-	var existingSite models.DiveSite
-	query := `SELECT id, name, latitude, longitude, description, created_at, updated_at 
-			  FROM dive_sites WHERE LOWER(name) = LOWER($1)`
-
-	err := r.db.QueryRow(query, name).Scan(
-		&existingSite.ID, &existingSite.Name, &existingSite.Latitude,
-		&existingSite.Longitude, &existingSite.Description,
-		&existingSite.CreatedAt, &existingSite.UpdatedAt,
-	)
-
-	if err == nil {
-		// Found existing site with same name
-		// Check if coordinates are reasonably close (within ~100m)
-		distance := calculateDistance(existingSite.Latitude, existingSite.Longitude, latitude, longitude)
-		if distance < 0.1 { // Less than 100 meters
-			return &existingSite, nil
-		}
-		// Name exists but coordinates are far - create new site (different location with same name)
+	existingSite, err := r.findNearbyDiveSite(ctx, name, latitude, longitude)
+	if err != nil {
+		return nil, err
+	}
+	if existingSite != nil {
+		return existingSite, nil
 	}
 
-	// No matching site found, create a new one
-	return r.createDiveSite(ctx, name, latitude, longitude)
+	return r.createDiveSite(ctx, name, latitude, longitude, nil)
 }
 
 // GetAll returns all dive sites
@@ -120,20 +106,15 @@ func (r *DiveSiteRepository) GetByID(ctx context.Context, id int) (*models.DiveS
 
 // Create creates a new dive site
 func (r *DiveSiteRepository) Create(ctx context.Context, siteReq *models.DiveSiteRequest) (*models.DiveSite, error) {
-	// Check if a dive site with the same name and close coordinates already exists
-	existingSite, err := r.FindOrCreateDiveSite(ctx, siteReq.Name, siteReq.Latitude, siteReq.Longitude)
+	existingSite, err := r.findNearbyDiveSite(ctx, siteReq.Name, siteReq.Latitude, siteReq.Longitude)
 	if err != nil {
 		return nil, err
 	}
-
-	// Check if this is actually a new site or an existing one
-	distance := calculateDistance(existingSite.Latitude, existingSite.Longitude, siteReq.Latitude, siteReq.Longitude)
-	if distance < 0.1 && existingSite.Name == siteReq.Name {
-		// This is essentially the same site
-		return nil, utils.ErrDuplicateDive // Reusing error for similar concept
+	if existingSite != nil {
+		return existingSite, utils.ErrDuplicateDive // Reusing error for similar concept
 	}
 
-	return existingSite, nil
+	return r.createDiveSite(ctx, siteReq.Name, siteReq.Latitude, siteReq.Longitude, siteReq.Description)
 }
 
 // Update updates an existing dive site
@@ -228,13 +209,42 @@ func (r *DiveSiteRepository) GetDiveSiteByDiveID(ctx context.Context, diveID int
 }
 
 // createDiveSite creates a new dive site
-func (r *DiveSiteRepository) createDiveSite(ctx context.Context, name string, latitude, longitude float64) (*models.DiveSite, error) {
-	insertQuery := `INSERT INTO dive_sites (name, latitude, longitude, created_at, updated_at)
-					VALUES ($1, $2, $3, NOW(), NOW())
-					RETURNING id, name, latitude, longitude, description, created_at, updated_at`
+func (r *DiveSiteRepository) findNearbyDiveSite(ctx context.Context, name string, latitude, longitude float64) (*models.DiveSite, error) {
+	rows, err := r.db.Query(
+		`SELECT id, name, latitude, longitude, description, created_at, updated_at
+		 FROM dive_sites WHERE LOWER(name) = LOWER($1)`,
+		name,
+	)
+	if err != nil {
+		utils.LogError(ctx, "Error finding nearby dive site", err)
+		return nil, utils.ErrDatabaseError
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		site, err := r.scanDiveSite(rows)
+		if err != nil {
+			utils.LogError(ctx, "Error scanning nearby dive site", err)
+			return nil, utils.ErrDatabaseError
+		}
+		if calculateDistance(site.Latitude, site.Longitude, latitude, longitude) < 0.1 {
+			return site, nil
+		}
+	}
+	if err := rows.Err(); err != nil {
+		utils.LogError(ctx, "Error iterating nearby dive sites", err)
+		return nil, utils.ErrDatabaseError
+	}
+	return nil, nil
+}
+
+func (r *DiveSiteRepository) createDiveSite(ctx context.Context, name string, latitude, longitude float64, description *string) (*models.DiveSite, error) {
+	insertQuery := `INSERT INTO dive_sites (name, latitude, longitude, description, created_at, updated_at)
+				   VALUES ($1, $2, $3, $4, NOW(), NOW())
+				   RETURNING id, name, latitude, longitude, description, created_at, updated_at`
 
 	var newSite models.DiveSite
-	err := r.db.QueryRow(insertQuery, name, latitude, longitude).Scan(
+	err := r.db.QueryRow(insertQuery, name, latitude, longitude, description).Scan(
 		&newSite.ID, &newSite.Name, &newSite.Latitude,
 		&newSite.Longitude, &newSite.Description,
 		&newSite.CreatedAt, &newSite.UpdatedAt,
