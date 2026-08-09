@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { deserializeDive, serializeDive } from './api';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { deserializeDive, divesApi, serializeDive } from './api';
 import type { Dive } from './dives';
 
 // The client models are camelCase and the Go API is snake_case. Go silently
@@ -189,5 +189,36 @@ describe('deserializeDive', () => {
     expect(result.conditions).toBeUndefined();
     expect(result.diveType).toBeUndefined();
     expect(result.safetyStops).toBeUndefined();
+  });
+});
+
+describe('divesApi.createMultipleDives', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('returns the backend validation message and status', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      error: 'Validation failed',
+      fields: { 'dives[0].equipment.tanks[0].size': 'must be greater than 0' },
+    }), {
+      status: 422,
+      headers: { 'Content-Type': 'application/json' },
+    })));
+
+    const result = await divesApi.createMultipleDives([dive()]);
+
+    expect(result.status).toBe(422);
+    expect(result.error).toContain('Validation failed');
+    expect(result.error).toContain('equipment.tanks[0].size');
+  });
+
+  it('distinguishes a network failure from an HTTP response', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Failed to fetch')));
+
+    const result = await divesApi.createMultipleDives([dive()]);
+
+    expect(result.status).toBeUndefined();
+    expect(result.error).toBe('Failed to fetch');
   });
 });

@@ -15,6 +15,24 @@
 <site uuid='d9210c02' name='Casa Cenote' gps='20.266768 -87.391836'>
   <geo cat='2' origin='2' value='Mexico'/>
 </site>
+<site uuid='eea339da' name='Red Hill' gps='20.640194 -156.451190'>
+  <geo cat='2' origin='2' value='USA'/>
+</site>
+<site uuid='eea339db' name='Molokini Backwall' gps='20.634400 -156.498800'>
+  <geo cat='2' origin='2' value='USA'/>
+</site>
+<site uuid='eea339dd' name='Lanai Cathedrals 1' gps='20.732777 -156.888470'>
+  <geo cat='2' origin='2' value='USA'/>
+</site>
+<site uuid='eea339de' name='La Jolla Cove' gps='32.851532 -117.271470'>
+  <geo cat='2' origin='2' value='USA'/>
+</site>
+<site uuid='eea339e0' name='Casino Point' gps='33.349290 -118.324750'>
+  <geo cat='2' origin='2' value='USA'/>
+</site>
+<site uuid='eea339e2' name='Channel Islands (Rat Rock)' gps='34.014324 -119.442020'>
+  <geo cat='2' origin='2' value='USA'/>
+</site>
 <site uuid='eea339e3' name='Paso Del Cedral' gps='20.367834 -87.029600'>
   <geo cat='2' origin='2' value='Mexico'/>
 </site>
@@ -28,6 +46,12 @@
   <geo cat='2' origin='2' value='Mexico'/>
 </site>
 <site uuid='eea339e7' name='San Carlos Beach Breakwater' gps='36.609573 -121.893270'>
+  <geo cat='2' origin='2' value='USA'/>
+</site>
+<site uuid='eea339e8' name='Channel Islands (Anacapa 2)' gps='34.016650 -119.432250'>
+  <geo cat='2' origin='2' value='USA'/>
+</site>
+<site uuid='eea339e9' name='Channel Islands (Anacapa 1)' gps='34.009563 -119.407486'>
   <geo cat='2' origin='2' value='USA'/>
 </site>
 <site uuid='eea339ed' name='San Carlos Beach Metridium' gps='36.611374 -121.894890'>
@@ -58,6 +82,18 @@
   <geo cat='2' origin='2' value='USA'/>
 </site>
 <site uuid='eea33a05' name='Nautilus Reef' gps='21.285828 -157.861010'>
+  <geo cat='2' origin='2' value='USA'/>
+</site>
+<site uuid='eea33a0d' name='Lanai Cathedrals 2' gps='20.733553 -156.929170'>
+  <geo cat='2' origin='2' value='USA'/>
+</site>
+<site uuid='eea33a15' name='Turtle Canyon' gps='21.271590 -157.727020'>
+  <geo cat='2' origin='2' value='USA'/>
+</site>
+<site uuid='eea33a16' name='Sea Caves' gps='21.260967 -157.696900'>
+  <geo cat='2' origin='2' value='USA'/>
+</site>
+<site uuid='eea33a17' name='New Barge' gps='21.250113 -157.767210'>
   <geo cat='2' origin='2' value='USA'/>
 </site>
 </divesites>

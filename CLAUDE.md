@@ -15,7 +15,7 @@ This is "Subsurface Web" - a modern dive log application with React frontend and
 - **State Management**: Zustand stores for client state, API integration for persistence
 - **UI Framework**: ShadCN UI components with Tailwind CSS v4
 - **Maps**: OpenStreetMap with Leaflet (replaced Google Maps for cost/licensing)
-- **Data Import**: UDDF (Universal Dive Data Format) file import support
+- **Data Import**: UDDF, native Subsurface XML/SSRF, Subsurface CSV, and dive-site XML support
 
 ## Development Commands
 
@@ -57,14 +57,16 @@ go run main.go      # Start Go API server on :8080
 ## Key Files and Patterns
 
 ### State Management
-- `src/store/diveStore.ts` - Zustand store for dive data with CRUD operations and UDDF import
+- `src/store/diveStore.ts` - Zustand store for dive data with CRUD operations and batch import
 - `src/store/settingsStore.ts` - Zustand store for user settings with localStorage persistence (being migrated to API)
 - Store pattern: `create<StateInterface>((set) => ({ state, actions }))`
 
 ### Data Models
 - `src/lib/dives.ts` - Core Dive interface and mock data
 - `src/lib/settings.ts` - User settings types and defaults
+- `src/lib/diveImportParser.ts` - Content-based import format detection and routing
 - `src/lib/uddfParser.ts` - UDDF file parser for dive computer data import
+- `src/lib/subsurfaceXmlParser.ts` - Native Subsurface XML/SSRF and dive-site parser
 - `src/lib/unitConversions.ts` - Unit conversion utilities (meters/feet, celsius/fahrenheit, etc.)
 - Dive model includes: id, date, location, depth, duration, buddy, lat/lng coordinates
 
@@ -92,7 +94,7 @@ go run main.go      # Start Go API server on :8080
 - **State Management**: Zustand with persistence middleware
 - **Maps**: Leaflet.js with react-leaflet (OpenStreetMap tiles)
 - **Charts**: Chart.js with react-chartjs-2
-- **File Parsing**: fast-xml-parser for UDDF import
+- **File Parsing**: fast-xml-parser for UDDF and Subsurface XML imports
 - **Icons**: Lucide React
 - **Package Manager**: Bun
 
@@ -122,8 +124,10 @@ go run main.go      # Start Go API server on :8080
 - User settings stored in PostgreSQL with proper constraints
 - Default development user (ID: 1) for testing
 
-### UDDF Import System
-- Supports standard UDDF files from dive computers and Subsurface
+### Dive Import System
+- Supports UDDF files from dive computers and Subsurface
+- Supports native Subsurface XML/SSRF, summary/profile CSV, and dive-site XML
+- Detects formats from file contents instead of relying only on extensions
 - Parses dive sites, coordinates, depth, duration, and buddy information
 - Handles duration conversion (seconds → minutes) and validates data
 - Preview/confirmation flow before importing

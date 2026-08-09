@@ -20,6 +20,8 @@ import type { Dive } from "@/lib/dives";
 import useSettingsStore from "@/store/settingsStore";
 import { formatDepth } from "@/lib/unitConversions";
 import { formatDiveDateTime } from "@/lib/dateHelpers";
+import { diveSitesApi } from "@/lib/api";
+import type { ImportedDiveSite } from "@/lib/subsurfaceXmlParser";
 
 const DiveLog = () => {
   const dives = useDiveStore((state) => state.dives);
@@ -49,8 +51,28 @@ const DiveLog = () => {
     setSelectedDive(null);
   };
 
-  const handleImportDives = (importedDives: Dive[]) => {
-    importDives(importedDives);
+  const handleImportDives = async (importedDives: Dive[]) => {
+    const imported = await importDives(importedDives);
+    if (!imported) {
+      throw new Error(
+        useDiveStore.getState().error ?? 'The dives could not be saved. Please try again.',
+      );
+    }
+    setShowImport(false);
+  };
+
+  const handleImportSites = async (sites: ImportedDiveSite[]) => {
+    const failures: string[] = [];
+    for (const site of sites) {
+      const result = await diveSitesApi.createDiveSite(site);
+      // A duplicate means the site is already present, so re-imports stay safe.
+      if (result.error && result.status !== 409) failures.push(`${site.name}: ${result.error}`);
+    }
+    if (failures.length > 0) {
+      throw new Error(
+        `Could not import ${failures.length} site${failures.length === 1 ? '' : 's'}: ${failures[0]}`,
+      );
+    }
     setShowImport(false);
   };
 
@@ -220,7 +242,7 @@ const DiveLog = () => {
           <DialogHeader>
             <DialogTitle>Import Dive Data</DialogTitle>
           </DialogHeader>
-          <DiveImport onImport={handleImportDives} />
+          <DiveImport onImportDives={handleImportDives} onImportSites={handleImportSites} />
         </DialogContent>
       </Dialog>
 

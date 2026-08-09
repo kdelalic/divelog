@@ -9,6 +9,9 @@ This document tracks our progress in implementing Subsurface dive logging featur
 - [x] Dive buddy tracking
 - [x] GPS coordinates for dive sites
 - [x] UDDF file import (basic)
+- [x] Native Subsurface XML/SSRF import
+- [x] Subsurface summary and dive-computer profile CSV import
+- [x] Standalone Subsurface dive-site XML import
 - [x] Unit conversions (metric/imperial)
 - [x] 12/24 hour time format support
 - [x] Dive site management (create, edit, delete)
@@ -75,7 +78,7 @@ This document tracks our progress in implementing Subsurface dive logging featur
 - [ ] Enhanced UDDF support (full specification)
 - [ ] CSV import/export
 - [ ] Dive computer direct integration
-- [ ] Subsurface file format support
+- [x] Subsurface file format support
 - [ ] PDF logbook export
 - [ ] Backup/restore functionality
 - [ ] Print capabilities

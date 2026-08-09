@@ -20,7 +20,7 @@ interface DiveState {
   addDive: (dive: Omit<Dive, 'id'>) => Promise<boolean>;
   editDive: (dive: Dive) => Promise<boolean>;
   deleteDive: (id: number) => Promise<void>;
-  importDives: (dives: Dive[]) => Promise<void>;
+  importDives: (dives: Dive[]) => Promise<boolean>;
   clearAllDives: () => Promise<boolean>;
   loadFromBackend: () => Promise<void>;
   processOfflineQueue: () => Promise<void>;
@@ -162,36 +162,22 @@ const useDiveStore = create<DiveState>()((set, get) => ({
   importDives: async (importedDives) => {
     set({ isLoading: true, error: null });
 
-    if (get().isOnline) {
-      const result = await divesApi.createMultipleDives(importedDives);
-      if (result.error) {
-        const operation: OfflineOperation = {
-          id: crypto.randomUUID(),
-          type: 'import',
-          data: importedDives,
-          timestamp: Date.now()
-        };
-        set((state) => ({ 
-          offlineQueue: [...state.offlineQueue, operation],
-          isOnline: false,
-          error: 'Network error - operation queued for retry',
-          isLoading: false
-        }));
-      } else {
-        await get().loadFromBackend();
-      }
-    } else {
-      const operation: OfflineOperation = {
-        id: crypto.randomUUID(),
-        type: 'import',
-        data: importedDives,
-        timestamp: Date.now()
-      };
-      set((state) => ({ 
-        offlineQueue: [...state.offlineQueue, operation],
-        isLoading: false
-      }));
+    // Always probe the API. `isOnline` reflects the last backend request, not
+    // whether the browser has network access, and the backend may have restarted.
+    const result = await divesApi.createMultipleDives(importedDives);
+    if (result.error) {
+      set({
+        isOnline: result.status === undefined ? false : get().isOnline,
+        error: result.status === undefined
+          ? `Could not reach the dive-log backend: ${result.error}`
+          : result.error,
+        isLoading: false,
+      });
+      return false;
     }
+
+    await get().loadFromBackend();
+    return true;
   },
 
   clearAllDives: async () => {

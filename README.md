@@ -90,7 +90,7 @@ bun run build
 ## Current features
 
 - Dive log CRUD and duplicate detection
-- UDDF and Subsurface CSV imports
+- UDDF, native Subsurface XML/SSRF, summary/profile CSV, and dive-site XML imports
 - Interactive dive-profile charts
 - Dive-site management and Leaflet maps
 - Equipment and gas-mix tracking

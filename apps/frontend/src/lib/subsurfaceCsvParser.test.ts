@@ -175,6 +175,13 @@ describe('parseSubsurfaceCSV', () => {
     expect(dive.notes).toBe('Saw a "cleaner" wrasse');
   });
 
+  it('handles newlines inside a quoted field', () => {
+    const multiline = csv(row({ notes: '"First line\nSecond line"' }));
+    const [dive] = parseSubsurfaceCSV(multiline);
+
+    expect(dive.notes).toBe('First line\nSecond line');
+  });
+
   // One unparseable row shouldn't cost the user the rest of the import.
   it('skips invalid rows and keeps the valid ones', () => {
     const dives = parseSubsurfaceCSV(

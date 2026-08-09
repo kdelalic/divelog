@@ -36,15 +36,14 @@ export class SubsurfaceCSVParseError extends Error {
 }
 
 export function parseSubsurfaceCSV(csvText: string): Dive[] {
-  const lines = csvText.trim().split('\n');
-  
-  if (lines.length < 2) {
+  const records = parseCSVRecords(csvText);
+
+  if (records.length < 2) {
     throw new SubsurfaceCSVParseError('CSV file must contain at least a header and one data row');
   }
 
   // Parse header
-  const headerLine = lines[0];
-  const headers = parseCSVRow(headerLine).filter(h => h.trim() !== ''); // Remove empty headers
+  const headers = records[0].filter(h => h.trim() !== ''); // Remove empty headers
   
   
   // Validate that this looks like a Subsurface CSV
@@ -58,12 +57,10 @@ export function parseSubsurfaceCSV(csvText: string): Dive[] {
   const dives: Dive[] = [];
   
   // Parse data rows
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line) continue; // Skip empty lines
-    
+  for (let i = 1; i < records.length; i++) {
     try {
-      const values = parseCSVRow(line).filter((_, index) => index < headers.length); // Only take as many values as headers
+      const values = records[i].filter((_, index) => index < headers.length); // Only take as many values as headers
+      if (values.every(value => value.trim() === '')) continue;
       if (values.length < headers.length) {
         // Pad with empty strings if we have fewer values than headers
         while (values.length < headers.length) {
@@ -94,40 +91,40 @@ export function parseSubsurfaceCSV(csvText: string): Dive[] {
   return dives;
 }
 
-function parseCSVRow(line: string): string[] {
-  const result: string[] = [];
-  let current = '';
+export function parseCSVRecords(csvText: string): string[][] {
+  const records: string[][] = [];
+  let record: string[] = [];
+  let field = '';
   let inQuotes = false;
   let i = 0;
-  
-  while (i < line.length) {
-    const char = line[i];
-    
+
+  while (i < csvText.length) {
+    const char = csvText[i];
     if (char === '"') {
-      if (inQuotes && line[i + 1] === '"') {
-        // Escaped quote
-        current += '"';
+      if (inQuotes && csvText[i + 1] === '"') {
+        field += '"';
         i += 2;
         continue;
-      } else {
-        // Toggle quote state
-        inQuotes = !inQuotes;
       }
+      inQuotes = !inQuotes;
     } else if (char === ',' && !inQuotes) {
-      // End of field
-      result.push(current.trim());
-      current = '';
+      record.push(field.trim());
+      field = '';
+    } else if ((char === '\n' || char === '\r') && !inQuotes) {
+      record.push(field.trim());
+      field = '';
+      if (record.some(value => value.length > 0)) records.push(record);
+      record = [];
+      if (char === '\r' && csvText[i + 1] === '\n') i++;
     } else {
-      current += char;
+      field += char;
     }
-    
     i++;
   }
-  
-  // Add the last field
-  result.push(current.trim());
-  
-  return result;
+
+  record.push(field.trim());
+  if (record.some(value => value.length > 0)) records.push(record);
+  return records;
 }
 
 function parseSubsurfaceCSVRow(row: SubsurfaceCSVRow): Dive | null {

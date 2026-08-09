@@ -192,7 +192,7 @@ export const divesApi = {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        return { error: await readApiError(response), status: response.status };
       }
 
       const data = await response.json() as ApiDive[];
@@ -238,7 +238,7 @@ export const divesApi = {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        return { error: await readApiError(response), status: response.status };
       }
 
       const data = await response.json() as { created?: ApiDive[] };
@@ -397,7 +397,7 @@ export const diveSitesApi = {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        return { error: await readApiError(response), status: response.status };
       }
 
       const data = await response.json();

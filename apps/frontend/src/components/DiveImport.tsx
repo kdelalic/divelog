@@ -1,5 +1,5 @@
-import { useState, useRef } from 'react';
-import { Upload, FileText, AlertCircle, CheckCircle } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { AlertCircle, CheckCircle, FileText, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -10,23 +10,23 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { parseUDDFFile, validateUDDFFile, getUDDFImportSummary, UDDFParseError } from '@/lib/uddfParser';
-import { parseSubsurfaceCSV, SubsurfaceCSVParseError } from '@/lib/subsurfaceCsvParser';
 import type { Dive } from '@/lib/dives';
+import { parseDiveImportFile, type DiveImportResult } from '@/lib/diveImportParser';
+import type { ImportedDiveSite } from '@/lib/subsurfaceXmlParser';
 import useSettingsStore from '@/store/settingsStore';
 import { formatDepth } from '@/lib/unitConversions';
 import { formatDiveDateTime } from '@/lib/dateHelpers';
 
 interface DiveImportProps {
-  onImport: (dives: Dive[]) => void;
+  onImportDives: (dives: Dive[]) => void | Promise<void>;
+  onImportSites: (sites: ImportedDiveSite[]) => void | Promise<void>;
 }
 
-const DiveImport = ({ onImport }: DiveImportProps) => {
+const DiveImport = ({ onImportDives, onImportSites }: DiveImportProps) => {
   const [isUploading, setIsUploading] = useState(false);
-  const [previewDives, setPreviewDives] = useState<Dive[]>([]);
+  const [importResult, setImportResult] = useState<DiveImportResult | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [fileType, setFileType] = useState<'uddf' | 'csv' | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { settings } = useSettingsStore();
@@ -34,43 +34,14 @@ const DiveImport = ({ onImport }: DiveImportProps) => {
   const handleFileSelect = async (file: File) => {
     setError(null);
     setIsUploading(true);
-    setFileType(null);
-
     try {
-      let parsedDives: Dive[] = [];
-      const fileName = file.name.toLowerCase();
-      
-      if (fileName.endsWith('.uddf')) {
-        // Handle UDDF file
-        if (!validateUDDFFile(file)) {
-          throw new Error('Invalid UDDF file. Please ensure it has a .uddf extension and is not empty.');
-        }
-        parsedDives = await parseUDDFFile(file);
-        setFileType('uddf');
-      } else if (fileName.endsWith('.csv')) {
-        // Handle CSV file
-        if (file.size === 0) {
-          throw new Error('CSV file is empty.');
-        }
-        const text = await file.text();
-        parsedDives = parseSubsurfaceCSV(text);
-        setFileType('csv');
-      } else {
-        throw new Error('Unsupported file format. Please upload a .uddf or .csv file.');
-      }
-      
-      if (parsedDives.length === 0) {
-        throw new Error(`No valid dives found in the ${fileType?.toUpperCase()} file.`);
-      }
-
-      setPreviewDives(parsedDives);
+      const result = await parseDiveImportFile(file);
+      const count = result.kind === 'dives' ? result.dives.length : result.sites.length;
+      if (count === 0) throw new Error(`No valid ${result.kind} found in ${result.label}.`);
+      setImportResult(result);
       setIsPreviewOpen(true);
     } catch (err) {
-      if (err instanceof UDDFParseError || err instanceof SubsurfaceCSVParseError) {
-        setError(err.message);
-      } else {
-        setError(err instanceof Error ? err.message : 'Unknown error occurred');
-      }
+      setError(err instanceof Error ? err.message : 'Unknown error occurred');
     } finally {
       setIsUploading(false);
     }
@@ -78,41 +49,45 @@ const DiveImport = ({ onImport }: DiveImportProps) => {
 
   const handleFileInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      handleFileSelect(file);
-    }
+    if (file) void handleFileSelect(file);
+    // Allow selecting the same file again after cancelling or correcting an error.
+    event.target.value = '';
   };
 
   const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     setDragActive(false);
-    
     const file = event.dataTransfer.files[0];
-    if (file) {
-      handleFileSelect(file);
+    if (file) void handleFileSelect(file);
+  };
+
+  const handleConfirmImport = async () => {
+    if (!importResult) return;
+    setIsUploading(true);
+    setError(null);
+    try {
+      if (importResult.kind === 'dives') {
+        await onImportDives(importResult.dives);
+      } else {
+        await onImportSites(importResult.sites);
+      }
+      setIsPreviewOpen(false);
+      setImportResult(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Import could not be saved');
+    } finally {
+      setIsUploading(false);
     }
-  };
-
-  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    setDragActive(true);
-  };
-
-  const handleDragLeave = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    setDragActive(false);
-  };
-
-  const handleConfirmImport = () => {
-    onImport(previewDives);
-    setIsPreviewOpen(false);
-    setPreviewDives([]);
   };
 
   const handleCancelImport = () => {
     setIsPreviewOpen(false);
-    setPreviewDives([]);
+    setImportResult(null);
   };
+
+  const importCount = importResult?.kind === 'dives'
+    ? importResult.dives.length
+    : importResult?.sites.length ?? 0;
 
   return (
     <>
@@ -129,33 +104,34 @@ const DiveImport = ({ onImport }: DiveImportProps) => {
         <CardContent>
           <div
             className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-              dragActive
-                ? 'border-blue-400 bg-blue-50'
-                : 'border-gray-300 hover:border-gray-400'
+              dragActive ? 'border-blue-400 bg-blue-50' : 'border-gray-300 hover:border-gray-400'
             }`}
             onDrop={handleDrop}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
+            onDragOver={(event) => {
+              event.preventDefault();
+              setDragActive(true);
+            }}
+            onDragLeave={(event) => {
+              event.preventDefault();
+              setDragActive(false);
+            }}
           >
             <input
               ref={fileInputRef}
               type="file"
-              accept=".uddf,.csv"
+              accept=".uddf,.csv,.xml,.ssrf"
               onChange={handleFileInputChange}
               className="hidden"
             />
-            
             <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            
             <div className="space-y-2">
               <p className="text-lg font-medium">
                 {dragActive ? 'Drop your file here' : 'Drop your file here or click to browse'}
               </p>
               <p className="text-sm text-muted-foreground">
-                Supports UDDF files (.uddf) and Subsurface CSV exports (.csv)
+                Supports UDDF, Subsurface XML/SSRF, CSV, and dive-site XML exports
               </p>
             </div>
-            
             <Button
               onClick={() => fileInputRef.current?.click()}
               disabled={isUploading}
@@ -176,13 +152,12 @@ const DiveImport = ({ onImport }: DiveImportProps) => {
           )}
 
           <div className="mt-4 text-xs text-muted-foreground">
-            <p><strong>UDDF:</strong> Universal Dive Data Format from dive computers and diving software</p>
-            <p><strong>CSV:</strong> Subsurface CSV export format with dive logs and equipment data</p>
+            <p><strong>Dives:</strong> UDDF, native Subsurface XML/SSRF, summary CSV, and profile CSV</p>
+            <p><strong>Sites:</strong> Standalone Subsurface dive-sites XML</p>
           </div>
         </CardContent>
       </Card>
 
-      {/* Import Preview Dialog */}
       <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
           <DialogHeader className="flex-shrink-0">
@@ -191,17 +166,23 @@ const DiveImport = ({ onImport }: DiveImportProps) => {
               Import Preview
             </DialogTitle>
             <DialogDescription>
-              {fileType === 'csv' ? `Found ${previewDives.length} dive${previewDives.length === 1 ? '' : 's'} in Subsurface CSV file` : getUDDFImportSummary(previewDives)}
+              {importResult?.kind === 'dives'
+                ? `Found ${importCount} dive${importCount === 1 ? '' : 's'} in ${importResult.label}`
+                : importResult?.kind === 'sites'
+                  ? `Found ${importCount} dive site${importCount === 1 ? '' : 's'} in ${importResult.label}`
+                  : ''}
             </DialogDescription>
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto min-h-0 py-4">
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-700">
+                {error}
+              </div>
+            )}
             <div className="space-y-2 pr-2">
-              {previewDives.map((dive, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-md border"
-                >
+              {importResult?.kind === 'dives' && importResult.dives.map((dive, index) => (
+                <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-md border">
                   <div className="flex-1 min-w-0">
                     <div className="font-medium truncate">{dive.location}</div>
                     <div className="text-sm text-muted-foreground">
@@ -209,9 +190,21 @@ const DiveImport = ({ onImport }: DiveImportProps) => {
                       {dive.buddy && ` • with ${dive.buddy}`}
                     </div>
                   </div>
-                  <div className="text-xs text-muted-foreground ml-4 flex-shrink-0">
-                    #{index + 1}
+                  <div className="text-xs text-muted-foreground ml-4 flex-shrink-0">#{index + 1}</div>
+                </div>
+              ))}
+              {importResult?.kind === 'sites' && importResult.sites.map((site, index) => (
+                <div
+                  key={`${site.name}-${index}`}
+                  className="flex items-center justify-between p-3 bg-gray-50 rounded-md border"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium truncate">{site.name}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {site.latitude.toFixed(6)}, {site.longitude.toFixed(6)}
+                    </div>
                   </div>
+                  <div className="text-xs text-muted-foreground ml-4 flex-shrink-0">#{index + 1}</div>
                 </div>
               ))}
             </div>
@@ -219,11 +212,18 @@ const DiveImport = ({ onImport }: DiveImportProps) => {
 
           <DialogFooter className="flex-shrink-0 border-t pt-6">
             <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-              <Button variant="outline" onClick={handleCancelImport} size="lg" className="px-6">
+              <Button variant="outline" onClick={handleCancelImport} disabled={isUploading} size="lg" className="px-6">
                 Cancel
               </Button>
-              <Button onClick={handleConfirmImport} size="lg" className="bg-blue-600 hover:bg-blue-700 px-6">
-                Import {previewDives.length} Dive{previewDives.length === 1 ? '' : 's'}
+              <Button
+                onClick={() => void handleConfirmImport()}
+                disabled={isUploading || !importResult}
+                size="lg"
+                className="bg-blue-600 hover:bg-blue-700 px-6"
+              >
+                {isUploading
+                  ? 'Importing...'
+                  : `Import ${importCount} ${importResult?.kind === 'sites' ? 'Site' : 'Dive'}${importCount === 1 ? '' : 's'}`}
               </Button>
             </div>
           </DialogFooter>

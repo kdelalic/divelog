@@ -35,4 +35,5 @@ bun run preview  # Preview the production build locally
 - `src/components/` — dive features and reusable UI components
 - `src/store/` — Zustand state stores
 - `src/lib/api.ts` — REST API client
-- `src/lib/uddfParser.ts` and `src/lib/subsurfaceCsvParser.ts` — import parsers
+- `src/lib/diveImportParser.ts` — content-based import detection and routing
+- `src/lib/uddfParser.ts`, `src/lib/subsurfaceXmlParser.ts`, and the Subsurface CSV parsers — format-specific import logic
