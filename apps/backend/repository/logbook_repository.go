@@ -284,13 +284,13 @@ func (r *LogbookRepository) BulkUpdateDives(ctx context.Context, userID int, req
 	if len(request.RemoveTags) > 0 {
 		trimmed := make([]string, 0, len(request.RemoveTags))
 		for _, name := range request.RemoveTags {
-			trimmed = append(trimmed, strings.TrimSpace(name))
+			trimmed = append(trimmed, strings.ToLower(strings.TrimSpace(name)))
 		}
 		if _, err := tx.ExecContext(ctx, `
 			DELETE FROM dive_tags dt USING tags t, dives d
 			WHERE dt.tag_id = t.id AND dt.dive_id = d.id
 			  AND t.user_id = $1 AND d.user_id = $1 AND d.id = ANY($2)
-			  AND lower(t.name) = ANY(SELECT lower(value) FROM unnest($3::text[]) AS value)`,
+			  AND lower(t.name) = ANY($3)`,
 			userID, pq.Array(request.DiveIDs), pq.Array(trimmed)); err != nil {
 			return 0, utils.ErrDatabaseError
 		}

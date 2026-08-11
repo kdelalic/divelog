@@ -86,9 +86,9 @@ export const divesToSubsurfaceXml = (dives: readonly Dive[]): string => {
   }
   for (const tripDives of trips.values()) {
     const trip = tripDives[0].trip!;
-    lines.push(`  <trip${attribute('name', trip.name)}${attribute('location', trip.location)}${attribute('startdate', trip.startDate)}${attribute('enddate', trip.endDate)}>`,
-      ...tripDives.map((dive) => diveXml(dive, siteID(dive)).split('\n').map((line) => `  ${line}`).join('\n')),
-      '  </trip>');
+		lines.push(`  <trip${attribute('name', trip.name)}${attribute('location', trip.location)}${attribute('startdate', trip.startDate)}${attribute('enddate', trip.endDate)}>`);
+		if (trip.notes) lines.push(`    <notes>${xmlText(trip.notes)}</notes>`);
+		lines.push(...tripDives.map((dive) => diveXml(dive, siteID(dive)).split('\n').map((line) => `  ${line}`).join('\n')), '  </trip>');
   }
   lines.push('  </dives>', '</divelog>', '');
   return lines.join('\n');

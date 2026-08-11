@@ -78,26 +78,27 @@ analytics, and higher-fidelity Subsurface imports.
 
 ### Bulk Logbook Operations
 
-- [ ] Add multi-select to the dive list
-- [ ] Bulk edit common dive fields
-- [ ] Bulk assign tags and trips
-- [ ] Shift the timestamps of selected dives
+- [x] Add multi-select to the dive list
+- [x] Bulk edit common dive fields
+- [x] Bulk assign tags and trips
+- [x] Shift the timestamps of selected dives
 - [ ] Merge duplicate or multi-computer dive records
 - [ ] Split a continuous profile into separate dives at surface intervals
-- [ ] Undo and redo destructive or bulk logbook operations
+- [~] Undo and redo destructive or bulk logbook operations: timestamp shifts have
+  durable undo; deletion, other bulk edits, and redo are not yet covered
 
 ## Priority 2: Complete the Dive Data Model
 
 ### Dive Identity and Environment
 
-- [ ] Separate dive mode (`OC`, `freedive`, `CCR`, `pSCR`) from dive purpose
+- [x] Separate dive mode (`OC`, `freedive`, `CCR`, `pSCR`) from dive purpose
   (`recreational`, `training`, `technical`, `work`, `research`)
 - [ ] Record divemaster and dive guide separately from buddies
-- [ ] Record mean depth
-- [ ] Calculate and display the surface interval before a dive
+- [x] Record mean depth
+- [x] Calculate and display the surface interval before a dive
 - [ ] Record altitude, surface pressure, and water density/salinity
 - [ ] Support multiple named weight systems instead of one aggregate weight
-- [ ] Retain dive-computer vendor, model, device ID, and dive-computer metadata
+- [x] Retain dive-computer vendor, model, device ID, serial, and firmware metadata
 - [ ] Retain extra vendor-specific fields without discarding unknown data
 
 ### Profile Samples and Events
@@ -114,18 +115,18 @@ analytics, and higher-fidelity Subsurface imports.
 
 ## Priority 3: Advanced Analytics
 
-- [ ] Add a dedicated statistics route and dashboard
-- [ ] Add date-range, tag, trip, site, buddy, dive-mode, and dive-type controls
-- [ ] Show dive frequency by month, quarter, and year
-- [ ] Show depth and duration distributions
+- [x] Add a dedicated statistics route and dashboard
+- [x] Add date-range, tag, trip, site/buddy search, dive-mode, and dive-type controls
+- [~] Show dive frequency by month, quarter, and year: monthly activity is implemented
+- [x] Show depth and duration distributions
 - [ ] Show SAC-rate trends over time and by depth
 - [ ] Show temperature-versus-depth and SAC-versus-depth scatterplots
-- [ ] Show dive-site, gas, cylinder, suit, and equipment usage
-- [ ] Support mean, minimum, maximum, median, sum, and count aggregations
+- [~] Show dive-site, gas, cylinder, suit, and equipment usage: site and gas usage are implemented
+- [~] Support mean, minimum, maximum, median, sum, and count aggregations: count and bottom-time sum are implemented
 - [ ] Support configurable grouping and histogram bins
-- [ ] Allow selecting chart points or bars to inspect the underlying dives
+- [x] Allow selecting chart points or bars to inspect the underlying dives
 - [ ] Add yearly summary statistics
-- [ ] Make analytics honor the active dive-log filters
+- [x] Make analytics honor the active dive-log filters
 
 ## Priority 4: Profile and Decompression Insight
 
@@ -189,10 +190,10 @@ and covered by verified test vectors.
 
 ### Export and Printing
 
-- [ ] Generate printable and PDF logbooks with dive profiles
+- [x] Generate printable and PDF logbooks with dive profiles
 - [ ] Add yearly-statistics printing
 - [ ] Export dive sites as KML
-- [ ] Export native Subsurface XML
+- [x] Export native Subsurface XML
 - [ ] Export profile-panel calculated data
 - [ ] Add configurable print templates
 - [ ] Export UDDF for interchange with other dive-log applications
@@ -225,11 +226,11 @@ Subsurface parity unless the upstream product adds an equivalent capability.
 
 ## Next Sprint
 
-1. Add multi-select to the dive list.
-2. Add bulk editing for common dive fields.
-3. Add bulk tag and trip assignment.
-4. Add timestamp shifting for selected dives.
-5. Design undo for destructive bulk operations.
+1. Add a typed profile timeline-event model.
+2. Import gas-change, cylinder-switch, alarm, warning, and bookmark events.
+3. Preserve and switch between multiple dive-computer profiles.
+4. Merge duplicate or multi-computer dive records.
+5. Extend durable undo to deletion and all bulk edits, then add redo.
 
 ## Reference
 

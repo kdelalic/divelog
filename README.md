@@ -98,6 +98,11 @@ bun run build
 - Interactive dive-profile charts
 - Dive-site management and Leaflet maps
 - Reusable tags, trip grouping/management, and independent dive numbering
+- Multi-select with transactional bulk editing, tag/trip assignment, and deletion
+- Previewed timestamp correction with durable, reload-safe undo
 - Equipment and gas-mix tracking
+- Dive mode, mean depth, surface interval, and structured dive-computer identity
+- Filter-aware statistics with interactive chart drill-down
+- Printable/PDF logbooks and native Subsurface XML export
 - User unit and display preferences
 - Light, dark, and system themes with a persisted device preference
