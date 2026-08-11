@@ -8,109 +8,21 @@ This is "Subsurface Web" - a modern dive log application with React frontend and
 
 ## Architecture
 
-- **Monorepo structure** using `apps/` for applications and `packages/` for shared code
-- **Frontend**: React + TypeScript + Vite app in `apps/frontend/`
-- **Backend**: Go + Gin API server in `apps/backend/` with PostgreSQL 18 database
-- **Database**: PostgreSQL 18 running in Docker with comprehensive schema
-- **State Management**: Zustand stores for client state, API integration for persistence
-- **UI Framework**: ShadCN UI components with Tailwind CSS v4
 - **Maps**: OpenStreetMap with Leaflet (replaced Google Maps for cost/licensing)
-- **Data Import**: UDDF, native Subsurface XML/SSRF, Subsurface CSV, and dive-site XML support
 
 ## Development Commands
 
 ### Frontend (apps/frontend/)
 ```bash
-bun dev              # Start development server
-bun run build        # Build for production (runs tsc -b && vite build)  
-bun run lint         # Run ESLint
-bun run preview      # Preview production build
-bun run test         # Run the Vitest suite once
-bun run test:watch   # Run Vitest in watch mode
-
 # Coverage must run under Node, not Bun - Bun's runtime does not implement the
 # node:inspector coverage API that @vitest/coverage-v8 depends on.
 npx vitest run --coverage
 ```
 
 ### Frontend Testing
-- **Runner**: Vitest, `node` environment (the covered modules are pure logic, no DOM)
-- Tests live beside their module as `src/**/*.test.ts`
 - The suite runs with `TZ=Pacific/Kiritimati` (UTC+14) on purpose: dive times are
   wall-clock times at the dive site, so an accidental UTC conversion shifts the
   date and fails a test instead of passing by luck on a UTC machine
-
-### Backend (apps/backend/)
-```bash
-docker-compose up -d # Start PostgreSQL 18 database
-go mod tidy         # Install Go dependencies
-go run main.go      # Start Go API server on :8080
-```
-
-### Database
-```bash
-# PostgreSQL runs on localhost:5432
-# Database: subsurface, User: dev, Password: devpass
-# Schema initialized automatically via init.sql
-```
-
-## Key Files and Patterns
-
-### State Management
-- `src/store/diveStore.ts` - Zustand store for dive data with CRUD operations and batch import
-- `src/store/settingsStore.ts` - Zustand store for user settings with localStorage persistence (being migrated to API)
-- Store pattern: `create<StateInterface>((set) => ({ state, actions }))`
-
-### Data Models
-- `src/lib/dives.ts` - Core Dive interface and mock data
-- `src/lib/settings.ts` - User settings types and defaults
-- `src/lib/diveImportParser.ts` - Content-based import format detection and routing
-- `src/lib/dataTransfer.ts` - Versioned JSON backup/restore, duplicate planning, and CSV export
-- `src/lib/uddfParser.ts` - UDDF file parser for dive computer data import
-- `src/lib/subsurfaceXmlParser.ts` - Native Subsurface XML/SSRF and dive-site parser
-- `src/lib/unitConversions.ts` - Unit conversion utilities (meters/feet, celsius/fahrenheit, etc.)
-- Dive model includes: id, date, location, depth, duration, buddy, lat/lng coordinates
-
-### Component Structure
-- `src/components/ui/` - ShadCN UI components (button, card, dialog, tabs, etc.)
-- `src/pages/` - Page components (DiveLog, AddDive, EditDive, Map, Settings)
-- `src/components/Layout.tsx` - Main layout wrapper with navigation
-- `src/components/DashboardStats.tsx` - Statistics cards with unit-aware formatting
-- `src/components/DiveDetailModal.tsx` - Detailed dive view modal with tabs
-- `src/components/DiveImport.tsx` - File import component with drag/drop
-- `src/components/DiveChart.tsx` - Chart.js visualizations
-
-### Routing and Navigation
-- Uses React Router DOM for navigation
-- Routes: `/` (dashboard), `/add`, `/edit/:id`, `/map`, `/settings`
-- Layout component provides consistent navigation header
-
-## Tech Stack Details
-
-### Frontend
-- **Build Tool**: Vite with TypeScript
-- **Styling**: Tailwind CSS v4 with custom configuration
-- **UI Components**: ShadCN UI with Radix primitives
-- **Forms**: React Hook Form + Zod validation
-- **State Management**: Zustand with persistence middleware
-- **Maps**: Leaflet.js with react-leaflet (OpenStreetMap tiles)
-- **Charts**: Chart.js with react-chartjs-2
-- **File Parsing**: fast-xml-parser for UDDF and Subsurface XML imports
-- **Icons**: Lucide React
-- **Package Manager**: Bun
-
-### Backend
-- **Language**: Go 1.25+
-- **Framework**: Gin HTTP framework
-- **Database**: PostgreSQL 18 with proper constraints
-- **Database Driver**: lib/pq
-- **Environment**: godotenv for configuration
-- **CORS**: Built-in middleware for frontend integration
-
-### Infrastructure
-- **Database**: Docker Compose for PostgreSQL 18
-- **API**: RESTful endpoints at `/api/v1/`
-- **Development**: Hot reload for both frontend and backend
 
 ## Important Development Guidelines
 
@@ -126,14 +38,10 @@ go run main.go      # Start Go API server on :8080
 - Default development user (ID: 1) for testing
 
 ### Dive Import System
-- Supports UDDF files from dive computers and Subsurface
-- Supports native Subsurface XML/SSRF, summary/profile CSV, and dive-site XML
 - Detects formats from file contents instead of relying only on extensions
 - Parses dive sites, coordinates, depth, duration, and buddy information
 - Handles duration conversion (seconds → minutes) and validates data
 - Preview/confirmation flow before importing
-- Versioned JSON backups preserve dives, profiles, equipment, conditions, sites, and settings
-- CSV exports can include all dives or only the current filtered result set
 
 ### Settings Architecture
 - Frontend: Zustand store with localStorage (transitioning to API)

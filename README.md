@@ -96,3 +96,4 @@ bun run build
 - Dive-site management and Leaflet maps
 - Equipment and gas-mix tracking
 - User unit and display preferences
+- Light, dark, and system themes with a persisted device preference

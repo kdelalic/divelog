@@ -168,14 +168,14 @@ const DiveLog = () => {
   return (
     <div className="space-y-8">
       {/* Hero Section */}
-      <div className="bg-gradient-to-br from-slate-50 to-white border-b border-slate-200 -mx-4 sm:-mx-6 lg:-mx-8 xl:-mx-12 -mt-6 lg:-mt-8">
+      <div className="-mx-4 -mt-6 border-b border-border bg-gradient-to-br from-muted/60 to-background sm:-mx-6 lg:-mx-8 lg:-mt-8 xl:-mx-12">
         <div className="px-4 sm:px-6 lg:px-8 xl:px-12 py-12 lg:py-16">
           <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-8">
             <div className="flex-1">
-              <h1 className="text-5xl lg:text-6xl font-bold tracking-tight text-slate-900 mb-6">
+              <h1 className="mb-6 text-5xl font-bold tracking-tight text-foreground lg:text-6xl">
                 Dive Dashboard
               </h1>
-              <p className="text-xl text-slate-600 max-w-2xl">
+              <p className="max-w-2xl text-xl text-muted-foreground">
                 Track and analyze your diving adventures with comprehensive logging and insights
               </p>
             </div>
@@ -190,7 +190,7 @@ const DiveLog = () => {
                   }}
                   disabled={dives.length === 0}
                   title="Development only: removes every dive from the database"
-                  className="bg-white border-red-300 text-red-700 hover:bg-red-50 hover:text-red-800 px-8 py-4 text-base font-medium shadow-sm"
+                  className="border-red-300 bg-background px-8 py-4 text-base font-medium text-red-700 shadow-sm hover:bg-red-50 hover:text-red-800 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/50 dark:hover:text-red-200"
                 >
                   Delete All Dives (dev)
                 </Button>
@@ -199,7 +199,7 @@ const DiveLog = () => {
                 variant="outline"
                 size="lg"
                 onClick={() => setShowDataTransfer(true)}
-                className="bg-white border-slate-300 text-slate-700 hover:bg-slate-50 px-8 py-4 text-base font-medium shadow-sm"
+                className="border-input bg-background px-8 py-4 text-base font-medium text-foreground shadow-sm hover:bg-muted"
               >
                 Backup &amp; Export
               </Button>
@@ -207,7 +207,7 @@ const DiveLog = () => {
                 variant="outline"
                 size="lg"
                 onClick={() => setShowImport(true)}
-                className="bg-white border-slate-300 text-slate-700 hover:bg-slate-50 px-8 py-4 text-base font-medium shadow-sm"
+                className="border-input bg-background px-8 py-4 text-base font-medium text-foreground shadow-sm hover:bg-muted"
               >
                 Import
               </Button>
@@ -237,10 +237,10 @@ const DiveLog = () => {
       </div>
 
       {/* Table Section */}
-      <div id="table" className="bg-white shadow-sm ring-1 ring-slate-200 overflow-hidden rounded-xl">
-        <div className="px-8 py-6 border-b border-slate-200 bg-slate-50/50">
-          <h3 className="text-xl font-semibold text-slate-900">All Dives</h3>
-          <p className="mt-1 text-sm text-slate-600">Complete history of your dive activities</p>
+      <div id="table" className="overflow-hidden rounded-xl bg-card text-card-foreground shadow-sm ring-1 ring-border">
+        <div className="border-b border-border bg-muted/30 px-8 py-6">
+          <h3 className="text-xl font-semibold text-foreground">All Dives</h3>
+          <p className="mt-1 text-sm text-muted-foreground">Complete history of your dive activities</p>
         </div>
         <DiveFilters
           filters={filters}
@@ -250,38 +250,38 @@ const DiveLog = () => {
           onChange={handleFiltersChange}
           onClear={handleClearFilters}
         />
-        <div className="overflow-x-auto border-t border-slate-200">
-          <table className="min-w-full divide-y divide-slate-200">
-            <thead className="bg-slate-50">
+        <div className="overflow-x-auto border-t border-border">
+          <table className="min-w-full divide-y divide-border">
+            <thead className="bg-muted/50">
               <tr>
-                <th scope="col" className="w-1/6 px-8 py-4 text-left text-sm font-semibold text-slate-700 uppercase tracking-wider">Date</th>
-                <th scope="col" className="w-2/6 px-8 py-4 text-left text-sm font-semibold text-slate-700 uppercase tracking-wider">Location</th>
-                <th scope="col" className="w-1/6 px-8 py-4 text-left text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                <th scope="col" className="w-1/6 px-8 py-4 text-left text-sm font-semibold uppercase tracking-wider text-foreground">Date</th>
+                <th scope="col" className="w-2/6 px-8 py-4 text-left text-sm font-semibold uppercase tracking-wider text-foreground">Location</th>
+                <th scope="col" className="w-1/6 px-8 py-4 text-left text-sm font-semibold uppercase tracking-wider text-foreground">
                   Depth ({settings.units.depth === 'meters' ? 'm' : 'ft'})
                 </th>
-                <th scope="col" className="w-1/6 px-8 py-4 text-left text-sm font-semibold text-slate-700 uppercase tracking-wider">Duration</th>
-                <th scope="col" className="w-1/6 px-8 py-4 text-left text-sm font-semibold text-slate-700 uppercase tracking-wider">Buddy</th>
+                <th scope="col" className="w-1/6 px-8 py-4 text-left text-sm font-semibold uppercase tracking-wider text-foreground">Duration</th>
+                <th scope="col" className="w-1/6 px-8 py-4 text-left text-sm font-semibold uppercase tracking-wider text-foreground">Buddy</th>
                 <th scope="col" className="w-1/6 relative px-8 py-4">
                   <span className="sr-only">Actions</span>
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-slate-100">
+            <tbody className="divide-y divide-border bg-card">
               {filteredDives.map((dive) => (
                 <tr
                   key={dive.id}
-                  className="hover:bg-slate-50 cursor-pointer transition-colors duration-150"
+                  className="cursor-pointer transition-colors duration-150 hover:bg-muted/50"
                   onClick={() => handleRowClick(dive)}
                 >
-                  <td className="px-8 py-5 whitespace-nowrap text-sm lg:text-base font-medium text-slate-900">
+                  <td className="whitespace-nowrap px-8 py-5 text-sm font-medium text-foreground lg:text-base">
                     {formatDiveDateTime(dive.datetime, settings)}
                   </td>
-                  <td className="px-8 py-5 whitespace-nowrap text-sm lg:text-base text-slate-600 font-medium">{dive.location}</td>
-                  <td className="px-8 py-5 whitespace-nowrap text-sm lg:text-base text-slate-600 font-semibold text-blue-600">
+                  <td className="whitespace-nowrap px-8 py-5 text-sm font-medium text-muted-foreground lg:text-base">{dive.location}</td>
+                  <td className="whitespace-nowrap px-8 py-5 text-sm font-semibold text-blue-600 dark:text-blue-400 lg:text-base">
                     {formatDepth(dive.depth, settings.units.depth, 0)}
                   </td>
-                  <td className="px-8 py-5 whitespace-nowrap text-sm lg:text-base text-slate-600">{dive.duration} min</td>
-                  <td className="px-8 py-5 whitespace-nowrap text-sm lg:text-base text-slate-600">{dive.buddy || '—'}</td>
+                  <td className="whitespace-nowrap px-8 py-5 text-sm text-muted-foreground lg:text-base">{dive.duration} min</td>
+                  <td className="whitespace-nowrap px-8 py-5 text-sm text-muted-foreground lg:text-base">{dive.buddy || '—'}</td>
                   <td className="px-8 py-5 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex justify-end gap-2">
                       <Button
@@ -289,14 +289,14 @@ const DiveLog = () => {
                         size="sm"
                         asChild
                         onClick={(e) => e.stopPropagation()}
-                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-3 py-1"
+                        className="px-3 py-1 text-blue-600 hover:bg-blue-50 hover:text-blue-700 dark:text-blue-400 dark:hover:bg-blue-950/50 dark:hover:text-blue-300"
                       >
                         <Link to={`/edit/${dive.id}`}>Edit</Link>
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50 px-3 py-1"
+                        className="px-3 py-1 text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-950/50 dark:hover:text-red-300"
                         onClick={(e) => {
                           e.stopPropagation();
                           if (window.confirm("Are you sure you want to delete this dive?")) {
@@ -313,10 +313,10 @@ const DiveLog = () => {
               {filteredDives.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-8 py-14 text-center">
-                    <p className="font-semibold text-slate-900">
+                    <p className="font-semibold text-foreground">
                       {hasActiveFilters ? 'No dives match these filters' : 'No dives logged yet'}
                     </p>
-                    <p className="mt-1 text-sm text-slate-600">
+                    <p className="mt-1 text-sm text-muted-foreground">
                       {hasActiveFilters
                         ? 'Try widening the date or depth range, or clear the filters.'
                         : 'Add or import a dive to start your logbook.'}
@@ -378,7 +378,7 @@ const DiveLog = () => {
               undone. Dive sites and settings are kept.
             </DialogDescription>
             {clearFailed && (
-              <p role="alert" className="text-sm text-red-600">
+              <p role="alert" className="text-sm text-red-600 dark:text-red-400">
                 Could not delete the dives. {clearError ?? "Please try again."}
               </p>
             )}

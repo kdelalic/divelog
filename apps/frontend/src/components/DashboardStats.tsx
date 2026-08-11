@@ -39,24 +39,24 @@ const DashboardStats = ({ stats }: DashboardStatsProps) => {
   ];
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm">
+    <div className="rounded-2xl border border-border bg-card text-card-foreground shadow-sm">
       <div className="px-8 py-8">
-        <h2 className="text-lg font-semibold text-slate-900 mb-8">Overview</h2>
+        <h2 className="mb-8 text-lg font-semibold text-foreground">Overview</h2>
         <div className="grid grid-cols-4 gap-16">
           {statCards.map((card, index) => {
             const Icon = card.icon;
             return (
-              <div key={card.title} className={`group ${index < statCards.length - 1 ? 'border-r border-slate-200 pr-8' : ''}`}>
+              <div key={card.title} className={`group ${index < statCards.length - 1 ? 'border-r border-border pr-8' : ''}`}>
                 <div className="flex items-center gap-4 mb-4">
-                  <div className="p-3 bg-slate-100 rounded-xl group-hover:bg-blue-100 transition-colors">
-                    <Icon className="h-6 w-6 text-slate-600 group-hover:text-blue-600 transition-colors" />
+                  <div className="rounded-xl bg-muted p-3 transition-colors group-hover:bg-blue-100 dark:group-hover:bg-blue-950/60">
+                    <Icon className="h-6 w-6 text-muted-foreground transition-colors group-hover:text-blue-600 dark:group-hover:text-blue-400" />
                   </div>
-                  <div className="text-sm font-semibold text-slate-700 uppercase tracking-wider">{card.title}</div>
+                  <div className="text-sm font-semibold uppercase tracking-wider text-foreground">{card.title}</div>
                 </div>
                 <div className="mb-3">
-                  <div className="text-4xl font-bold text-slate-900 leading-none">{card.value}</div>
+                  <div className="text-4xl font-bold leading-none text-foreground">{card.value}</div>
                 </div>
-                <div className="text-sm text-slate-500 leading-relaxed">{card.subtitle}</div>
+                <div className="text-sm leading-relaxed text-muted-foreground">{card.subtitle}</div>
               </div>
             );
           })}

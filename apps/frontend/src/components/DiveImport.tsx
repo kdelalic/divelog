@@ -104,7 +104,9 @@ const DiveImport = ({ onImportDives, onImportSites }: DiveImportProps) => {
         <CardContent>
           <div
             className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-              dragActive ? 'border-blue-400 bg-blue-50' : 'border-gray-300 hover:border-gray-400'
+              dragActive
+                ? 'border-blue-400 bg-blue-50 dark:bg-blue-950/50'
+                : 'border-input hover:border-muted-foreground'
             }`}
             onDrop={handleDrop}
             onDragOver={(event) => {
@@ -123,7 +125,7 @@ const DiveImport = ({ onImportDives, onImportSites }: DiveImportProps) => {
               onChange={handleFileInputChange}
               className="hidden"
             />
-            <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <FileText className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
             <div className="space-y-2">
               <p className="text-lg font-medium">
                 {dragActive ? 'Drop your file here' : 'Drop your file here or click to browse'}
@@ -142,9 +144,9 @@ const DiveImport = ({ onImportDives, onImportSites }: DiveImportProps) => {
           </div>
 
           {error && (
-            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md flex items-start gap-2">
-              <AlertCircle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
-              <div className="text-sm text-red-700">
+            <div className="mt-4 flex items-start gap-2 rounded-md border border-red-200 bg-red-50 p-3 dark:border-red-900 dark:bg-red-950/50">
+              <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-red-500 dark:text-red-400" />
+              <div className="text-sm text-red-700 dark:text-red-300">
                 <p className="font-medium">Import Error</p>
                 <p>{error}</p>
               </div>
@@ -176,13 +178,13 @@ const DiveImport = ({ onImportDives, onImportSites }: DiveImportProps) => {
 
           <div className="flex-1 overflow-y-auto min-h-0 py-4">
             {error && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-700">
+              <div className="mb-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/50 dark:text-red-300">
                 {error}
               </div>
             )}
             <div className="space-y-2 pr-2">
               {importResult?.kind === 'dives' && importResult.dives.map((dive, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-md border">
+                <div key={index} className="flex items-center justify-between rounded-md border bg-muted/50 p-3">
                   <div className="flex-1 min-w-0">
                     <div className="font-medium truncate">{dive.location}</div>
                     <div className="text-sm text-muted-foreground">
@@ -196,7 +198,7 @@ const DiveImport = ({ onImportDives, onImportSites }: DiveImportProps) => {
               {importResult?.kind === 'sites' && importResult.sites.map((site, index) => (
                 <div
                   key={`${site.name}-${index}`}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-md border"
+                  className="flex items-center justify-between rounded-md border bg-muted/50 p-3"
                 >
                   <div className="flex-1 min-w-0">
                     <div className="font-medium truncate">{site.name}</div>

@@ -75,7 +75,7 @@ const DiveFilters = ({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
           <Search
-            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
             aria-hidden="true"
           />
           <Input
@@ -84,12 +84,12 @@ const DiveFilters = ({
             placeholder="Search location, buddy, or notes"
             value={filters.query}
             onChange={(event) => update('query', event.target.value)}
-            className="h-10 border-slate-300 bg-white pl-9"
+            className="h-10 border-input bg-background pl-9"
           />
         </div>
         <div className="flex items-center justify-between gap-3 sm:justify-end">
-          <p className="text-sm text-slate-600" aria-live="polite">
-            <span className="font-semibold text-slate-900">{resultCount}</span> of {totalCount}{' '}
+          <p className="text-sm text-muted-foreground" aria-live="polite">
+            <span className="font-semibold text-foreground">{resultCount}</span> of {totalCount}{' '}
             {totalCount === 1 ? 'dive' : 'dives'}
           </p>
           {activeCount > 0 && (
@@ -110,7 +110,7 @@ const DiveFilters = ({
             value={filters.startDate}
             max={filters.endDate || undefined}
             onChange={(event) => update('startDate', event.target.value)}
-            className="border-slate-300 bg-white"
+            className="border-input bg-background"
           />
         </div>
         <div className="space-y-2">
@@ -121,7 +121,7 @@ const DiveFilters = ({
             value={filters.endDate}
             min={filters.startDate || undefined}
             onChange={(event) => update('endDate', event.target.value)}
-            className="border-slate-300 bg-white"
+            className="border-input bg-background"
           />
         </div>
         <div className="space-y-2">
@@ -137,7 +137,7 @@ const DiveFilters = ({
             placeholder="Any"
             value={filters.minDepth}
             onChange={(event) => update('minDepth', event.target.value)}
-            className="border-slate-300 bg-white"
+            className="border-input bg-background"
           />
         </div>
         <div className="space-y-2">
@@ -153,7 +153,7 @@ const DiveFilters = ({
             placeholder="Any"
             value={filters.maxDepth}
             onChange={(event) => update('maxDepth', event.target.value)}
-            className="border-slate-300 bg-white"
+            className="border-input bg-background"
           />
         </div>
         <div className="space-y-2">
@@ -165,7 +165,7 @@ const DiveFilters = ({
               value === 'all' ? '' : value as DiveFilterValues['diveType'],
             )}
           >
-            <SelectTrigger id="filter-dive-type" className="border-slate-300 bg-white">
+            <SelectTrigger id="filter-dive-type" className="border-input bg-background">
               <SelectValue placeholder="All types" />
             </SelectTrigger>
             <SelectContent>
@@ -185,7 +185,7 @@ const DiveFilters = ({
               value === 'all' ? '' : value as DiveFilterValues['minRating'],
             )}
           >
-            <SelectTrigger id="filter-rating" className="border-slate-300 bg-white">
+            <SelectTrigger id="filter-rating" className="border-input bg-background">
               <SelectValue placeholder="Any rating" />
             </SelectTrigger>
             <SelectContent>
@@ -202,7 +202,7 @@ const DiveFilters = ({
 
       {activeCount > 0 && (
         <div className="flex flex-wrap items-center gap-2" aria-label="Active filters">
-          <span className="flex items-center gap-1 text-xs font-medium text-blue-700">
+          <span className="flex items-center gap-1 text-xs font-medium text-blue-700 dark:text-blue-300">
             <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
             {activeCount} active
           </span>
@@ -212,7 +212,7 @@ const DiveFilters = ({
               type="button"
               onClick={() => update(filter.key, '')}
               aria-label={`Remove ${filter.label} filter`}
-              className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+              className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:bg-blue-950/60 dark:text-blue-300 dark:hover:bg-blue-900/60"
             >
               {filter.label}
               <X className="h-3 w-3" aria-hidden="true" />

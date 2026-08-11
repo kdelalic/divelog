@@ -146,9 +146,9 @@ const DiveSites = () => {
       </div>
 
       {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md flex items-start gap-2">
-          <AlertCircle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
-          <div className="text-sm text-red-700">
+        <div className="mb-6 flex items-start gap-2 rounded-md border border-red-200 bg-red-50 p-4 dark:border-red-900 dark:bg-red-950/50">
+          <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-red-500 dark:text-red-400" />
+          <div className="text-sm text-red-700 dark:text-red-300">
             <p className="font-medium">Error</p>
             <p>{error}</p>
           </div>

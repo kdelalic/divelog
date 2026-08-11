@@ -34,6 +34,7 @@ bun run preview  # Preview the production build locally
 - `src/pages/` — routed application pages
 - `src/components/` — dive features and reusable UI components
 - `src/store/` — Zustand state stores
+- `src/components/ThemeProvider.tsx` and `src/lib/theme.ts` — persisted light, dark, and system themes
 - `src/lib/api.ts` — REST API client
 - `src/lib/diveImportParser.ts` — content-based import detection and routing
 - `src/lib/dataTransfer.ts` — lossless JSON backup/restore and spreadsheet CSV export

@@ -11,6 +11,7 @@ import {
 } from "chart.js";
 import type { Dive } from "@/lib/dives";
 import { getDivesByMonth } from "@/lib/diveStats";
+import { useTheme } from "@/hooks/useTheme";
 
 ChartJS.register(
   CategoryScale,
@@ -27,6 +28,8 @@ interface DiveChartProps {
 }
 
 const DiveChart = ({ dives }: DiveChartProps) => {
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
   const monthlyData = getDivesByMonth(dives);
 
   const chartData = {
@@ -47,6 +50,9 @@ const DiveChart = ({ dives }: DiveChartProps) => {
     plugins: {
       legend: {
         position: "top" as const,
+        labels: {
+          color: isDark ? '#cbd5e1' : '#475569',
+        },
       },
       title: {
         display: false,
@@ -57,6 +63,18 @@ const DiveChart = ({ dives }: DiveChartProps) => {
         beginAtZero: true,
         ticks: {
           stepSize: 1,
+          color: isDark ? '#cbd5e1' : '#475569',
+        },
+        grid: {
+          color: isDark ? 'rgba(148, 163, 184, 0.18)' : 'rgba(100, 116, 139, 0.15)',
+        },
+      },
+      x: {
+        ticks: {
+          color: isDark ? '#cbd5e1' : '#475569',
+        },
+        grid: {
+          color: isDark ? 'rgba(148, 163, 184, 0.18)' : 'rgba(100, 116, 139, 0.15)',
         },
       },
     },
@@ -64,13 +82,13 @@ const DiveChart = ({ dives }: DiveChartProps) => {
 
   if (dives.length === 0) {
     return (
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm">
+      <div className="rounded-2xl border border-border bg-card text-card-foreground shadow-sm">
         <div className="px-8 py-6">
           <div className="mb-6">
-            <h3 className="text-lg font-semibold text-slate-900">Dive Activity</h3>
-            <p className="text-sm text-slate-500 mt-1">Track your diving frequency over time</p>
+            <h3 className="text-lg font-semibold text-foreground">Dive Activity</h3>
+            <p className="mt-1 text-sm text-muted-foreground">Track your diving frequency over time</p>
           </div>
-          <div className="flex items-center justify-center h-[400px] text-slate-500 bg-slate-50 rounded-xl">
+          <div className="flex h-[400px] items-center justify-center rounded-xl bg-muted/50 text-muted-foreground">
             <div className="text-center">
               <div className="text-lg font-medium mb-2">No dive data to display</div>
               <p className="text-sm">Add your first dive to see activity trends</p>
@@ -82,11 +100,11 @@ const DiveChart = ({ dives }: DiveChartProps) => {
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm">
+    <div className="rounded-2xl border border-border bg-card text-card-foreground shadow-sm">
       <div className="px-8 py-6">
         <div className="mb-6">
-          <h3 className="text-lg font-semibold text-slate-900">Dive Activity</h3>
-          <p className="text-sm text-slate-500 mt-1">Your diving frequency over time</p>
+          <h3 className="text-lg font-semibold text-foreground">Dive Activity</h3>
+          <p className="mt-1 text-sm text-muted-foreground">Your diving frequency over time</p>
         </div>
         <div className="h-[400px]">
           <Line data={chartData} options={{ ...options, maintainAspectRatio: false }} />

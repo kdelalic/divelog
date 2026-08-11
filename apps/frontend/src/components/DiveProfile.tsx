@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { RotateCcw } from 'lucide-react';
 import type { DiveSample } from '@/lib/dives';
 import useSettingsStore from '@/store/settingsStore';
+import { useTheme } from '@/hooks/useTheme';
 
 // Register Chart.js components
 ChartJS.register(
@@ -41,6 +42,7 @@ const DiveProfile: React.FC<DiveProfileProps> = ({
   className = '' 
 }) => {
   const { settings } = useSettingsStore();
+  const { resolvedTheme } = useTheme();
   const chartRef = useRef<ChartJS<'line'>>(null);
 
   const resetZoom = () => {
@@ -192,6 +194,9 @@ const DiveProfile: React.FC<DiveProfileProps> = ({
   }, [samples, settings]);
 
   const chartOptions = useMemo(() => {
+    const isDark = resolvedTheme === 'dark';
+    const chartTextColor = isDark ? '#cbd5e1' : '#475569';
+    const chartGridColor = isDark ? 'rgba(148, 163, 184, 0.18)' : 'rgba(100, 116, 139, 0.15)';
     const maxDepthInUserUnits = settings.units.depth === 'feet' 
       ? maxDepth * 3.28084 
       : maxDepth;
@@ -246,9 +251,13 @@ const DiveProfile: React.FC<DiveProfileProps> = ({
             size: 14,
             weight: 'normal' as const,
           },
+          color: chartTextColor,
         },
         legend: {
           position: 'top' as const,
+          labels: {
+            color: chartTextColor,
+          },
         },
         tooltip: {
           backgroundColor: 'rgba(0, 0, 0, 0.9)',
@@ -342,19 +351,21 @@ const DiveProfile: React.FC<DiveProfileProps> = ({
             display: true,
             text: 'Time (minutes)',
             padding: 10,
+            color: chartTextColor,
           },
           grid: {
-            color: 'rgba(0, 0, 0, 0.1)',
+            color: chartGridColor,
             display: true,
           },
           ticks: {
             display: true,
             maxTicksLimit: 10,
             padding: 5,
+            color: chartTextColor,
           },
           border: {
             display: true,
-            color: 'rgba(0, 0, 0, 0.3)',
+            color: chartGridColor,
           },
         },
         depth: {
@@ -364,6 +375,7 @@ const DiveProfile: React.FC<DiveProfileProps> = ({
           title: {
             display: true,
             text: `Depth (${settings.units.depth})`,
+            color: chartTextColor,
           },
           min: -Math.ceil(maxDepthInUserUnits * 1.1), // Add 10% padding
           max: Math.ceil(maxDepthInUserUnits * 0.1), // Surface + 10% padding
@@ -372,6 +384,7 @@ const DiveProfile: React.FC<DiveProfileProps> = ({
             color: 'rgba(59, 130, 246, 0.2)',
           },
           ticks: {
+            color: chartTextColor,
             callback: function(value: number | string) {
               return Math.abs(Number(value)).toString(); // Show positive values
             },
@@ -384,6 +397,7 @@ const DiveProfile: React.FC<DiveProfileProps> = ({
           title: {
             display: true,
             text: `Temperature (${settings.units.temperature === 'celsius' ? '°C' : '°F'})`,
+            color: chartTextColor,
           },
           min: tempMin,
           max: tempMax,
@@ -401,6 +415,7 @@ const DiveProfile: React.FC<DiveProfileProps> = ({
           title: {
             display: true,
             text: `Pressure (${settings.units.pressure})`,
+            color: chartTextColor,
           },
           grid: {
             drawOnChartArea: false,
@@ -411,14 +426,14 @@ const DiveProfile: React.FC<DiveProfileProps> = ({
         },
       },
     };
-  }, [samples, settings, maxDepth, chartData]);
+  }, [samples, settings, maxDepth, chartData, resolvedTheme]);
 
   if (!chartData) {
     return (
-      <div className={`flex items-center justify-center h-64 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 ${className}`}>
+      <div className={`flex h-64 items-center justify-center rounded-lg border-2 border-dashed border-input bg-muted/50 ${className}`}>
         <div className="text-center">
-          <div className="text-gray-500 text-lg mb-2">No Profile Data</div>
-          <div className="text-gray-400 text-sm">
+          <div className="mb-2 text-lg text-muted-foreground">No Profile Data</div>
+          <div className="text-sm text-muted-foreground">
             This dive doesn't contain detailed sample data for profile visualization.
           </div>
         </div>
@@ -433,7 +448,7 @@ const DiveProfile: React.FC<DiveProfileProps> = ({
           variant="outline"
           size="sm"
           onClick={resetZoom}
-          className="bg-white/90 hover:bg-white"
+          className="bg-background/90 hover:bg-muted"
         >
           <RotateCcw className="h-4 w-4 mr-1" />
           Reset Zoom

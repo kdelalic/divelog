@@ -17,13 +17,13 @@ const RecentDives = ({ dives }: RecentDivesProps) => {
 
   if (dives.length === 0) {
     return (
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm">
+      <div className="rounded-2xl border border-border bg-card text-card-foreground shadow-sm">
         <div className="px-8 py-6">
           <div className="mb-6">
-            <h3 className="text-lg font-semibold text-slate-900">Recent Dives</h3>
-            <p className="text-sm text-slate-500 mt-1">Your latest diving activities</p>
+            <h3 className="text-lg font-semibold text-foreground">Recent Dives</h3>
+            <p className="mt-1 text-sm text-muted-foreground">Your latest diving activities</p>
           </div>
-          <div className="flex items-center justify-center h-[400px] text-slate-500 bg-slate-50 rounded-xl">
+          <div className="flex h-[400px] items-center justify-center rounded-xl bg-muted/50 text-muted-foreground">
             <div className="text-center">
               <div className="text-lg font-medium mb-4">No dives logged yet</div>
               <Button asChild className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl transition-all">
@@ -37,14 +37,14 @@ const RecentDives = ({ dives }: RecentDivesProps) => {
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm">
+    <div className="rounded-2xl border border-border bg-card text-card-foreground shadow-sm">
       <div className="px-8 py-6">
         <div className="flex flex-row items-center justify-between mb-6">
           <div>
-            <h3 className="text-lg font-semibold text-slate-900">Recent Dives</h3>
-            <p className="text-sm text-slate-500 mt-1">Your latest diving activities</p>
+            <h3 className="text-lg font-semibold text-foreground">Recent Dives</h3>
+            <p className="mt-1 text-sm text-muted-foreground">Your latest diving activities</p>
           </div>
-          <Button variant="outline" size="sm" asChild className="bg-white border-slate-300 text-slate-700 hover:bg-slate-50 px-4 py-2 shadow-sm">
+          <Button variant="outline" size="sm" asChild className="border-input bg-background px-4 py-2 text-foreground shadow-sm hover:bg-muted">
             <Link to="#table">View All</Link>
           </Button>
         </div>
@@ -52,30 +52,30 @@ const RecentDives = ({ dives }: RecentDivesProps) => {
           {recentDives.map((dive) => (
             <div
               key={dive.id}
-              className="flex items-center justify-between p-6 border border-slate-200 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 group cursor-pointer"
+              className="group flex cursor-pointer items-center justify-between rounded-xl border border-border p-6 transition-all duration-200 hover:border-input hover:bg-muted/50"
             >
               <div className="flex-1 min-w-0">
-                <div className="font-semibold text-slate-900 truncate mb-2">{dive.location}</div>
-                <div className="text-sm text-slate-600 mb-3">
+                <div className="mb-2 truncate font-semibold text-foreground">{dive.location}</div>
+                <div className="mb-3 text-sm text-muted-foreground">
                   {formatDiveDateTime(dive.datetime, settings)}
                 </div>
-                <div className="flex items-center gap-6 text-sm text-slate-600">
+                <div className="flex items-center gap-6 text-sm text-muted-foreground">
                   <div className="flex items-center gap-2">
-                    <div className="p-1 bg-blue-100 rounded-md">
-                      <Waves className="h-3 w-3 text-blue-600" />
+                    <div className="rounded-md bg-blue-100 p-1 dark:bg-blue-950/60">
+                      <Waves className="h-3 w-3 text-blue-600 dark:text-blue-400" />
                     </div>
                     <span className="font-medium">{formatDepth(dive.depth, settings.units.depth)}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="p-1 bg-slate-100 rounded-md">
-                      <Clock className="h-3 w-3 text-slate-600" />
+                    <div className="rounded-md bg-muted p-1">
+                      <Clock className="h-3 w-3 text-muted-foreground" />
                     </div>
                     <span>{formatDuration(dive.duration)}</span>
                   </div>
                   {dive.buddy && (
                     <div className="flex items-center gap-2 truncate">
-                      <div className="p-1 bg-slate-100 rounded-md">
-                        <User className="h-3 w-3 text-slate-600" />
+                      <div className="rounded-md bg-muted p-1">
+                        <User className="h-3 w-3 text-muted-foreground" />
                       </div>
                       <span className="truncate">{dive.buddy}</span>
                     </div>
@@ -83,7 +83,7 @@ const RecentDives = ({ dives }: RecentDivesProps) => {
                 </div>
               </div>
               <div className="flex items-center gap-2 ml-6 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Button variant="ghost" size="sm" asChild className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-4 py-2">
+                <Button variant="ghost" size="sm" asChild className="px-4 py-2 text-blue-600 hover:bg-blue-50 hover:text-blue-700 dark:text-blue-400 dark:hover:bg-blue-950/50 dark:hover:text-blue-300">
                   <Link to={`/edit/${dive.id}`}>Edit</Link>
                 </Button>
               </div>

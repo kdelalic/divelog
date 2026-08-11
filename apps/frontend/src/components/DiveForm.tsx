@@ -28,11 +28,11 @@ interface DiveFormProps {
   onSubmit: (dive: Omit<Dive, 'id'>) => Promise<boolean>;
 }
 
-const fieldClassName = 'mt-1 block w-full rounded-md border border-slate-300 bg-white px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 sm:text-sm';
-const labelClassName = 'block text-sm font-medium text-slate-700';
+const fieldClassName = 'mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-foreground shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 sm:text-sm';
+const labelClassName = 'block text-sm font-medium text-foreground';
 
 const FieldError = ({ message }: { message?: string }) =>
-  message ? <p className="mt-1 text-sm text-red-600">{message}</p> : null;
+  message ? <p className="mt-1 text-sm text-red-600 dark:text-red-400">{message}</p> : null;
 
 const DiveForm = ({
   heading,
@@ -80,11 +80,11 @@ const DiveForm = ({
   return (
     <div className="mx-auto max-w-4xl space-y-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900 lg:text-4xl">{heading}</h1>
-        <p className="mt-2 text-lg text-slate-600 lg:text-xl">{description}</p>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground lg:text-4xl">{heading}</h1>
+        <p className="mt-2 text-lg text-muted-foreground lg:text-xl">{description}</p>
       </div>
 
-      <form onSubmit={submit} className="space-y-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm lg:p-8">
+      <form onSubmit={submit} className="space-y-6 rounded-xl border border-border bg-card p-6 text-card-foreground shadow-sm lg:p-8">
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
           <div>
             <label htmlFor="date" className={labelClassName}>Date</label>
@@ -184,7 +184,7 @@ const DiveForm = ({
               {isConditionsOpen ? <ChevronDown /> : <ChevronRight />}
             </Button>
           </CollapsibleTrigger>
-          <CollapsibleContent className="mt-4 space-y-6 rounded-lg border border-slate-200 bg-slate-50/50 p-5">
+          <CollapsibleContent className="mt-4 space-y-6 rounded-lg border border-border bg-muted/30 p-5">
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
               <div>
                 <label htmlFor="waterTempSurface" className={labelClassName}>Surface temp ({temperatureLabel})</label>
@@ -267,9 +267,9 @@ const DiveForm = ({
               {isStopsOpen ? <ChevronDown /> : <ChevronRight />}
             </Button>
           </CollapsibleTrigger>
-          <CollapsibleContent className="mt-4 space-y-4 rounded-lg border border-slate-200 bg-slate-50/50 p-5">
+          <CollapsibleContent className="mt-4 space-y-4 rounded-lg border border-border bg-muted/30 p-5">
             {safetyStopFields.length === 0 && (
-              <p className="text-sm text-slate-500">No safety stops recorded.</p>
+              <p className="text-sm text-muted-foreground">No safety stops recorded.</p>
             )}
             {safetyStopFields.map((field, index) => (
               <div key={field.id} className="grid grid-cols-[1fr_1fr_auto] items-start gap-3">
@@ -322,12 +322,12 @@ const DiveForm = ({
         </Collapsible>
 
         {saveError && (
-          <div role="alert" className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          <div role="alert" className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/50 dark:text-red-300">
             {saveError}
           </div>
         )}
 
-        <div className="flex flex-col gap-3 border-t border-slate-200 pt-6 sm:flex-row sm:justify-end">
+        <div className="flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:justify-end">
           <Button variant="outline" size="lg" asChild className="px-6">
             <Link to="/">Cancel</Link>
           </Button>

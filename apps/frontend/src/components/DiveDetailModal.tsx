@@ -62,7 +62,7 @@ const DiveDetailModal = ({ dive, isOpen, onClose }: DiveDetailModalProps) => {
       <DialogContent className="flex h-[90vh] w-[95vw] max-w-[95vw] flex-col xl:max-w-[90vw] 2xl:max-w-[85vw]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl">
-            <MapPin className="h-5 w-5 text-blue-600" />
+            <MapPin className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             {dive.location}
           </DialogTitle>
           <DialogDescription>
@@ -155,8 +155,8 @@ const DiveDetailModal = ({ dive, isOpen, onClose }: DiveDetailModalProps) => {
               <DiveProfile samples={dive.samples} maxDepth={dive.depth} className="min-h-0 flex-1" />
             ) : (
               <div className="py-12 text-center">
-                <div className="mb-2 text-lg text-gray-500">No profile data available</div>
-                <div className="mx-auto max-w-md text-sm text-gray-400">
+                <div className="mb-2 text-lg text-muted-foreground">No profile data available</div>
+                <div className="mx-auto max-w-md text-sm text-muted-foreground">
                   Profile charts are available for imports containing dive-computer sample data.
                 </div>
               </div>

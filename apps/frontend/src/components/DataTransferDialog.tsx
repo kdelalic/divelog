@@ -197,22 +197,22 @@ const DataTransferDialog = ({
         </DialogHeader>
 
         {error && (
-          <div role="alert" className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          <div role="alert" className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/50 dark:text-red-300">
             <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
             <span>{error}</span>
           </div>
         )}
         {success && (
-          <div role="status" className="flex items-start gap-2 rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-700">
+          <div role="status" className="flex items-start gap-2 rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-700 dark:border-green-900 dark:bg-green-950/50 dark:text-green-300">
             <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0" />
             <span>{success}</span>
           </div>
         )}
 
         <div className="grid gap-4 md:grid-cols-2">
-          <section className="rounded-lg border border-slate-200 p-4">
-            <h3 className="font-semibold text-slate-900">Complete JSON backup</h3>
-            <p className="mt-1 text-sm text-slate-600">
+          <section className="rounded-lg border border-border p-4">
+            <h3 className="font-semibold text-foreground">Complete JSON backup</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
               Includes all dives, profile samples, equipment, conditions, dive sites, and settings.
             </p>
             <Button
@@ -226,19 +226,19 @@ const DataTransferDialog = ({
             </Button>
           </section>
 
-          <section className="rounded-lg border border-slate-200 p-4">
-            <h3 className="font-semibold text-slate-900">Spreadsheet CSV</h3>
-            <p className="mt-1 text-sm text-slate-600">
+          <section className="rounded-lg border border-border p-4">
+            <h3 className="font-semibold text-foreground">Spreadsheet CSV</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
               Exports metric source values, with profile and equipment data in JSON columns.
             </p>
-            <label className="mt-3 block text-sm font-medium text-slate-700" htmlFor="csv-scope">
+            <label className="mt-3 block text-sm font-medium text-foreground" htmlFor="csv-scope">
               Dives to export
             </label>
             <select
               id="csv-scope"
               value={effectiveCsvScope}
               onChange={(event) => setCsvScope(event.target.value as 'all' | 'filtered')}
-              className="mt-1 h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm"
+              className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground"
             >
               <option value="all">All dives ({dives.length})</option>
               {hasActiveFilters && (
@@ -258,11 +258,11 @@ const DataTransferDialog = ({
           </section>
         </div>
 
-        <section className="rounded-lg border border-slate-200 p-4">
+        <section className="rounded-lg border border-border p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h3 className="font-semibold text-slate-900">Restore a JSON backup</h3>
-              <p className="mt-1 text-sm text-slate-600">
+              <h3 className="font-semibold text-foreground">Restore a JSON backup</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
                 The file is validated and existing dives and sites are skipped automatically.
               </p>
             </div>
@@ -289,8 +289,8 @@ const DataTransferDialog = ({
           </div>
 
           {backup && (
-            <div className="mt-4 rounded-md bg-slate-50 p-4">
-              <p className="text-sm font-medium text-slate-900">
+            <div className="mt-4 rounded-md bg-muted/50 p-4">
+              <p className="text-sm font-medium text-foreground">
                 Backup from {new Date(backup.createdAt).toLocaleString()}
               </p>
               <div className="mt-3 space-y-2 text-sm">

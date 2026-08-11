@@ -142,7 +142,7 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({ equipment, onChange }) =>
                     size="sm"
                     type="button"
                     onClick={() => removeTank(index)}
-                    className="text-red-600 hover:text-red-700"
+                    className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
