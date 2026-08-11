@@ -6,6 +6,7 @@ import (
 	"divelog-backend/models"
 	"divelog-backend/utils"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/lib/pq"
@@ -14,6 +15,140 @@ import (
 // LogbookRepository owns reusable tags, trips, and numbering operations.
 type LogbookRepository struct {
 	db *sql.DB
+}
+
+func ensureOwnedDives(ctx context.Context, tx *sql.Tx, userID int, diveIDs []int) error {
+	var count int
+	if err := tx.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM dives WHERE user_id = $1 AND id = ANY($2)`,
+		userID, pq.Array(diveIDs),
+	).Scan(&count); err != nil {
+		return utils.ErrDatabaseError
+	}
+	if count != len(diveIDs) {
+		return utils.ErrDiveNotFound
+	}
+	return nil
+}
+
+// BulkUpdateDives applies one partial update to every selected dive in a
+// serializable transaction. Ownership is checked before any mutation.
+func (r *LogbookRepository) BulkUpdateDives(ctx context.Context, userID int, request models.BulkDiveUpdateRequest) (int64, error) {
+	tx, err := r.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
+	if err != nil {
+		return 0, utils.ErrDatabaseError
+	}
+	defer tx.Rollback()
+	if err := ensureOwnedDives(ctx, tx, userID, request.DiveIDs); err != nil {
+		return 0, err
+	}
+	if request.TripID != nil {
+		var exists bool
+		if err := tx.QueryRowContext(ctx,
+			`SELECT EXISTS(SELECT 1 FROM trips WHERE id = $1 AND user_id = $2)`,
+			*request.TripID, userID,
+		).Scan(&exists); err != nil {
+			return 0, utils.ErrDatabaseError
+		}
+		if !exists {
+			return 0, utils.ErrTripNotFound
+		}
+	}
+
+	sets := []string{}
+	args := []interface{}{}
+	addSet := func(column string, value interface{}) {
+		args = append(args, value)
+		sets = append(sets, fmt.Sprintf("%s = $%d", column, len(args)))
+	}
+	if request.TripID != nil {
+		addSet("trip_id", *request.TripID)
+	} else if request.ClearTrip {
+		sets = append(sets, "trip_id = NULL")
+	}
+	if request.Buddy != nil {
+		addSet("buddy", strings.TrimSpace(*request.Buddy))
+	} else if request.ClearBuddy {
+		sets = append(sets, "buddy = NULL")
+	}
+	if request.DiveType != nil {
+		addSet("dive_type", *request.DiveType)
+	} else if request.ClearDiveType {
+		sets = append(sets, "dive_type = NULL")
+	}
+	if request.Rating != nil {
+		addSet("rating", *request.Rating)
+	} else if request.ClearRating {
+		sets = append(sets, "rating = NULL")
+	}
+
+	if len(sets) > 0 {
+		sets = append(sets, "updated_at = NOW()")
+		args = append(args, userID, pq.Array(request.DiveIDs))
+		query := fmt.Sprintf(`UPDATE dives SET %s WHERE user_id = $%d AND id = ANY($%d)`,
+			strings.Join(sets, ", "), len(args)-1, len(args))
+		if _, err := tx.ExecContext(ctx, query, args...); err != nil {
+			return 0, utils.ErrDatabaseError
+		}
+	}
+
+	for _, rawName := range request.AddTags {
+		name := strings.TrimSpace(rawName)
+		var tagID int
+		if err := tx.QueryRowContext(ctx, `
+			INSERT INTO tags (user_id, name) VALUES ($1, $2)
+			ON CONFLICT (user_id, lower(name)) DO UPDATE SET name = tags.name
+			RETURNING id`, userID, name).Scan(&tagID); err != nil {
+			return 0, utils.ErrDatabaseError
+		}
+		if _, err := tx.ExecContext(ctx, `
+			INSERT INTO dive_tags (dive_id, tag_id)
+			SELECT id, $1 FROM dives WHERE user_id = $2 AND id = ANY($3)
+			ON CONFLICT DO NOTHING`, tagID, userID, pq.Array(request.DiveIDs)); err != nil {
+			return 0, utils.ErrDatabaseError
+		}
+	}
+	if len(request.RemoveTags) > 0 {
+		trimmed := make([]string, 0, len(request.RemoveTags))
+		for _, name := range request.RemoveTags {
+			trimmed = append(trimmed, strings.TrimSpace(name))
+		}
+		if _, err := tx.ExecContext(ctx, `
+			DELETE FROM dive_tags dt USING tags t, dives d
+			WHERE dt.tag_id = t.id AND dt.dive_id = d.id
+			  AND t.user_id = $1 AND d.user_id = $1 AND d.id = ANY($2)
+			  AND lower(t.name) = ANY(SELECT lower(value) FROM unnest($3::text[]) AS value)`,
+			userID, pq.Array(request.DiveIDs), pq.Array(trimmed)); err != nil {
+			return 0, utils.ErrDatabaseError
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return 0, utils.ErrDatabaseError
+	}
+	return int64(len(request.DiveIDs)), nil
+}
+
+func (r *LogbookRepository) BulkDeleteDives(ctx context.Context, userID int, diveIDs []int) (int64, error) {
+	tx, err := r.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
+	if err != nil {
+		return 0, utils.ErrDatabaseError
+	}
+	defer tx.Rollback()
+	if err := ensureOwnedDives(ctx, tx, userID, diveIDs); err != nil {
+		return 0, err
+	}
+	result, err := tx.ExecContext(ctx, `DELETE FROM dives WHERE user_id = $1 AND id = ANY($2)`, userID, pq.Array(diveIDs))
+	if err != nil {
+		return 0, utils.ErrDatabaseError
+	}
+	deleted, err := result.RowsAffected()
+	if err != nil {
+		return 0, utils.ErrDatabaseError
+	}
+	if err := tx.Commit(); err != nil {
+		return 0, utils.ErrDatabaseError
+	}
+	return deleted, nil
 }
 
 func NewLogbookRepository(db *sql.DB) *LogbookRepository {

@@ -406,6 +406,20 @@ export const divesApi = {
 
 export type TripInput = Omit<Trip, 'id' | 'diveCount'>;
 
+export interface BulkDiveUpdateInput {
+  diveIds: number[];
+  tripId?: number;
+  clearTrip?: boolean;
+  addTags?: string[];
+  removeTags?: string[];
+  buddy?: string;
+  clearBuddy?: boolean;
+  diveType?: Dive['diveType'];
+  clearDiveType?: boolean;
+  rating?: number;
+  clearRating?: boolean;
+}
+
 const organizationRequest = async <T>(path: string, init?: RequestInit): Promise<ApiResponse<T>> => {
   try {
     const separator = path.includes('?') ? '&' : '?';
@@ -448,6 +462,29 @@ export const organizationApi = {
   async fetchTrips(): Promise<ApiResponse<Trip[]>> {
     const response = await organizationRequest<ApiTrip[]>('/trips');
     return response.data ? { data: response.data.map(deserializeTrip) } : response;
+  },
+  bulkUpdateDives(input: BulkDiveUpdateInput): Promise<ApiResponse<{ updated_count: number }>> {
+    return organizationRequest('/dives/bulk', {
+      method: 'PATCH',
+      body: JSON.stringify({
+        dive_ids: input.diveIds,
+        trip_id: input.tripId,
+        clear_trip: input.clearTrip,
+        add_tags: input.addTags,
+        remove_tags: input.removeTags,
+        buddy: input.buddy,
+        clear_buddy: input.clearBuddy,
+        dive_type: input.diveType,
+        clear_dive_type: input.clearDiveType,
+        rating: input.rating,
+        clear_rating: input.clearRating,
+      }),
+    });
+  },
+  bulkDeleteDives(diveIds: number[]): Promise<ApiResponse<{ deleted_count: number }>> {
+    return organizationRequest('/dives/bulk-delete', {
+      method: 'POST', body: JSON.stringify({ dive_ids: diveIds }),
+    });
   },
   async createTrip(trip: TripInput): Promise<ApiResponse<Trip>> {
     const response = await organizationRequest<ApiTrip>('/trips', { method: 'POST', body: JSON.stringify(serializeTrip(trip)) });

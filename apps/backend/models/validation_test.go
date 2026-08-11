@@ -83,6 +83,27 @@ func TestTripRequestValidateDateRange(t *testing.T) {
 	assert.Contains(t, request.Validate(), "end_date")
 }
 
+func TestBulkDiveUpdateRequestValidate(t *testing.T) {
+	tripID := 7
+	rating := 4
+	request := BulkDiveUpdateRequest{DiveIDs: []int{2, 3}, TripID: &tripID, AddTags: []string{"Wreck"}, Rating: &rating}
+	assert.Empty(t, request.Validate())
+
+	request.DiveIDs = []int{2, 2, 0}
+	request.ClearTrip = true
+	request.AddTags = []string{"wreck", "WRECK"}
+	errors := request.Validate()
+	assert.Contains(t, errors, "dive_ids[1]")
+	assert.Contains(t, errors, "dive_ids[2]")
+	assert.Contains(t, errors, "trip_id")
+	assert.Contains(t, errors, "add_tags[1]")
+}
+
+func TestBulkDiveUpdateRequiresAChange(t *testing.T) {
+	assert.Contains(t, (&BulkDiveUpdateRequest{DiveIDs: []int{1}}).Validate(), "changes")
+	assert.Empty(t, (&BulkDiveDeleteRequest{DiveIDs: []int{1, 2}}).Validate())
+}
+
 func TestDiveSiteRequestValidate(t *testing.T) {
 	request := DiveSiteRequest{Name: "", Latitude: 91, Longitude: -181}
 

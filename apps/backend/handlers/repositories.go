@@ -42,4 +42,6 @@ type logbookService interface {
 	MergeTrips(context.Context, int, int, models.MergeTripsRequest) error
 	SplitTrip(context.Context, int, int, models.SplitTripRequest) (*models.Trip, error)
 	RenumberDives(context.Context, int, models.RenumberDivesRequest) (int64, error)
+	BulkUpdateDives(context.Context, int, models.BulkDiveUpdateRequest) (int64, error)
+	BulkDeleteDives(context.Context, int, models.BulkDiveDeleteRequest) (int64, error)
 }

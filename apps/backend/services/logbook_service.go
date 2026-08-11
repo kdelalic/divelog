@@ -17,6 +17,8 @@ type LogbookRepository interface {
 	MergeTrips(context.Context, int, int, []int) error
 	SplitTrip(context.Context, int, int, models.SplitTripRequest) (*models.Trip, error)
 	RenumberDives(context.Context, int, models.RenumberDivesRequest) (int64, error)
+	BulkUpdateDives(context.Context, int, models.BulkDiveUpdateRequest) (int64, error)
+	BulkDeleteDives(context.Context, int, []int) (int64, error)
 }
 
 type LogbookService struct {
@@ -59,4 +61,10 @@ func (s *LogbookService) SplitTrip(ctx context.Context, userID, sourceID int, re
 }
 func (s *LogbookService) RenumberDives(ctx context.Context, userID int, request models.RenumberDivesRequest) (int64, error) {
 	return s.repository.RenumberDives(ctx, userID, request)
+}
+func (s *LogbookService) BulkUpdateDives(ctx context.Context, userID int, request models.BulkDiveUpdateRequest) (int64, error) {
+	return s.repository.BulkUpdateDives(ctx, userID, request)
+}
+func (s *LogbookService) BulkDeleteDives(ctx context.Context, userID int, request models.BulkDiveDeleteRequest) (int64, error) {
+	return s.repository.BulkDeleteDives(ctx, userID, request.DiveIDs)
 }

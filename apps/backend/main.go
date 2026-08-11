@@ -127,6 +127,8 @@ func main() {
 			organizationRoutes.POST("/trips/:id/merge", logbookHandler.MergeTrips)
 			organizationRoutes.POST("/trips/:id/split", logbookHandler.SplitTrip)
 			organizationRoutes.POST("/dives/renumber", logbookHandler.RenumberDives)
+			organizationRoutes.PATCH("/dives/bulk", logbookHandler.BulkUpdateDives)
+			organizationRoutes.POST("/dives/bulk-delete", logbookHandler.BulkDeleteDives)
 		}
 
 		// Dive site endpoints (no user validation needed for these)

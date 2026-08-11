@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { TagSummary, Trip } from '@/lib/dives';
-import { organizationApi, type TripInput } from '@/lib/api';
+import { organizationApi, type BulkDiveUpdateInput, type TripInput } from '@/lib/api';
 import useDiveStore from './diveStore';
 
 interface OrganizationState {
@@ -20,6 +20,8 @@ interface OrganizationState {
   renumberDives: (request: {
     scope: 'all' | 'range'; startNumber: number; increment: number; fromDate?: string; toDate?: string;
   }) => Promise<number | null>;
+  bulkUpdateDives: (request: BulkDiveUpdateInput) => Promise<boolean>;
+  bulkDeleteDives: (diveIds: number[]) => Promise<boolean>;
 }
 
 const useOrganizationStore = create<OrganizationState>()((set, get) => {
@@ -69,6 +71,8 @@ const useOrganizationStore = create<OrganizationState>()((set, get) => {
       await refresh();
       return result.data?.renumbered_count ?? 0;
     },
+    bulkUpdateDives: (request) => run(() => organizationApi.bulkUpdateDives(request)),
+    bulkDeleteDives: (diveIds) => run(() => organizationApi.bulkDeleteDives(diveIds)),
   };
 });
 

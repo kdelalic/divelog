@@ -199,9 +199,43 @@ func (h *LogbookHandler) RenumberDives(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"renumbered_count": count})
 }
 
+func (h *LogbookHandler) BulkUpdateDives(c *gin.Context) {
+	userID, ok := middleware.RequireUserID(c)
+	if !ok {
+		return
+	}
+	var request models.BulkDiveUpdateRequest
+	if !middleware.BindAndValidateJSON(c, &request) {
+		return
+	}
+	count, err := h.service.BulkUpdateDives(c.Request.Context(), userID, request)
+	if err != nil {
+		respondLogbookError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"updated_count": count})
+}
+
+func (h *LogbookHandler) BulkDeleteDives(c *gin.Context) {
+	userID, ok := middleware.RequireUserID(c)
+	if !ok {
+		return
+	}
+	var request models.BulkDiveDeleteRequest
+	if !middleware.BindAndValidateJSON(c, &request) {
+		return
+	}
+	count, err := h.service.BulkDeleteDives(c.Request.Context(), userID, request)
+	if err != nil {
+		respondLogbookError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"deleted_count": count})
+}
+
 func respondLogbookError(c *gin.Context, err error) {
 	switch err {
-	case utils.ErrTagNotFound, utils.ErrTripNotFound:
+	case utils.ErrTagNotFound, utils.ErrTripNotFound, utils.ErrDiveNotFound:
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 	case utils.ErrOrganizationConflict:
 		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { chunkDivesForUpload, deserializeDive, divesApi, serializeDive } from './api';
+import { chunkDivesForUpload, deserializeDive, divesApi, organizationApi, serializeDive } from './api';
 import type { Dive } from './dives';
 
 // The client models are camelCase and the Go API is snake_case. Go silently
@@ -266,5 +266,26 @@ describe('divesApi.createMultipleDives', () => {
 
     expect(result.status).toBeUndefined();
     expect(result.error).toBe('Failed to fetch');
+  });
+});
+
+describe('organizationApi bulk operations', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('serializes a partial bulk update using backend field names', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ updated_count: 2 }), {
+      status: 200, headers: { 'Content-Type': 'application/json' },
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await organizationApi.bulkUpdateDives({
+      diveIds: [2, 3], tripId: 8, addTags: ['wreck'], diveType: 'technical', rating: 5,
+    });
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(init.body as string)).toMatchObject({
+      dive_ids: [2, 3], trip_id: 8, add_tags: ['wreck'], dive_type: 'technical', rating: 5,
+    });
+    expect(init.method).toBe('PATCH');
   });
 });

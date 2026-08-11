@@ -38,6 +38,8 @@ import type { BackupDive, BackupDiveSite, BackupTrip } from "@/lib/dataTransfer"
 import type { UserSettings } from "@/lib/settings";
 import useOrganizationStore from "@/store/organizationStore";
 import LogbookOrganizationDialog from "@/components/LogbookOrganizationDialog";
+import BulkDiveEditDialog from "@/components/BulkDiveEditDialog";
+import type { BulkDiveUpdateInput } from "@/lib/api";
 
 const DiveLog = () => {
   const dives = useDiveStore((state) => state.dives);
@@ -50,6 +52,8 @@ const DiveLog = () => {
 	const tags = useOrganizationStore((state) => state.tags);
 	const trips = useOrganizationStore((state) => state.trips);
 	const loadOrganization = useOrganizationStore((state) => state.load);
+	const bulkUpdateDives = useOrganizationStore((state) => state.bulkUpdateDives);
+	const bulkDeleteDives = useOrganizationStore((state) => state.bulkDeleteDives);
   const stats = calculateDiveStatistics(dives);
   const [searchParams, setSearchParams] = useSearchParams();
   const filterQuery = searchParams.toString();
@@ -72,6 +76,8 @@ const DiveLog = () => {
 	const [showOrganization, setShowOrganization] = useState(false);
 	const [groupByTrip, setGroupByTrip] = useState(true);
 	const [collapsedTrips, setCollapsedTrips] = useState<Set<string>>(new Set());
+	const [selectedDiveIds, setSelectedDiveIds] = useState<Set<number>>(new Set());
+	const [showBulkEdit, setShowBulkEdit] = useState(false);
 	const tripGroups = useMemo(() => {
 		const groups = new Map<string, { key: string; label: string; detail?: string; dives: Dive[] }>();
 		for (const dive of filteredDives) {
@@ -84,6 +90,8 @@ const DiveLog = () => {
 		}
 		return [...groups.values()];
 	}, [filteredDives]);
+	const visibleDiveIds = useMemo(() => filteredDives.map((dive) => dive.id), [filteredDives]);
+	const allVisibleSelected = visibleDiveIds.length > 0 && visibleDiveIds.every((id) => selectedDiveIds.has(id));
 
   // The matching backend route only exists outside release mode
   const isDevBuild = import.meta.env.DEV;
@@ -191,12 +199,44 @@ const DiveLog = () => {
   };
 
   const handleFiltersChange = (nextFilters: DiveFilterValues) => {
+	setSelectedDiveIds(new Set());
     setSearchParams(diveFiltersToSearchParams(nextFilters), { replace: true });
   };
 
   const handleClearFilters = () => {
+	setSelectedDiveIds(new Set());
     setSearchParams(diveFiltersToSearchParams(EMPTY_DIVE_FILTERS), { replace: true });
   };
+
+	const toggleDiveSelection = (diveId: number, selected: boolean) => {
+		setSelectedDiveIds((current) => {
+			const next = new Set(current);
+			if (selected) next.add(diveId); else next.delete(diveId);
+			return next;
+		});
+	};
+
+	const toggleSelection = (diveIds: number[], selected: boolean) => {
+		setSelectedDiveIds((current) => {
+			const next = new Set(current);
+			for (const id of diveIds) {
+				if (selected) next.add(id); else next.delete(id);
+			}
+			return next;
+		});
+	};
+
+	const handleBulkUpdate = async (request: BulkDiveUpdateInput) => {
+		const success = await bulkUpdateDives(request);
+		if (success) setSelectedDiveIds(new Set());
+		return success;
+	};
+
+	const handleBulkDelete = async () => {
+		const ids = [...selectedDiveIds];
+		if (ids.length === 0 || !window.confirm(`Delete ${ids.length} selected dive${ids.length === 1 ? '' : 's'}? This cannot be undone.`)) return;
+		if (await bulkDeleteDives(ids)) setSelectedDiveIds(new Set());
+	};
 
   return (
     <div className="space-y-8">
@@ -303,6 +343,14 @@ const DiveLog = () => {
           <table className="min-w-full divide-y divide-border">
             <thead className="bg-muted/50">
               <tr>
+				<th scope="col" className="w-12 px-4 py-4 text-left">
+					<input
+						type="checkbox"
+						aria-label="Select all filtered dives"
+						checked={allVisibleSelected}
+						onChange={(event) => toggleSelection(visibleDiveIds, event.target.checked)}
+					/>
+				</th>
 				<th scope="col" className="px-5 py-4 text-left text-sm font-semibold uppercase tracking-wider text-foreground">#</th>
                 <th scope="col" className="w-1/6 px-8 py-4 text-left text-sm font-semibold uppercase tracking-wider text-foreground">Date</th>
                 <th scope="col" className="w-2/6 px-8 py-4 text-left text-sm font-semibold uppercase tracking-wider text-foreground">Location</th>
@@ -321,21 +369,37 @@ const DiveLog = () => {
 				<Fragment key={group.key}>
 				{groupByTrip && (
 					<tr className="bg-muted/50">
-						<td colSpan={7} className="px-5 py-3">
-							<button type="button" className="flex w-full items-center gap-2 text-left" onClick={() => setCollapsedTrips((current) => { const next = new Set(current); if (next.has(group.key)) next.delete(group.key); else next.add(group.key); return next; })}>
-								{collapsedTrips.has(group.key) ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-								<span className="font-semibold text-foreground">{group.label}</span>
-								<span className="text-sm text-muted-foreground">{group.dives.length} dive{group.dives.length === 1 ? '' : 's'}{group.detail ? ` · ${group.detail}` : ''}</span>
-							</button>
-						</td>
+							<td colSpan={8} className="px-4 py-3">
+								<div className="flex items-center gap-3">
+									<input
+										type="checkbox"
+										aria-label={`Select all dives in ${group.label}`}
+										checked={group.dives.every((dive) => selectedDiveIds.has(dive.id))}
+										onChange={(event) => toggleSelection(group.dives.map((dive) => dive.id), event.target.checked)}
+									/>
+								<button type="button" className="flex flex-1 items-center gap-2 text-left" onClick={() => setCollapsedTrips((current) => { const next = new Set(current); if (next.has(group.key)) next.delete(group.key); else next.add(group.key); return next; })}>
+									{collapsedTrips.has(group.key) ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+									<span className="font-semibold text-foreground">{group.label}</span>
+									<span className="text-sm text-muted-foreground">{group.dives.length} dive{group.dives.length === 1 ? '' : 's'}{group.detail ? ` · ${group.detail}` : ''}</span>
+								</button>
+								</div>
+							</td>
 					</tr>
 				)}
 				{!collapsedTrips.has(group.key) && group.dives.map((dive) => (
 				<tr key={dive.id}
                   className="cursor-pointer transition-colors duration-150 hover:bg-muted/50"
                   onClick={() => handleRowClick(dive)}
-                >
-				  <td className="whitespace-nowrap px-5 py-5 text-sm font-semibold text-foreground">{dive.diveNumber ?? '—'}</td>
+	                >
+					  <td className="px-4 py-5" onClick={(event) => event.stopPropagation()}>
+						<input
+							type="checkbox"
+							aria-label={`Select dive ${dive.diveNumber ?? dive.id}`}
+							checked={selectedDiveIds.has(dive.id)}
+							onChange={(event) => toggleDiveSelection(dive.id, event.target.checked)}
+						/>
+					  </td>
+					  <td className="whitespace-nowrap px-5 py-5 text-sm font-semibold text-foreground">{dive.diveNumber ?? '—'}</td>
                   <td className="whitespace-nowrap px-8 py-5 text-sm font-medium text-foreground lg:text-base">
                     {formatDiveDateTime(dive.datetime, settings)}
                   </td>
@@ -380,7 +444,7 @@ const DiveLog = () => {
 			  ))}
               {filteredDives.length === 0 && (
                 <tr>
-				  <td colSpan={7} className="px-8 py-14 text-center">
+					  <td colSpan={8} className="px-8 py-14 text-center">
                     <p className="font-semibold text-foreground">
                       {hasActiveFilters ? 'No dives match these filters' : 'No dives logged yet'}
                     </p>
@@ -408,6 +472,15 @@ const DiveLog = () => {
         </div>
       </div>
 
+	  {selectedDiveIds.size > 0 && (
+		<div className="sticky bottom-4 z-30 mx-auto flex w-fit items-center gap-3 rounded-xl border border-border bg-card px-5 py-3 shadow-xl">
+			<span className="text-sm font-semibold">{selectedDiveIds.size} selected</span>
+			<Button size="sm" onClick={() => setShowBulkEdit(true)}>Edit selected</Button>
+			<Button size="sm" variant="outline" className="text-red-600 dark:text-red-400" onClick={handleBulkDelete}>Delete</Button>
+			<Button size="sm" variant="ghost" onClick={() => setSelectedDiveIds(new Set())}>Clear</Button>
+		</div>
+	  )}
+
       <DiveDetailModal 
         dive={selectedDive}
         isOpen={isModalOpen}
@@ -415,6 +488,14 @@ const DiveLog = () => {
       />
 
 	  <LogbookOrganizationDialog open={showOrganization} onOpenChange={setShowOrganization} dives={dives} />
+	  <BulkDiveEditDialog
+		open={showBulkEdit}
+		onOpenChange={setShowBulkEdit}
+		selectedCount={selectedDiveIds.size}
+		diveIds={[...selectedDiveIds]}
+		trips={trips}
+		onApply={handleBulkUpdate}
+	  />
 
       <Dialog open={showImport} onOpenChange={setShowImport}>
         <DialogContent className="max-w-2xl">
