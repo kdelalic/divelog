@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"divelog-backend/models"
+	"divelog-backend/services"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -14,65 +15,50 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-type mockDiveRepository struct {
+type mockDiveService struct {
 	mock.Mock
 }
 
-func (m *mockDiveRepository) GetDivesByUserID(ctx context.Context, userID int) ([]models.Dive, error) {
+func (m *mockDiveService) GetDives(ctx context.Context, userID int) ([]models.Dive, error) {
 	args := m.Called(ctx, userID)
 	return args.Get(0).([]models.Dive), args.Error(1)
 }
 
-func (m *mockDiveRepository) CreateDive(ctx context.Context, dive *models.Dive) error {
-	return m.Called(ctx, dive).Error(0)
-}
-
-func (m *mockDiveRepository) CreateMultipleDives(ctx context.Context, dives []*models.Dive) ([]models.Dive, []map[string]interface{}, error) {
-	args := m.Called(ctx, dives)
-	return args.Get(0).([]models.Dive), args.Get(1).([]map[string]interface{}), args.Error(2)
-}
-
-func (m *mockDiveRepository) UpdateDive(ctx context.Context, diveID, userID int, dive *models.Dive) error {
-	return m.Called(ctx, diveID, userID, dive).Error(0)
-}
-
-func (m *mockDiveRepository) DeleteDive(ctx context.Context, diveID, userID int) error {
-	return m.Called(ctx, diveID, userID).Error(0)
-}
-
-func (m *mockDiveRepository) DeleteAllDives(ctx context.Context, userID int) (int64, error) {
-	args := m.Called(ctx, userID)
-	return args.Get(0).(int64), args.Error(1)
-}
-
-func (m *mockDiveRepository) GetCurrentDive(ctx context.Context, diveID, userID int) (*models.Dive, error) {
-	args := m.Called(ctx, diveID, userID)
+func (m *mockDiveService) CreateDive(ctx context.Context, userID int, request models.DiveRequest) (*models.Dive, error) {
+	args := m.Called(ctx, userID, request)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*models.Dive), args.Error(1)
 }
 
-func (m *mockDiveRepository) CheckDuplicateDive(ctx context.Context, userID, diveSiteID int, dateTime string) (bool, error) {
-	args := m.Called(ctx, userID, diveSiteID, dateTime)
-	return args.Bool(0), args.Error(1)
+func (m *mockDiveService) CreateMultipleDives(ctx context.Context, userID int, requests []models.DiveRequest) (*services.BatchCreateResult, error) {
+	args := m.Called(ctx, userID, requests)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*services.BatchCreateResult), args.Error(1)
 }
 
-func (m *mockDiveRepository) CheckDuplicateDiveForUpdateByLocation(ctx context.Context, userID int, lat, lng float64, dateTime string, excludeDiveID int) (bool, error) {
-	args := m.Called(ctx, userID, lat, lng, dateTime, excludeDiveID)
-	return args.Bool(0), args.Error(1)
+func (m *mockDiveService) UpdateDive(ctx context.Context, diveID, userID int, request models.DiveRequest) (*models.Dive, error) {
+	args := m.Called(ctx, diveID, userID, request)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.Dive), args.Error(1)
+}
+
+func (m *mockDiveService) DeleteDive(ctx context.Context, diveID, userID int) error {
+	return m.Called(ctx, diveID, userID).Error(0)
+}
+
+func (m *mockDiveService) DeleteAllDives(ctx context.Context, userID int) (int64, error) {
+	args := m.Called(ctx, userID)
+	return args.Get(0).(int64), args.Error(1)
 }
 
 type mockDiveSiteRepository struct {
 	mock.Mock
-}
-
-func (m *mockDiveSiteRepository) FindOrCreateDiveSite(ctx context.Context, name string, lat, lng float64) (*models.DiveSite, error) {
-	args := m.Called(ctx, name, lat, lng)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*models.DiveSite), args.Error(1)
 }
 
 func (m *mockDiveSiteRepository) GetAll(ctx context.Context) ([]models.DiveSite, error) {
@@ -113,14 +99,6 @@ func (m *mockDiveSiteRepository) Delete(ctx context.Context, id int) error {
 	return m.Called(ctx, id).Error(0)
 }
 
-func (m *mockDiveSiteRepository) GetDiveSiteByDiveID(ctx context.Context, diveID int) (*int, error) {
-	args := m.Called(ctx, diveID)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*int), args.Error(1)
-}
-
 func setupGinContext(method, url string, body interface{}) (*gin.Context, *httptest.ResponseRecorder) {
 	jsonBody, _ := json.Marshal(body)
 	return setupRawGinContext(method, url, jsonBody)
@@ -148,30 +126,23 @@ func validDiveRequest() models.DiveRequest {
 }
 
 func TestDiveHandlerCreateDiveAcceptsZeroCoordinates(t *testing.T) {
-	diveRepo := new(mockDiveRepository)
-	siteRepo := new(mockDiveSiteRepository)
-	handler := NewDiveHandler(diveRepo, siteRepo)
+	service := new(mockDiveService)
+	handler := NewDiveHandler(service)
 	request := validDiveRequest()
 	request.Lat = 0
 	request.Lng = 0
-	site := &models.DiveSite{ID: 7, Name: request.Location}
-
-	siteRepo.On("FindOrCreateDiveSite", mock.Anything, request.Location, float64(0), float64(0)).Return(site, nil)
-	diveRepo.On("CheckDuplicateDive", mock.Anything, 1, 7, request.DateTime).Return(false, nil)
-	diveRepo.On("CreateDive", mock.Anything, mock.AnythingOfType("*models.Dive")).Return(nil)
+	service.On("CreateDive", mock.Anything, 1, request).Return(request.ToDive(1), nil)
 
 	context, recorder := setupGinContext(http.MethodPost, "/dives", request)
 	handler.CreateDive(context)
 
 	assert.Equal(t, http.StatusCreated, recorder.Code)
-	diveRepo.AssertExpectations(t)
-	siteRepo.AssertExpectations(t)
+	service.AssertExpectations(t)
 }
 
 func TestDiveHandlerCreateDiveReturnsFieldErrors(t *testing.T) {
-	diveRepo := new(mockDiveRepository)
-	siteRepo := new(mockDiveSiteRepository)
-	handler := NewDiveHandler(diveRepo, siteRepo)
+	service := new(mockDiveService)
+	handler := NewDiveHandler(service)
 	request := validDiveRequest()
 	request.DateTime = "not-a-date"
 	request.Depth = 0
@@ -190,13 +161,12 @@ func TestDiveHandlerCreateDiveReturnsFieldErrors(t *testing.T) {
 	assert.Contains(t, response.Fields, "datetime")
 	assert.Contains(t, response.Fields, "depth")
 	assert.Contains(t, response.Fields, "lat")
-	diveRepo.AssertNotCalled(t, "CreateDive", mock.Anything, mock.Anything)
+	service.AssertNotCalled(t, "CreateDive", mock.Anything, mock.Anything, mock.Anything)
 }
 
 func TestDiveHandlerCreateMultipleDivesReturnsIndexedFieldErrors(t *testing.T) {
-	diveRepo := new(mockDiveRepository)
-	siteRepo := new(mockDiveSiteRepository)
-	handler := NewDiveHandler(diveRepo, siteRepo)
+	service := new(mockDiveService)
+	handler := NewDiveHandler(service)
 	requests := []models.DiveRequest{validDiveRequest(), validDiveRequest()}
 	requests[1].Duration = 0
 
@@ -209,11 +179,11 @@ func TestDiveHandlerCreateMultipleDivesReturnsIndexedFieldErrors(t *testing.T) {
 	}
 	assert.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &response))
 	assert.Equal(t, "must be between 1 and 1440", response.Fields["dives[1].duration"])
-	siteRepo.AssertNotCalled(t, "FindOrCreateDiveSite", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+	service.AssertNotCalled(t, "CreateMultipleDives", mock.Anything, mock.Anything, mock.Anything)
 }
 
 func TestDiveHandlerCreateDiveRejectsMalformedJSON(t *testing.T) {
-	handler := NewDiveHandler(new(mockDiveRepository), new(mockDiveSiteRepository))
+	handler := NewDiveHandler(new(mockDiveService))
 	context, recorder := setupRawGinContext(http.MethodPost, "/dives", []byte(`{"datetime":`))
 
 	handler.CreateDive(context)
@@ -223,10 +193,10 @@ func TestDiveHandlerCreateDiveRejectsMalformedJSON(t *testing.T) {
 }
 
 func TestDiveHandlerDeleteAllDivesReturnsDeletedCount(t *testing.T) {
-	diveRepo := new(mockDiveRepository)
-	handler := NewDiveHandler(diveRepo, new(mockDiveSiteRepository))
+	service := new(mockDiveService)
+	handler := NewDiveHandler(service)
 
-	diveRepo.On("DeleteAllDives", mock.Anything, 1).Return(int64(12), nil)
+	service.On("DeleteAllDives", mock.Anything, 1).Return(int64(12), nil)
 
 	context, recorder := setupGinContext(http.MethodDelete, "/dives", nil)
 	handler.DeleteAllDives(context)
@@ -237,18 +207,18 @@ func TestDiveHandlerDeleteAllDivesReturnsDeletedCount(t *testing.T) {
 	}
 	assert.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &response))
 	assert.Equal(t, int64(12), response.DeletedCount)
-	diveRepo.AssertExpectations(t)
+	service.AssertExpectations(t)
 }
 
 func TestDiveHandlerDeleteAllDivesReportsRepositoryFailure(t *testing.T) {
-	diveRepo := new(mockDiveRepository)
-	handler := NewDiveHandler(diveRepo, new(mockDiveSiteRepository))
+	service := new(mockDiveService)
+	handler := NewDiveHandler(service)
 
-	diveRepo.On("DeleteAllDives", mock.Anything, 1).Return(int64(0), assert.AnError)
+	service.On("DeleteAllDives", mock.Anything, 1).Return(int64(0), assert.AnError)
 
 	context, recorder := setupGinContext(http.MethodDelete, "/dives", nil)
 	handler.DeleteAllDives(context)
 
 	assert.Equal(t, http.StatusInternalServerError, recorder.Code)
-	diveRepo.AssertExpectations(t)
+	service.AssertExpectations(t)
 }

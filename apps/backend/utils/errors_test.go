@@ -17,6 +17,8 @@ func TestErrorConstants(t *testing.T) {
 		{ErrDiveNotFound, "dive not found"},
 		{ErrDiveSiteNotFound, "dive site not found"},
 		{ErrDuplicateDive, "duplicate dive exists"},
+		{ErrDuplicateDiveSite, "duplicate dive site exists"},
+		{ErrDiveSiteInUse, "dive site is referenced by one or more dives"},
 		{ErrDatabaseError, "database error"},
 		{ErrInvalidInput, "invalid input data"},
 		{ErrProcessingFailed, "processing failed"},

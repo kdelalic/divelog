@@ -11,18 +11,16 @@ import (
 )
 
 type DiveSiteHandler struct {
-	diveSiteRepo diveSiteRepository
+	service diveSiteService
 }
 
-func NewDiveSiteHandler(diveSiteRepo diveSiteRepository) *DiveSiteHandler {
-	return &DiveSiteHandler{
-		diveSiteRepo: diveSiteRepo,
-	}
+func NewDiveSiteHandler(service diveSiteService) *DiveSiteHandler {
+	return &DiveSiteHandler{service: service}
 }
 
 // GetDiveSites returns all dive sites
 func (h *DiveSiteHandler) GetDiveSites(c *gin.Context) {
-	sites, err := h.diveSiteRepo.GetAll(c.Request.Context())
+	sites, err := h.service.GetAll(c.Request.Context())
 	if err != nil {
 		utils.LogError(c.Request.Context(), "Error getting dive sites", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve dive sites"})
@@ -40,7 +38,7 @@ func (h *DiveSiteHandler) SearchDiveSites(c *gin.Context) {
 		return
 	}
 
-	sites, err := h.diveSiteRepo.Search(c.Request.Context(), query)
+	sites, err := h.service.Search(c.Request.Context(), query)
 	if err != nil {
 		utils.LogError(c.Request.Context(), "Error searching dive sites", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to search dive sites"})
@@ -57,7 +55,7 @@ func (h *DiveSiteHandler) GetDiveSite(c *gin.Context) {
 		return
 	}
 
-	site, err := h.diveSiteRepo.GetByID(c.Request.Context(), id)
+	site, err := h.service.GetByID(c.Request.Context(), id)
 	if err != nil {
 		if err == utils.ErrDiveSiteNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Dive site not found"})
@@ -78,9 +76,9 @@ func (h *DiveSiteHandler) CreateDiveSite(c *gin.Context) {
 		return
 	}
 
-	site, err := h.diveSiteRepo.Create(c.Request.Context(), &siteReq)
+	site, err := h.service.Create(c.Request.Context(), &siteReq)
 	if err != nil {
-		if err == utils.ErrDuplicateDive { // Reusing error for similar concept
+		if err == utils.ErrDuplicateDiveSite {
 			c.JSON(http.StatusConflict, gin.H{
 				"error":         "A dive site with this name and location already exists",
 				"existing_site": site,
@@ -107,13 +105,13 @@ func (h *DiveSiteHandler) UpdateDiveSite(c *gin.Context) {
 		return
 	}
 
-	site, err := h.diveSiteRepo.Update(c.Request.Context(), id, &siteReq)
+	site, err := h.service.Update(c.Request.Context(), id, &siteReq)
 	if err != nil {
 		if err == utils.ErrDiveSiteNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Dive site not found"})
 			return
 		}
-		if err == utils.ErrDuplicateDive {
+		if err == utils.ErrDuplicateDiveSite {
 			c.JSON(http.StatusConflict, gin.H{
 				"error": "A dive site with this name and location already exists",
 			})
@@ -134,13 +132,13 @@ func (h *DiveSiteHandler) DeleteDiveSite(c *gin.Context) {
 		return
 	}
 
-	err = h.diveSiteRepo.Delete(c.Request.Context(), id)
+	err = h.service.Delete(c.Request.Context(), id)
 	if err != nil {
 		if err == utils.ErrDiveSiteNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Dive site not found"})
 			return
 		}
-		if err == utils.ErrProcessingFailed {
+		if err == utils.ErrDiveSiteInUse {
 			c.JSON(http.StatusConflict, gin.H{
 				"error": "Cannot delete dive site that has associated dives",
 			})

@@ -11,10 +11,12 @@ var (
 
 // Database errors
 var (
-	ErrDiveNotFound     = errors.New("dive not found")
-	ErrDiveSiteNotFound = errors.New("dive site not found")
-	ErrDuplicateDive    = errors.New("duplicate dive exists")
-	ErrDatabaseError    = errors.New("database error")
+	ErrDiveNotFound      = errors.New("dive not found")
+	ErrDiveSiteNotFound  = errors.New("dive site not found")
+	ErrDuplicateDive     = errors.New("duplicate dive exists")
+	ErrDuplicateDiveSite = errors.New("duplicate dive site exists")
+	ErrDiveSiteInUse     = errors.New("dive site is referenced by one or more dives")
+	ErrDatabaseError     = errors.New("database error")
 )
 
 // Business logic errors

@@ -5,28 +5,18 @@ import (
 	"database/sql"
 	"divelog-backend/models"
 	"divelog-backend/utils"
-	"math"
 )
 
 type DiveSiteRepository struct {
-	db *sql.DB
+	db dbExecutor
 }
 
 func NewDiveSiteRepository(db *sql.DB) *DiveSiteRepository {
 	return &DiveSiteRepository{db: db}
 }
 
-// FindOrCreateDiveSite finds an existing dive site or creates a new one
-func (r *DiveSiteRepository) FindOrCreateDiveSite(ctx context.Context, name string, latitude, longitude float64) (*models.DiveSite, error) {
-	existingSite, err := r.findNearbyDiveSite(ctx, name, latitude, longitude)
-	if err != nil {
-		return nil, err
-	}
-	if existingSite != nil {
-		return existingSite, nil
-	}
-
-	return r.createDiveSite(ctx, name, latitude, longitude, nil)
+func newDiveSiteRepository(db dbExecutor) *DiveSiteRepository {
+	return &DiveSiteRepository{db: db}
 }
 
 // GetAll returns all dive sites
@@ -104,47 +94,15 @@ func (r *DiveSiteRepository) GetByID(ctx context.Context, id int) (*models.DiveS
 	return &site, nil
 }
 
-// Create creates a new dive site
-func (r *DiveSiteRepository) Create(ctx context.Context, siteReq *models.DiveSiteRequest) (*models.DiveSite, error) {
-	existingSite, err := r.findNearbyDiveSite(ctx, siteReq.Name, siteReq.Latitude, siteReq.Longitude)
-	if err != nil {
-		return nil, err
-	}
-	if existingSite != nil {
-		return existingSite, utils.ErrDuplicateDive // Reusing error for similar concept
-	}
-
-	return r.createDiveSite(ctx, siteReq.Name, siteReq.Latitude, siteReq.Longitude, siteReq.Description)
-}
-
-// Update updates an existing dive site
-func (r *DiveSiteRepository) Update(ctx context.Context, id int, siteReq *models.DiveSiteRequest) (*models.DiveSite, error) {
-	// Check if another dive site with the same name and close coordinates exists (excluding current one)
-	checkQuery := `SELECT id FROM dive_sites 
-				   WHERE LOWER(name) = LOWER($1) AND id != $2`
-
-	var existingID int
-	err := r.db.QueryRow(checkQuery, siteReq.Name, id).Scan(&existingID)
-	if err == nil {
-		// Found another site with same name, check distance
-		var existingLat, existingLng float64
-		err = r.db.QueryRow(`SELECT latitude, longitude FROM dive_sites WHERE id = $1`, existingID).Scan(&existingLat, &existingLng)
-		if err == nil {
-			distance := calculateDistance(existingLat, existingLng, siteReq.Latitude, siteReq.Longitude)
-			if distance < 0.1 {
-				return nil, utils.ErrDuplicateDive
-			}
-		}
-	}
-
-	// Update the dive site
+// UpdateDiveSite persists an already validated dive site update.
+func (r *DiveSiteRepository) UpdateDiveSite(ctx context.Context, id int, siteReq *models.DiveSiteRequest) (*models.DiveSite, error) {
 	updateQuery := `UPDATE dive_sites 
 					SET name = $1, latitude = $2, longitude = $3, description = $4, updated_at = NOW()
 					WHERE id = $5
 					RETURNING id, name, latitude, longitude, description, created_at, updated_at`
 
 	var site models.DiveSite
-	err = r.db.QueryRow(updateQuery, siteReq.Name, siteReq.Latitude, siteReq.Longitude, siteReq.Description, id).Scan(
+	err := r.db.QueryRow(updateQuery, siteReq.Name, siteReq.Latitude, siteReq.Longitude, siteReq.Description, id).Scan(
 		&site.ID, &site.Name, &site.Latitude, &site.Longitude,
 		&site.Description, &site.CreatedAt, &site.UpdatedAt,
 	)
@@ -160,21 +118,18 @@ func (r *DiveSiteRepository) Update(ctx context.Context, id int, siteReq *models
 	return &site, nil
 }
 
-// Delete deletes a dive site (only if no dives reference it)
-func (r *DiveSiteRepository) Delete(ctx context.Context, id int) error {
-	// Check if any dives reference this dive site
+func (r *DiveSiteRepository) CountDivesBySiteID(ctx context.Context, id int) (int, error) {
 	var diveCount int
 	err := r.db.QueryRow(`SELECT COUNT(*) FROM dives WHERE dive_site_id = $1`, id).Scan(&diveCount)
 	if err != nil {
 		utils.LogError(ctx, "Error checking dive site usage", err)
-		return utils.ErrDatabaseError
+		return 0, utils.ErrDatabaseError
 	}
+	return diveCount, nil
+}
 
-	if diveCount > 0 {
-		return utils.ErrProcessingFailed // Could create a more specific error
-	}
-
-	// Delete the dive site
+// DeleteDiveSite deletes an already validated unused dive site.
+func (r *DiveSiteRepository) DeleteDiveSite(ctx context.Context, id int) error {
 	deleteQuery := `DELETE FROM dive_sites WHERE id = $1`
 	result, err := r.db.Exec(deleteQuery, id)
 	if err != nil {
@@ -208,37 +163,35 @@ func (r *DiveSiteRepository) GetDiveSiteByDiveID(ctx context.Context, diveID int
 	return diveSiteID, nil
 }
 
-// createDiveSite creates a new dive site
-func (r *DiveSiteRepository) findNearbyDiveSite(ctx context.Context, name string, latitude, longitude float64) (*models.DiveSite, error) {
+func (r *DiveSiteRepository) FindDiveSitesByName(ctx context.Context, name string) ([]models.DiveSite, error) {
 	rows, err := r.db.Query(
 		`SELECT id, name, latitude, longitude, description, created_at, updated_at
 		 FROM dive_sites WHERE LOWER(name) = LOWER($1)`,
 		name,
 	)
 	if err != nil {
-		utils.LogError(ctx, "Error finding nearby dive site", err)
+		utils.LogError(ctx, "Error finding dive sites by name", err)
 		return nil, utils.ErrDatabaseError
 	}
 	defer rows.Close()
 
+	var sites []models.DiveSite
 	for rows.Next() {
 		site, err := r.scanDiveSite(rows)
 		if err != nil {
-			utils.LogError(ctx, "Error scanning nearby dive site", err)
+			utils.LogError(ctx, "Error scanning dive site by name", err)
 			return nil, utils.ErrDatabaseError
 		}
-		if calculateDistance(site.Latitude, site.Longitude, latitude, longitude) < 0.1 {
-			return site, nil
-		}
+		sites = append(sites, *site)
 	}
 	if err := rows.Err(); err != nil {
-		utils.LogError(ctx, "Error iterating nearby dive sites", err)
+		utils.LogError(ctx, "Error iterating dive sites by name", err)
 		return nil, utils.ErrDatabaseError
 	}
-	return nil, nil
+	return sites, nil
 }
 
-func (r *DiveSiteRepository) createDiveSite(ctx context.Context, name string, latitude, longitude float64, description *string) (*models.DiveSite, error) {
+func (r *DiveSiteRepository) CreateDiveSite(ctx context.Context, name string, latitude, longitude float64, description *string) (*models.DiveSite, error) {
 	insertQuery := `INSERT INTO dive_sites (name, latitude, longitude, description, created_at, updated_at)
 				   VALUES ($1, $2, $3, $4, NOW(), NOW())
 				   RETURNING id, name, latitude, longitude, description, created_at, updated_at`
@@ -268,19 +221,4 @@ func (r *DiveSiteRepository) scanDiveSite(rows *sql.Rows) (*models.DiveSite, err
 		return nil, err
 	}
 	return &site, nil
-}
-
-// calculateDistance calculates the distance between two coordinates in kilometers
-func calculateDistance(lat1, lon1, lat2, lon2 float64) float64 {
-	const R = 6371 // Earth's radius in kilometers
-
-	dLat := (lat2 - lat1) * math.Pi / 180
-	dLon := (lon2 - lon1) * math.Pi / 180
-
-	a := math.Sin(dLat/2)*math.Sin(dLat/2) +
-		math.Cos(lat1*math.Pi/180)*math.Cos(lat2*math.Pi/180)*
-			math.Sin(dLon/2)*math.Sin(dLon/2)
-
-	c := 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
-	return R * c
 }

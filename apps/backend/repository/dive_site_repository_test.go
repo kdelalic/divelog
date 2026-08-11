@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"divelog-backend/models"
-	"divelog-backend/utils"
 	"errors"
 	"fmt"
 	"io"
@@ -92,7 +91,7 @@ func openDiveSiteCreateTestDB(t *testing.T, testDriver *diveSiteCreateTestDriver
 	return db
 }
 
-func TestDiveSiteRepository_FindOrCreateDiveSite(t *testing.T) {
+func TestDiveSiteRepository_CreateDiveSite(t *testing.T) {
 	db := setupTestDB(t)
 	if db == nil {
 		return
@@ -103,7 +102,7 @@ func TestDiveSiteRepository_FindOrCreateDiveSite(t *testing.T) {
 	ctx := context.Background()
 
 	// Test creating a new dive site
-	site, err := repo.FindOrCreateDiveSite(ctx, "Test Site", 40.7128, -74.0060)
+	site, err := repo.CreateDiveSite(ctx, "Test Site", 40.7128, -74.0060, nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, site)
 	assert.Equal(t, "Test Site", site.Name)
@@ -161,7 +160,7 @@ func TestDiveSiteRepository_GetByID(t *testing.T) {
 	assert.Nil(t, site)
 }
 
-func TestDiveSiteRepository_Create(t *testing.T) {
+func TestDiveSiteRepository_CreateWithDescription(t *testing.T) {
 	db := setupTestDB(t)
 	if db == nil {
 		return
@@ -178,7 +177,7 @@ func TestDiveSiteRepository_Create(t *testing.T) {
 		Description: &description,
 	}
 
-	site, err := repo.Create(ctx, siteReq)
+	site, err := repo.CreateDiveSite(ctx, siteReq.Name, siteReq.Latitude, siteReq.Longitude, siteReq.Description)
 	assert.NoError(t, err)
 	assert.NotNil(t, site)
 	assert.Equal(t, siteReq.Name, site.Name)
@@ -189,32 +188,31 @@ func TestDiveSiteRepositoryCreatePreservesDescription(t *testing.T) {
 	db := openDiveSiteCreateTestDB(t, testDriver)
 	description := "Restored from backup"
 
-	site, err := NewDiveSiteRepository(db).Create(context.Background(), &models.DiveSiteRequest{
+	request := &models.DiveSiteRequest{
 		Name:        "Test Site",
 		Latitude:    36.61,
 		Longitude:   -121.89,
 		Description: &description,
-	})
+	}
+	site, err := NewDiveSiteRepository(db).CreateDiveSite(
+		context.Background(), request.Name, request.Latitude, request.Longitude, request.Description,
+	)
 
 	assert.NoError(t, err)
 	assert.Equal(t, description, *site.Description)
-	assert.Len(t, testDriver.queries, 2)
-	assert.Contains(t, testDriver.queries[1], "description")
-	assert.Equal(t, description, testDriver.args[1][3].Value)
+	assert.Len(t, testDriver.queries, 1)
+	assert.Contains(t, testDriver.queries[0], "description")
+	assert.Equal(t, description, testDriver.args[0][3].Value)
 }
 
-func TestDiveSiteRepositoryCreateReportsExistingSiteWithoutInserting(t *testing.T) {
+func TestDiveSiteRepositoryFindByNameReturnsCandidates(t *testing.T) {
 	testDriver := &diveSiteCreateTestDriver{existing: true}
 	db := openDiveSiteCreateTestDB(t, testDriver)
 
-	site, err := NewDiveSiteRepository(db).Create(context.Background(), &models.DiveSiteRequest{
-		Name:      "test site",
-		Latitude:  36.6101,
-		Longitude: -121.8901,
-	})
+	sites, err := NewDiveSiteRepository(db).FindDiveSitesByName(context.Background(), "test site")
 
-	assert.ErrorIs(t, err, utils.ErrDuplicateDive)
-	assert.Equal(t, 12, site.ID)
+	assert.NoError(t, err)
+	assert.Equal(t, 12, sites[0].ID)
 	assert.Len(t, testDriver.queries, 1)
 }
 
@@ -236,7 +234,7 @@ func TestDiveSiteRepository_Update(t *testing.T) {
 		Description: &description,
 	}
 
-	site, err := repo.Update(ctx, 999999, siteReq)
+	site, err := repo.UpdateDiveSite(ctx, 999999, siteReq)
 	assert.Error(t, err)
 	assert.Nil(t, site)
 }
@@ -252,7 +250,7 @@ func TestDiveSiteRepository_Delete(t *testing.T) {
 	ctx := context.Background()
 
 	// Test deleting non-existent site
-	err := repo.Delete(ctx, 999999)
+	err := repo.DeleteDiveSite(ctx, 999999)
 	assert.Error(t, err)
 }
 
@@ -270,26 +268,4 @@ func TestDiveSiteRepository_GetDiveSiteByDiveID(t *testing.T) {
 	siteID, err := repo.GetDiveSiteByDiveID(ctx, 999999)
 	assert.Error(t, err)
 	assert.Nil(t, siteID)
-}
-
-// Unit test for distance calculation
-func TestCalculateDistance(t *testing.T) {
-	// Test distance between New York and Los Angeles (approximate)
-	distance := calculateDistance(40.7128, -74.0060, 34.0522, -118.2437)
-
-	// Distance should be approximately 3944 km
-	assert.Greater(t, distance, 3900.0)
-	assert.Less(t, distance, 4000.0)
-}
-
-func TestCalculateDistance_SameLocation(t *testing.T) {
-	// Distance between same coordinates should be 0
-	distance := calculateDistance(40.7128, -74.0060, 40.7128, -74.0060)
-	assert.Equal(t, 0.0, distance)
-}
-
-func TestCalculateDistance_CloseLocations(t *testing.T) {
-	// Test locations within 100m (0.1 km)
-	distance := calculateDistance(40.7128, -74.0060, 40.7129, -74.0061)
-	assert.Less(t, distance, 0.1)
 }

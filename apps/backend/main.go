@@ -6,6 +6,7 @@ import (
 	"divelog-backend/handlers"
 	"divelog-backend/middleware"
 	"divelog-backend/repository"
+	"divelog-backend/services"
 	"divelog-backend/utils"
 	"log"
 	"log/slog"
@@ -39,10 +40,13 @@ func main() {
 	diveRepo := repository.NewDiveRepository(database.DB)
 	diveSiteRepo := repository.NewDiveSiteRepository(database.DB)
 	settingsRepo := repository.NewSettingsRepository(database.DB)
+	transactor := repository.NewSQLTransactor(database.DB)
 
-	// Create handlers
-	diveHandler := handlers.NewDiveHandler(diveRepo, diveSiteRepo)
-	diveSiteHandler := handlers.NewDiveSiteHandler(diveSiteRepo)
+	// Create services and handlers
+	diveService := services.NewDiveService(diveRepo, transactor)
+	diveSiteService := services.NewDiveSiteService(diveSiteRepo, transactor)
+	diveHandler := handlers.NewDiveHandler(diveService)
+	diveSiteHandler := handlers.NewDiveSiteHandler(diveSiteService)
 	settingsHandler := handlers.NewSettingsHandler(settingsRepo)
 
 	// Create Gin router

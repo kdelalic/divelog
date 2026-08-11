@@ -5,15 +5,18 @@ import (
 	"database/sql"
 	"divelog-backend/models"
 	"divelog-backend/utils"
-	"log/slog"
 	"time"
 )
 
 type DiveRepository struct {
-	db *sql.DB
+	db dbExecutor
 }
 
 func NewDiveRepository(db *sql.DB) *DiveRepository {
+	return &DiveRepository{db: db}
+}
+
+func newDiveRepository(db dbExecutor) *DiveRepository {
 	return &DiveRepository{db: db}
 }
 
@@ -118,56 +121,6 @@ func (r *DiveRepository) CreateDive(ctx context.Context, dive *models.Dive) erro
 	}
 
 	return nil
-}
-
-// CreateMultipleDives creates multiple dives in a transaction
-func (r *DiveRepository) CreateMultipleDives(ctx context.Context, dives []*models.Dive) ([]models.Dive, []map[string]interface{}, error) {
-	tx, err := r.db.Begin()
-	if err != nil {
-		return nil, nil, utils.ErrDatabaseError
-	}
-	defer tx.Rollback()
-
-	var createdDives []models.Dive
-	var skippedDives []map[string]interface{}
-	now := time.Now()
-
-	for _, dive := range dives {
-		samplesParam, equipmentParam, conditionsParam, safetyStopsParam, err := marshalDiveJSON(dive)
-		if err != nil {
-			utils.LogError(ctx, "Error marshaling dive JSON fields in batch", err, slog.Int("dive_count", len(dives)))
-			return nil, nil, utils.ErrProcessingFailed
-		}
-
-		query := `
-			INSERT INTO dives (user_id, dive_site_id, dive_datetime, max_depth, duration, buddy, latitude, longitude, location, water_temperature, visibility, notes, samples, equipment, conditions, dive_type, rating, safety_stops, created_at, updated_at)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
-			RETURNING id, created_at, updated_at
-		`
-
-		err = tx.QueryRow(
-			query,
-			dive.UserID, dive.DiveSiteID, dive.DateTime, dive.MaxDepth, dive.Duration,
-			dive.Buddy, dive.Latitude, dive.Longitude, dive.Location,
-			dive.WaterTemp, dive.Visibility, dive.Notes, samplesParam, equipmentParam,
-			conditionsParam, dive.DiveType, dive.Rating, safetyStopsParam,
-			now, now,
-		).Scan(&dive.ID, &dive.CreatedAt, &dive.UpdatedAt)
-
-		if err != nil {
-			utils.LogError(ctx, "Error creating dive in batch", err, slog.Int("dive_count", len(dives)))
-			return nil, nil, utils.ErrDatabaseError
-		}
-
-		createdDives = append(createdDives, *dive)
-	}
-
-	if err = tx.Commit(); err != nil {
-		utils.LogError(ctx, "Error committing dive batch", err, slog.Int("dive_count", len(dives)))
-		return nil, nil, utils.ErrDatabaseError
-	}
-
-	return createdDives, skippedDives, nil
 }
 
 // UpdateDive updates an existing dive
@@ -301,27 +254,15 @@ func (r *DiveRepository) CheckDuplicateDive(ctx context.Context, userID int, div
 	return count > 0, nil
 }
 
-// CheckDuplicateDiveForUpdateByLocation checks if a dive already exists at the same location and date, excluding the current dive
-func (r *DiveRepository) CheckDuplicateDiveForUpdateByLocation(ctx context.Context, userID int, latitude, longitude float64, diveDateTime string, excludeDiveID int) (bool, error) {
+// CheckDuplicateDiveForUpdate checks the same identity used for creates while
+// excluding the dive currently being updated.
+func (r *DiveRepository) CheckDuplicateDiveForUpdate(ctx context.Context, userID, diveSiteID int, diveDateTime string, excludeDiveID int) (bool, error) {
 	dt := utils.ParseDateTime(diveDateTime)
-	dateOnly := dt.Format("2006-01-02")
-
-	query := `
-		SELECT COUNT(*) FROM dives d
-		LEFT JOIN dive_sites ds ON d.dive_site_id = ds.id
-		WHERE d.user_id = $1 
-		  AND d.id != $2
-		  AND DATE(d.dive_datetime) = $3
-		  AND (
-		    -- Check direct coordinates
-		    (ABS(COALESCE(d.latitude, 0) - $4) < 0.001 AND ABS(COALESCE(d.longitude, 0) - $5) < 0.001)
-		    OR
-		    -- Check dive site coordinates  
-		    (ABS(COALESCE(ds.latitude, 0) - $4) < 0.001 AND ABS(COALESCE(ds.longitude, 0) - $5) < 0.001)
-		  )`
+	query := `SELECT COUNT(*) FROM dives
+		WHERE user_id = $1 AND dive_site_id = $2 AND dive_datetime = $3 AND id != $4`
 
 	var count int
-	err := r.db.QueryRow(query, userID, excludeDiveID, dateOnly, latitude, longitude).Scan(&count)
+	err := r.db.QueryRow(query, userID, diveSiteID, dt, excludeDiveID).Scan(&count)
 	if err != nil {
 		return false, utils.ErrDatabaseError
 	}
