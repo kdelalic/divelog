@@ -103,11 +103,21 @@ export const settingsApi = {
 // Sending a Dive verbatim silently drops conditions, dive type and safety stops,
 // since Go ignores unknown JSON keys.
 export const serializeDive = (dive: Omit<Dive, 'id'>) => {
-  const { conditions, diveType, safetyStops, diveNumber, trip, ...rest } = dive;
+  const { conditions, diveType, diveMode, meanDepth, surfaceInterval: _surfaceInterval, computer, safetyStops, diveNumber, trip, ...rest } = dive;
+	void _surfaceInterval;
 
   return {
     ...rest,
     dive_type: diveType,
+		dive_mode: diveMode,
+		mean_depth: meanDepth,
+		computer_metadata: computer && {
+			vendor: computer.vendor,
+			model: computer.model,
+			device_id: computer.deviceId,
+			serial: computer.serial,
+			firmware: computer.firmware,
+		},
 		dive_number: diveNumber,
 		trip_id: trip && trip.id > 0 ? trip.id : undefined,
 		trip: trip && trip.id > 0 ? undefined : trip && {
@@ -182,9 +192,19 @@ interface ApiDiveConditions {
   surge?: 'none' | 'light' | 'moderate' | 'heavy';
 }
 
-type ApiDive = Omit<Dive, 'conditions' | 'diveType' | 'safetyStops' | 'diveNumber' | 'trip'> & {
+type ApiDive = Omit<Dive, 'conditions' | 'diveType' | 'diveMode' | 'meanDepth' | 'surfaceInterval' | 'computer' | 'safetyStops' | 'diveNumber' | 'trip'> & {
   conditions?: ApiDiveConditions;
   dive_type?: Dive['diveType'];
+	dive_mode?: Dive['diveMode'];
+	mean_depth?: number;
+	surface_interval?: number;
+	computer_metadata?: {
+		vendor?: string;
+		model?: string;
+		device_id?: string;
+		serial?: string;
+		firmware?: string;
+	};
   safety_stops?: Dive['safetyStops'];
 	dive_number?: number;
 	trip_id?: number;
@@ -203,7 +223,7 @@ type ApiDive = Omit<Dive, 'conditions' | 'diveType' | 'safetyStops' | 'diveNumbe
 // Without this read-side mapping, enhanced data appears to save successfully
 // and then vanishes from the UI on the next backend reload.
 export const deserializeDive = (apiDive: ApiDive): Dive => {
-  const { conditions, dive_type, safety_stops, dive_number, trip_id: _tripId, trip, ...rest } = apiDive;
+  const { conditions, dive_type, dive_mode, mean_depth, surface_interval, computer_metadata, safety_stops, dive_number, trip_id: _tripId, trip, ...rest } = apiDive;
 	void _tripId;
   const waterTemp = conditions?.water_temp_surface !== undefined || conditions?.water_temp_bottom !== undefined
     ? {
@@ -221,6 +241,16 @@ export const deserializeDive = (apiDive: ApiDive): Dive => {
   return {
     ...rest,
     diveType: dive_type,
+		diveMode: dive_mode,
+		meanDepth: mean_depth,
+		surfaceInterval: surface_interval,
+		computer: computer_metadata && {
+			vendor: computer_metadata.vendor,
+			model: computer_metadata.model,
+			deviceId: computer_metadata.device_id,
+			serial: computer_metadata.serial,
+			firmware: computer_metadata.firmware,
+		},
 		diveNumber: dive_number,
 		trip: trip && {
 			id: trip.id,

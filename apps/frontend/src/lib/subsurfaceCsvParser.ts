@@ -156,6 +156,13 @@ function parseSubsurfaceCSVRow(row: SubsurfaceCSVRow): Dive | null {
     if (isNaN(depth) || depth <= 0) {
       throw new Error('Invalid depth');
     }
+		const parsedMeanDepth = parseFloat(row['avgdepth [m]']?.trim() || '');
+		const mode = row.mode?.trim().toLocaleLowerCase();
+		const diveMode: Dive['diveMode'] = mode === 'oc' || mode === 'open circuit' ? 'OC'
+			: mode === 'freedive' || mode === 'apnea' ? 'freedive'
+			: mode === 'ccr' ? 'CCR'
+			: mode === 'pscr' ? 'pSCR'
+			: undefined;
     
     // Parse duration
     const durationStr = row['duration [min]']?.trim();
@@ -273,6 +280,7 @@ function parseSubsurfaceCSVRow(row: SubsurfaceCSVRow): Dive | null {
       datetime,
       location,
       depth,
+			meanDepth: Number.isFinite(parsedMeanDepth) && parsedMeanDepth >= 0 && parsedMeanDepth <= depth ? parsedMeanDepth : undefined,
       duration,
       buddy,
       lat,
@@ -281,7 +289,8 @@ function parseSubsurfaceCSVRow(row: SubsurfaceCSVRow): Dive | null {
       conditions,
       rating,
       notes: row.notes?.trim() || undefined,
-      diveType: 'recreational' // Default for CSV imports
+			diveType: 'recreational', // Default purpose for CSV imports
+			diveMode,
     };
     
     return dive;

@@ -43,6 +43,22 @@ describe('serializeDive', () => {
     expect(payload).not.toHaveProperty('safetyStops');
   });
 
+	it('serializes profile identity fields and omits calculated surface intervals', () => {
+		const payload = serializeDive(dive({
+			meanDepth: 16.4,
+			surfaceInterval: 95,
+			diveMode: 'CCR',
+			computer: { vendor: 'Shearwater', model: 'Perdix 2', deviceId: 'abc123' },
+		}));
+		expect(payload).toMatchObject({
+			mean_depth: 16.4,
+			dive_mode: 'CCR',
+			computer_metadata: { vendor: 'Shearwater', model: 'Perdix 2', device_id: 'abc123' },
+		});
+		expect(payload).not.toHaveProperty('surface_interval');
+		expect(payload).not.toHaveProperty('surfaceInterval');
+	});
+
 	it('serializes dive numbers, reusable tags, and existing or imported trips', () => {
 		expect(serializeDive(dive({
 			diveNumber: 42,
@@ -171,6 +187,10 @@ describe('deserializeDive', () => {
 			dive_number: 42,
 			tags: ['wreck'],
 			trip: { id: 7, name: 'Red Sea', start_date: '2026-05-01' },
+			mean_depth: 16.4,
+			surface_interval: 95,
+			dive_mode: 'CCR',
+			computer_metadata: { vendor: 'Shearwater', model: 'Perdix 2', device_id: 'abc123' },
     });
 
     expect(result).toMatchObject({
@@ -188,6 +208,10 @@ describe('deserializeDive', () => {
 			diveNumber: 42,
 			tags: ['wreck'],
 			trip: { id: 7, name: 'Red Sea', startDate: '2026-05-01' },
+			meanDepth: 16.4,
+			surfaceInterval: 95,
+			diveMode: 'CCR',
+			computer: { vendor: 'Shearwater', model: 'Perdix 2', deviceId: 'abc123' },
     });
     expect(result).not.toHaveProperty('dive_type');
     expect(result).not.toHaveProperty('safety_stops');

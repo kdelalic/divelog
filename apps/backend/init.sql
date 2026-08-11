@@ -84,6 +84,7 @@ CREATE TABLE IF NOT EXISTS dives (
     
     dive_datetime TIMESTAMP NOT NULL,
     max_depth DECIMAL(5, 2) NOT NULL, -- stored in meters
+	mean_depth DECIMAL(5, 2), -- stored in meters; calculated from profile when available
     duration INTEGER NOT NULL, -- stored in minutes
     buddy VARCHAR(255),
     
@@ -102,6 +103,8 @@ CREATE TABLE IF NOT EXISTS dives (
     equipment JSONB, -- tanks, BCD, regulator, wetsuit, weights, etc.
     conditions JSONB, -- water temp, air temp, visibility, current, weather, sea state
     dive_type VARCHAR(20) CHECK (dive_type IN ('recreational', 'training', 'technical', 'work', 'research')),
+	dive_mode VARCHAR(10) CHECK (dive_mode IN ('OC', 'freedive', 'CCR', 'pSCR')),
+	computer_metadata JSONB,
     rating INTEGER CHECK (rating >= 1 AND rating <= 5), -- 1-5 star rating
     safety_stops JSONB, -- array of safety stops with depth and duration
     
@@ -132,6 +135,7 @@ CREATE INDEX IF NOT EXISTS idx_dives_samples ON dives USING GIN (samples); -- fo
 CREATE INDEX IF NOT EXISTS idx_dives_equipment ON dives USING GIN (equipment); -- for JSONB queries
 CREATE INDEX IF NOT EXISTS idx_dives_conditions ON dives USING GIN (conditions); -- for JSONB queries
 CREATE INDEX IF NOT EXISTS idx_dives_dive_type ON dives(dive_type);
+CREATE INDEX IF NOT EXISTS idx_dives_dive_mode ON dives(dive_mode);
 CREATE INDEX IF NOT EXISTS idx_dives_rating ON dives(rating);
 CREATE INDEX IF NOT EXISTS idx_dives_trip_id ON dives(trip_id);
 CREATE INDEX IF NOT EXISTS idx_dives_user_number ON dives(user_id, dive_number);

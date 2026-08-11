@@ -28,7 +28,7 @@ const filters = (overrides: Partial<DiveFilters> = {}): DiveFilters => ({
 
 describe('filterDives', () => {
   const dives = [
-		dive({ id: 1, buddy: 'Sam Rivera', notes: 'Kelp forest', rating: 5, diveType: 'recreational', tags: ['Wreck'], trip: { id: 9, name: 'Monterey weekend' } }),
+		dive({ id: 1, buddy: 'Sam Rivera', notes: 'Kelp forest', rating: 5, diveType: 'recreational', diveMode: 'OC', tags: ['Wreck'], trip: { id: 9, name: 'Monterey weekend' } }),
     dive({
       id: 2,
       datetime: '2024-01-10T14:00:00',
@@ -80,6 +80,10 @@ describe('filterDives', () => {
       minRating: '4',
     }), 'meters').map(({ id }) => id)).toEqual([1]);
   });
+
+	it('filters dive mode independently from dive purpose', () => {
+		expect(filterDives(dives, filters({ diveMode: 'OC' }), 'meters').map(({ id }) => id)).toEqual([1]);
+	});
 
 	it('filters by duration and recorded gas mix', () => {
 		const gasDive = dive({

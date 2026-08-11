@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/select';
 import {
   DIVE_TYPES,
+	DIVE_MODES,
   countActiveDiveFilters,
   type DiveFilters as DiveFilterValues,
 } from '@/lib/diveFilters';
@@ -34,6 +35,12 @@ const DIVE_TYPE_LABELS: Record<(typeof DIVE_TYPES)[number], string> = {
   technical: 'Technical',
   work: 'Work',
   research: 'Research',
+};
+const DIVE_MODE_LABELS: Record<(typeof DIVE_MODES)[number], string> = {
+	OC: 'Open circuit',
+	freedive: 'Freedive',
+	CCR: 'Closed-circuit rebreather',
+	pSCR: 'Passive semi-closed rebreather',
 };
 
 const DiveFilters = ({
@@ -71,6 +78,7 @@ const DiveFilters = ({
       key: 'diveType',
       label: DIVE_TYPE_LABELS[filters.diveType],
     },
+		filters.diveMode && { key: 'diveMode', label: DIVE_MODE_LABELS[filters.diveMode] },
     filters.minRating && {
       key: 'minRating',
       label: `${filters.minRating}+ stars`,
@@ -195,6 +203,13 @@ const DiveFilters = ({
           </Select>
         </div>
         <div className="space-y-2">
+			<Label htmlFor="filter-dive-mode">Dive mode</Label>
+			<Select value={filters.diveMode || 'all'} onValueChange={(value) => update('diveMode', value === 'all' ? '' : value as DiveFilterValues['diveMode'])}>
+				<SelectTrigger id="filter-dive-mode" className="border-input bg-background"><SelectValue placeholder="All modes" /></SelectTrigger>
+				<SelectContent><SelectItem value="all">All modes</SelectItem>{DIVE_MODES.map((mode) => <SelectItem key={mode} value={mode}>{DIVE_MODE_LABELS[mode]}</SelectItem>)}</SelectContent>
+			</Select>
+		</div>
+		<div className="space-y-2">
           <Label htmlFor="filter-rating">Minimum rating</Label>
           <Select
             value={filters.minRating || 'all'}

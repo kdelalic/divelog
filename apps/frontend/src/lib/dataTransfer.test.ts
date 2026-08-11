@@ -20,6 +20,7 @@ const dive = (overrides: Partial<Dive> = {}): Dive => ({
   datetime: '2026-07-04T09:30:00',
   location: 'Monterey Breakwater',
   depth: 18.4,
+	meanDepth: 12.2,
   duration: 47,
   buddy: 'Sam',
   lat: 36.6101,
@@ -41,6 +42,8 @@ const dive = (overrides: Partial<Dive> = {}): Dive => ({
     current: { strength: 'light', direction: 'incoming' },
   },
   diveType: 'recreational',
+	diveMode: 'OC',
+	computer: { vendor: 'Shearwater', model: 'Perdix 2', deviceId: 'device-1' },
   rating: 5,
   notes: 'Kelp forest',
   safetyStops: [{ depth: 5, duration: 3 }],
@@ -88,6 +91,7 @@ describe('dive-log backups', () => {
     expect(parsed.data.diveSites[0]).not.toHaveProperty('created_at');
     expect(parsed.data.settings).toEqual(defaultSettings);
 		expect(parsed.data.dives[0]).toMatchObject({ diveNumber: 42, tags: ['wreck', 'nitrox'], trip: { id: 0, name: 'Red Sea' } });
+		expect(parsed.data.dives[0]).toMatchObject({ meanDepth: 12.2, diveMode: 'OC', computer: { model: 'Perdix 2' } });
 		expect(parsed.data.trips).toEqual([{ name: 'Red Sea', location: 'Egypt', startDate: '2026-05-01', endDate: '2026-05-07' }]);
 		expect(parsed.data.tags).toEqual(['wreck', 'nitrox', 'unused']);
   });
@@ -178,6 +182,8 @@ describe('CSV export', () => {
   it('exports metric source values and rich fields', () => {
     const csv = divesToCsv([dive()]);
     expect(csv).toContain('max_depth_m');
+		expect(csv).toContain('mean_depth_m');
+		expect(csv).toContain('computer_device_id');
     expect(csv).toContain('18.4');
     expect(csv).toContain('water_temp_bottom_c');
     expect(csv).toContain('12.5');

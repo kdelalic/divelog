@@ -77,6 +77,32 @@ func TestDiveRequestValidateOrganizationFields(t *testing.T) {
 	assert.Contains(t, errors, "tags[1]")
 }
 
+func TestDiveRequestValidateProfileIdentityFields(t *testing.T) {
+	request := validDiveRequestForValidation()
+	mean := 18.5
+	mode := "CCR"
+	model := "Perdix 2"
+	request.MeanDepth = &mean
+	request.DiveMode = &mode
+	request.Computer = &DiveComputerIdentity{Model: &model}
+	assert.Empty(t, request.Validate())
+
+	tooDeep := 31.0
+	badMode := "scuba"
+	request.MeanDepth = &tooDeep
+	request.DiveMode = &badMode
+	errors := request.Validate()
+	assert.Contains(t, errors, "mean_depth")
+	assert.Contains(t, errors, "dive_mode")
+}
+
+func TestCalculateMeanDepthUsesElapsedTime(t *testing.T) {
+	mean := CalculateMeanDepth([]DiveSample{{Time: 0, Depth: 0}, {Time: 60, Depth: 20}, {Time: 180, Depth: 20}})
+	assert.NotNil(t, mean)
+	assert.InDelta(t, 16.67, *mean, 0.01)
+	assert.Nil(t, CalculateMeanDepth(nil))
+}
+
 func TestTripRequestValidateDateRange(t *testing.T) {
 	start, end := "2026-08-10", "2026-08-01"
 	request := TripRequest{Name: "Trip", StartDate: &start, EndDate: &end}

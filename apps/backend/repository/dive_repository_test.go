@@ -139,3 +139,17 @@ func TestDiveRepositoryDeleteAllDivesScopesDeleteToUser(t *testing.T) {
 	require.Len(t, testDriver.args, 1)
 	assert.Equal(t, int64(42), testDriver.args[0].Value)
 }
+
+func TestCalculateSurfaceIntervalsUsesPreviousDiveEnd(t *testing.T) {
+	start := time.Date(2026, 8, 10, 9, 0, 0, 0, time.UTC)
+	dives := []models.Dive{
+		{DateTime: models.LocalTime{Time: start.Add(3 * time.Hour)}, Duration: 40},
+		{DateTime: models.LocalTime{Time: start}, Duration: 45},
+	}
+
+	calculateSurfaceIntervals(dives)
+
+	require.NotNil(t, dives[0].SurfaceInterval)
+	assert.Equal(t, 135, *dives[0].SurfaceInterval)
+	assert.Nil(t, dives[1].SurfaceInterval)
+}

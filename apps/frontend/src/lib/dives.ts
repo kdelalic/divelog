@@ -55,6 +55,14 @@ export interface DiveConditions {
   surge?: 'none' | 'light' | 'moderate' | 'heavy';
 }
 
+export interface DiveComputerIdentity {
+  vendor?: string;
+  model?: string;
+  deviceId?: string;
+  serial?: string;
+  firmware?: string;
+}
+
 export interface Trip {
   id: number;
   name: string;
@@ -79,7 +87,9 @@ export interface Dive {
   datetime: string; // ISO 8601 datetime string
   location: string;
   depth: number;
+	meanDepth?: number;
   duration: number;
+	surfaceInterval?: number;
   buddy?: string;
   lat: number;
   lng: number;
@@ -87,6 +97,8 @@ export interface Dive {
   equipment?: Equipment; // Equipment used on dive
   conditions?: DiveConditions; // Environmental conditions
   diveType?: 'recreational' | 'training' | 'technical' | 'work' | 'research';
+	diveMode?: 'OC' | 'freedive' | 'CCR' | 'pSCR';
+	computer?: DiveComputerIdentity;
   rating?: number; // Dive rating 1-5 stars
   notes?: string; // Dive notes and observations
   safetyStops?: {

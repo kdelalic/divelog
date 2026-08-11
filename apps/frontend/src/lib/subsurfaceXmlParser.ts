@@ -222,6 +222,7 @@ const parseNativeDive = (
   const temperatureNode = asNode(primaryComputer?.temperature);
   const maxDepth = measurement(attribute(depthNode, 'max')) ??
     (samples?.reduce((max, sample) => Math.max(max, sample.depth), 0) ?? 0);
+	const meanDepth = measurement(attribute(depthNode, 'mean'));
   const durationSeconds = minutesAndSeconds(attribute(dive, 'duration')) ??
     (samples?.[samples.length - 1]?.time ?? 0);
   if (maxDepth <= 0 && durationSeconds <= 0) return undefined;
@@ -233,6 +234,20 @@ const parseNativeDive = (
   const notes = asString(dive.notes)?.trim() || undefined;
 	const diveNumber = measurement(attribute(dive, 'number'));
 	const tags = attribute(dive, 'tags')?.split(',').map((tag) => tag.trim()).filter(Boolean);
+	const rawMode = (attribute(dive, 'divemode') || attribute(primaryComputer, 'dctype') || '').toLocaleLowerCase();
+	const diveMode: Dive['diveMode'] = rawMode === 'oc' || rawMode === 'open circuit' ? 'OC'
+		: rawMode === 'freedive' || rawMode === 'apnea' ? 'freedive'
+		: rawMode === 'ccr' ? 'CCR'
+		: rawMode === 'pscr' ? 'pSCR'
+		: undefined;
+	const computer = primaryComputer ? {
+		vendor: attribute(primaryComputer, 'vendor') || undefined,
+		model: attribute(primaryComputer, 'model') || undefined,
+		deviceId: attribute(primaryComputer, 'deviceid') || undefined,
+		serial: attribute(primaryComputer, 'serial') || undefined,
+		firmware: attribute(primaryComputer, 'firmware') || undefined,
+	} : undefined;
+	const hasComputerIdentity = computer && Object.values(computer).some(Boolean);
 
   return {
 		id: diveNumber ?? index + 1,
@@ -242,12 +257,15 @@ const parseNativeDive = (
     datetime: `${date}T${time}`,
     location: site?.name ?? 'Unknown Location',
     depth: Math.round(maxDepth * 100) / 100,
+		meanDepth: meanDepth === undefined ? undefined : Math.round(meanDepth * 100) / 100,
     duration: Math.max(1, Math.round(durationSeconds / 60)),
     buddy: attribute(dive, 'buddy') || undefined,
     lat: site?.latitude ?? 0,
     lng: site?.longitude ?? 0,
     samples,
     equipment: parseEquipment(dive),
+		diveMode,
+		computer: hasComputerIdentity ? computer : undefined,
     conditions: waterTemperature !== undefined || airTemperature !== undefined
       ? {
           waterTemp: waterTemperature === undefined

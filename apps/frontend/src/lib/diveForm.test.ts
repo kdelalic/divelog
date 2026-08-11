@@ -29,6 +29,11 @@ const formValues = (overrides: Partial<DiveFormValues> = {}): DiveFormValues => 
   lat: 28.5721,
   lng: 34.5372,
   diveType: 'recreational',
+	diveMode: 'CCR',
+	meanDepth: 18,
+	computerVendor: 'Shearwater',
+	computerModel: 'Perdix 2',
+	computerDeviceId: 'abc123',
   rating: 4,
   notes: '  Clear water  ',
   waterTempSurface: 25,
@@ -54,6 +59,9 @@ describe('diveFormValuesToDive', () => {
       depth: 30,
       buddy: 'Sam',
       diveType: 'recreational',
+			diveMode: 'CCR',
+			meanDepth: 18,
+			computer: { vendor: 'Shearwater', model: 'Perdix 2', deviceId: 'abc123' },
       rating: 4,
       notes: 'Clear water',
       conditions: {
@@ -73,6 +81,7 @@ describe('diveFormValuesToDive', () => {
     const dive = diveFormValuesToDive(
       formValues({
         depth: 100,
+				meanDepth: 60,
         waterTempSurface: 77,
         waterTempBottom: 68,
         airTemp: 86,
@@ -83,6 +92,7 @@ describe('diveFormValuesToDive', () => {
     );
 
     expect(dive.depth).toBe(30.5);
+		expect(dive.meanDepth).toBe(18.3);
     expect(dive.conditions?.waterTemp).toEqual({ surface: 25, bottom: 20 });
     expect(dive.conditions?.airTemp).toBe(30);
     expect(dive.conditions?.visibility).toBe(18.3);
@@ -93,6 +103,11 @@ describe('diveFormValuesToDive', () => {
     const dive = diveFormValuesToDive(formValues({
       buddy: '',
       diveType: '',
+			diveMode: '',
+			meanDepth: undefined,
+			computerVendor: '',
+			computerModel: '',
+			computerDeviceId: '',
       rating: undefined,
       notes: '   ',
       waterTempSurface: undefined,
@@ -111,6 +126,7 @@ describe('diveFormValuesToDive', () => {
     expect(dive.conditions).toBeUndefined();
     expect(dive.safetyStops).toBeUndefined();
     expect(dive.notes).toBeUndefined();
+		expect(dive.computer).toBeUndefined();
   });
 
   it('preserves imported profile samples while editing', () => {
@@ -138,11 +154,18 @@ describe('diveToFormValues', () => {
     expect(values.date).toBe('2026-08-08');
     expect(values.time).toBe('09:45');
     expect(values.depth).toBe(98.4);
+		expect(values.meanDepth).toBe(59.1);
     expect(values.waterTempSurface).toBe(77);
     expect(values.waterTempBottom).toBe(68);
     expect(values.visibility).toBe(59.1);
     expect(values.safetyStops).toEqual([{ depth: 16.4, duration: 3 }]);
   });
+
+	it('rejects a mean depth deeper than the maximum depth', () => {
+		const parsed = createDiveFormSchema(metricSettings).safeParse(formValues({ depth: 20, meanDepth: 21 }));
+		expect(parsed.success).toBe(false);
+		if (!parsed.success) expect(parsed.error.issues.some((issue) => issue.path.join('.') === 'meanDepth')).toBe(true);
+	});
 });
 
 describe('createDiveFormSchema', () => {

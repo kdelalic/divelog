@@ -7,6 +7,7 @@ import {
   activityByMonth,
   depthDistribution,
   divesByGas,
+	divesByMode,
   divesBySite,
   divesByTag,
   divesByTrip,
@@ -47,6 +48,7 @@ const Statistics = () => {
     tags: divesByTag(filteredDives),
     trips: divesByTrip(filteredDives),
     gases: divesByGas(filteredDives),
+		modes: divesByMode(filteredDives),
   }), [filteredDives, settings.units.depth]);
 
   const updateFilters = (next: DiveFilterValues) => setSearchParams(diveFiltersToSearchParams(next), { replace: true });
@@ -74,6 +76,7 @@ const Statistics = () => {
         <AnalyticsBarChart title="Trips" description="Dive activity by trip" items={datasets.trips} onSelect={inspect} />
         <AnalyticsBarChart title="Tags" description="Reusable logbook categories" items={datasets.tags} onSelect={inspect} />
         <AnalyticsBarChart title="Breathing gases" description="Dives using each recorded gas mix" items={datasets.gases} onSelect={inspect} />
+		<AnalyticsBarChart title="Dive modes" description="Open-circuit, freediving, and rebreather activity" items={datasets.modes} onSelect={inspect} />
       </div>
     </div>
   );

@@ -36,7 +36,15 @@ func RunMigrations(ctx context.Context, db *sql.DB) error {
 
 		ALTER TABLE dives ADD COLUMN IF NOT EXISTS dive_number INTEGER;
 		ALTER TABLE dives ADD COLUMN IF NOT EXISTS trip_id INTEGER REFERENCES trips(id) ON DELETE SET NULL;
+		ALTER TABLE dives ADD COLUMN IF NOT EXISTS mean_depth DECIMAL(5, 2);
+		ALTER TABLE dives ADD COLUMN IF NOT EXISTS dive_mode VARCHAR(10);
+		ALTER TABLE dives ADD COLUMN IF NOT EXISTS computer_metadata JSONB;
+		DO $$ BEGIN
+			ALTER TABLE dives ADD CONSTRAINT dives_dive_mode_check CHECK (dive_mode IN ('OC', 'freedive', 'CCR', 'pSCR'));
+		EXCEPTION WHEN duplicate_object THEN NULL;
+		END $$;
 		CREATE INDEX IF NOT EXISTS idx_dives_trip_id ON dives(trip_id);
+		CREATE INDEX IF NOT EXISTS idx_dives_dive_mode ON dives(dive_mode);
 		CREATE INDEX IF NOT EXISTS idx_dives_user_number ON dives(user_id, dive_number);
 
 		CREATE TABLE IF NOT EXISTS dive_tags (
@@ -64,6 +72,12 @@ func RunMigrations(ctx context.Context, db *sql.DB) error {
 			FROM dives d WHERE d.dive_number IS NULL
 		)
 		UPDATE dives d SET dive_number = numbered.number FROM numbered WHERE d.id = numbered.id;
+
+		UPDATE dives SET mean_depth = profile.mean_depth
+		FROM (
+			SELECT id, (SELECT AVG((sample->>'depth')::numeric) FROM jsonb_array_elements(samples) sample) AS mean_depth
+			FROM dives WHERE mean_depth IS NULL AND jsonb_typeof(samples) = 'array' AND jsonb_array_length(samples) > 0
+		) profile WHERE dives.id = profile.id AND profile.mean_depth IS NOT NULL;
 	`
 	if _, err := db.ExecContext(ctx, migration); err != nil {
 		return fmt.Errorf("apply logbook organization migration: %w", err)

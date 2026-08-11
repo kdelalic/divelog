@@ -19,6 +19,7 @@ export const createDiveFormSchema = (settings: UserSettings) => {
     time: z.string().optional(),
     location: z.string().trim().min(1, 'Location is required').max(255),
     depth: z.number().finite().positive('Depth must be greater than zero').max(maxDepth),
+		meanDepth: optionalNumber(0, maxDepth),
     duration: z.number().int().min(1, 'Duration must be at least one minute').max(1440),
 		diveNumber: z.number().int().min(1).max(10000000).optional(),
 		tags: z.string().max(1000).optional(),
@@ -27,6 +28,12 @@ export const createDiveFormSchema = (settings: UserSettings) => {
     lat: z.number().finite().min(-90).max(90),
     lng: z.number().finite().min(-180).max(180),
     diveType: z.enum(['recreational', 'training', 'technical', 'work', 'research']).or(z.literal('')).optional(),
+		diveMode: z.enum(['OC', 'freedive', 'CCR', 'pSCR']).or(z.literal('')).optional(),
+		computerVendor: z.string().max(255).optional(),
+		computerModel: z.string().max(255).optional(),
+		computerDeviceId: z.string().max(255).optional(),
+		computerSerial: z.string().max(255).optional(),
+		computerFirmware: z.string().max(255).optional(),
     rating: z.number().int().min(1).max(5).optional(),
     notes: z.string().max(10000).optional(),
     waterTempSurface: optionalNumber(minTemperature, maxTemperature),
@@ -45,6 +52,9 @@ export const createDiveFormSchema = (settings: UserSettings) => {
   }).refine(
     (values) => !values.currentDirection?.trim() || Boolean(values.currentStrength),
     { path: ['currentDirection'], message: 'Select a current strength before adding a direction' },
+	).refine(
+		(values) => values.meanDepth === undefined || values.meanDepth <= values.depth,
+		{ path: ['meanDepth'], message: 'Mean depth cannot exceed maximum depth' },
   );
 };
 
@@ -90,6 +100,7 @@ export const diveToFormValues = (
     time: time === '00:00' ? '' : time,
     location: dive.location,
     depth: convertStoredDepth(dive.depth),
+		meanDepth: dive.meanDepth === undefined ? undefined : convertStoredDepth(dive.meanDepth),
     duration: dive.duration,
 		diveNumber: dive.diveNumber,
 		tags: dive.tags?.join(', ') ?? '',
@@ -98,6 +109,12 @@ export const diveToFormValues = (
     lat: dive.lat,
     lng: dive.lng,
     diveType: dive.diveType ?? '',
+		diveMode: dive.diveMode ?? '',
+		computerVendor: dive.computer?.vendor ?? '',
+		computerModel: dive.computer?.model ?? '',
+		computerDeviceId: dive.computer?.deviceId ?? '',
+		computerSerial: dive.computer?.serial ?? '',
+		computerFirmware: dive.computer?.firmware ?? '',
     rating: dive.rating,
     notes: dive.notes ?? '',
     waterTempSurface: convertStoredTemperature(dive.conditions?.waterTemp?.surface),
@@ -149,11 +166,20 @@ export const diveFormValuesToDive = (
     seaState: values.seaState,
     surge: values.surge || undefined,
   };
+	const computer = {
+		vendor: cleanOptionalString(values.computerVendor),
+		model: cleanOptionalString(values.computerModel),
+		deviceId: cleanOptionalString(values.computerDeviceId),
+		serial: cleanOptionalString(values.computerSerial),
+		firmware: cleanOptionalString(values.computerFirmware),
+	};
+	const hasComputerIdentity = Object.values(computer).some(Boolean);
 
   return {
     datetime: `${values.date}T${values.time || '00:00'}:00`,
     location: values.location.trim(),
     depth: convertEnteredDepth(values.depth),
+		meanDepth: values.meanDepth === undefined ? undefined : convertEnteredDepth(values.meanDepth),
     duration: values.duration,
 		diveNumber: values.diveNumber,
 		tags: [...new Map((values.tags ?? '').split(',')
@@ -171,6 +197,8 @@ export const diveFormValuesToDive = (
     equipment,
     conditions: hasConditions(conditions) ? conditions : undefined,
     diveType: values.diveType || undefined,
+		diveMode: values.diveMode || undefined,
+		computer: hasComputerIdentity ? computer : undefined,
     rating: values.rating,
     notes: cleanOptionalString(values.notes),
     safetyStops: values.safetyStops.length > 0

@@ -8,8 +8,10 @@ export const DIVE_TYPES = [
   'work',
   'research',
 ] as const;
+export const DIVE_MODES = ['OC', 'freedive', 'CCR', 'pSCR'] as const;
 
 export type DiveTypeFilter = (typeof DIVE_TYPES)[number] | '';
+export type DiveModeFilter = (typeof DIVE_MODES)[number] | '';
 export type RatingFilter = '1' | '2' | '3' | '4' | '5' | '';
 
 export interface DiveFilters {
@@ -21,6 +23,7 @@ export interface DiveFilters {
 	minDuration: string;
 	maxDuration: string;
   diveType: DiveTypeFilter;
+	diveMode: DiveModeFilter;
   minRating: RatingFilter;
 	tag: string;
 	tripId: string;
@@ -36,6 +39,7 @@ export const EMPTY_DIVE_FILTERS: DiveFilters = {
 	minDuration: '',
 	maxDuration: '',
   diveType: '',
+	diveMode: '',
   minRating: '',
 	tag: '',
 	tripId: '',
@@ -64,6 +68,7 @@ const readNonNegativeNumber = (value: string | null): string => {
 export const diveFiltersFromSearchParams = (params: URLSearchParams): DiveFilters => {
   const diveType = params.get('type');
   const minRating = params.get('rating');
+	const diveMode = params.get('mode');
 
   return {
     query: params.get('q') ?? '',
@@ -76,6 +81,9 @@ export const diveFiltersFromSearchParams = (params: URLSearchParams): DiveFilter
     diveType: DIVE_TYPES.includes(diveType as (typeof DIVE_TYPES)[number])
       ? diveType as DiveTypeFilter
       : '',
+		diveMode: DIVE_MODES.includes(diveMode as (typeof DIVE_MODES)[number])
+			? diveMode as DiveModeFilter
+			: '',
     minRating: ['1', '2', '3', '4', '5'].includes(minRating ?? '')
       ? minRating as RatingFilter
       : '',
@@ -97,6 +105,7 @@ export const diveFiltersToSearchParams = (filters: DiveFilters): URLSearchParams
 		['minDuration', filters.minDuration],
 		['maxDuration', filters.maxDuration],
     ['type', filters.diveType],
+		['mode', filters.diveMode],
     ['rating', filters.minRating],
 		['tag', filters.tag],
 		['trip', filters.tripId],
@@ -149,6 +158,7 @@ export const filterDives = (
 			&& (minDuration === undefined || dive.duration >= minDuration)
 			&& (maxDuration === undefined || dive.duration <= maxDuration)
       && (filters.diveType === '' || dive.diveType === filters.diveType)
+			&& (filters.diveMode === '' || dive.diveMode === filters.diveMode)
       && (minRating === undefined || (dive.rating ?? 0) >= minRating)
 			&& (filters.tag === '' || (dive.tags ?? []).some((tag) => tag.toLocaleLowerCase() === filters.tag.toLocaleLowerCase()))
 			&& (filters.tripId === '' || String(dive.trip?.id ?? '') === filters.tripId)

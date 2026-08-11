@@ -53,6 +53,8 @@ describe('parseSubsurfaceCSV', () => {
 
     expect(dive.location).toBe('Blue Hole');
     expect(dive.depth).toBe(28.4);
+		expect(dive.meanDepth).toBe(16.2);
+		expect(dive.diveMode).toBe('OC');
     expect(dive.duration).toBe(45);
     expect(dive.buddy).toBe('Jane Diver');
     expect(dive.notes).toBe('Great dive');

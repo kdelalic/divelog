@@ -51,7 +51,7 @@ const DiveDetailModal = ({ dive, isOpen, onClose }: DiveDetailModalProps) => {
   if (!dive) return null;
 
   const conditions = dive.conditions;
-  const averageDepth = averageRecordedDepth(dive);
+  const averageDepth = dive.meanDepth ?? averageRecordedDepth(dive);
   const hasCoordinates = dive.lat !== 0 || dive.lng !== 0;
   const current = conditions?.current
     ? `${titleCase(conditions.current.strength)}${conditions.current.direction ? ` (${conditions.current.direction})` : ''}`
@@ -90,6 +90,7 @@ const DiveDetailModal = ({ dive, isOpen, onClose }: DiveDetailModalProps) => {
                 <CardContent className="space-y-3">
                   <DetailRow label="Max depth" value={formatDepth(dive.depth, settings.units.depth)} />
                   <DetailRow label="Duration" value={formatDuration(dive.duration)} />
+				  <DetailRow label="Surface interval" value={dive.surfaceInterval === undefined ? 'Not available' : formatDuration(dive.surfaceInterval)} />
                   <DetailRow
                     label="Average depth"
                     value={averageDepth === undefined ? 'Not recorded' : formatDepth(averageDepth, settings.units.depth)}
@@ -109,6 +110,7 @@ const DiveDetailModal = ({ dive, isOpen, onClose }: DiveDetailModalProps) => {
                     value={hasCoordinates ? `${dive.lat.toFixed(4)}, ${dive.lng.toFixed(4)}` : 'Not recorded'}
                   />
                   <DetailRow label="Dive type" value={titleCase(dive.diveType)} />
+				  <DetailRow label="Dive mode" value={dive.diveMode ?? 'Not recorded'} />
 				  <DetailRow label="Trip" value={dive.trip?.name ?? 'Not assigned'} />
 				  <DetailRow label="Tags" value={dive.tags?.length ? dive.tags.join(', ') : 'None'} />
                 </CardContent>
@@ -232,6 +234,18 @@ const DiveDetailModal = ({ dive, isOpen, onClose }: DiveDetailModalProps) => {
           </TabsContent>
 
           <TabsContent value="equipment" className="flex-1 space-y-6 overflow-y-auto">
+			{dive.computer && (
+			  <Card>
+				<CardHeader><CardTitle className="text-base">Dive computer identity</CardTitle></CardHeader>
+				<CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+				  <DetailRow label="Vendor" value={dive.computer.vendor ?? 'Not recorded'} />
+				  <DetailRow label="Model" value={dive.computer.model ?? 'Not recorded'} />
+				  <DetailRow label="Device ID" value={dive.computer.deviceId ?? 'Not recorded'} />
+				  <DetailRow label="Serial" value={dive.computer.serial ?? 'Not recorded'} />
+				  <DetailRow label="Firmware" value={dive.computer.firmware ?? 'Not recorded'} />
+				</CardContent>
+			  </Card>
+			)}
             {dive.equipment?.tanks?.length ? (
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Tank configuration</h3>

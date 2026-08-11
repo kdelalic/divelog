@@ -28,6 +28,7 @@ func (dr *DiveRequest) Validate() utils.ValidationErrors {
 	if dr.Depth <= 0 || dr.Depth > maxDiveDepth {
 		errors.Add("depth", "must be greater than 0 and at most 999.99 meters")
 	}
+	optionalFloatRange(errors, "mean_depth", dr.MeanDepth, 0, dr.Depth)
 	utils.IntRange(errors, "duration", dr.Duration, 1, maxDiveDuration)
 	utils.FloatRange(errors, "lat", dr.Lat, -90, 90)
 	utils.FloatRange(errors, "lng", dr.Lng, -180, 180)
@@ -37,6 +38,14 @@ func (dr *DiveRequest) Validate() utils.ValidationErrors {
 	optionalIntRange(errors, "visibility", dr.Visibility, 0, 1000)
 	utils.OptionalOneOf(errors, "dive_type", dr.DiveType,
 		"recreational", "training", "technical", "work", "research")
+	utils.OptionalOneOf(errors, "dive_mode", dr.DiveMode, "OC", "freedive", "CCR", "pSCR")
+	if dr.Computer != nil {
+		utils.OptionalString(errors, "computer_metadata.vendor", dr.Computer.Vendor, maxEquipmentString)
+		utils.OptionalString(errors, "computer_metadata.model", dr.Computer.Model, maxEquipmentString)
+		utils.OptionalString(errors, "computer_metadata.device_id", dr.Computer.DeviceID, maxEquipmentString)
+		utils.OptionalString(errors, "computer_metadata.serial", dr.Computer.Serial, maxEquipmentString)
+		utils.OptionalString(errors, "computer_metadata.firmware", dr.Computer.Firmware, maxEquipmentString)
+	}
 	optionalIntRange(errors, "rating", dr.Rating, 1, 5)
 	optionalIntRange(errors, "dive_number", dr.DiveNumber, 1, 10000000)
 	if dr.TripID != nil && *dr.TripID <= 0 {

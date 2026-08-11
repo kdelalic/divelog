@@ -50,6 +50,7 @@ const DiveForm = ({
   const [isEquipmentOpen, setIsEquipmentOpen] = useState(Boolean(initialDive?.equipment));
   const [isConditionsOpen, setIsConditionsOpen] = useState(Boolean(initialDive?.conditions));
   const [isStopsOpen, setIsStopsOpen] = useState(Boolean(initialDive?.safetyStops?.length));
+	const [isComputerOpen, setIsComputerOpen] = useState(Boolean(initialDive?.computer));
 	const tags = useOrganizationStore((state) => state.tags);
 	const trips = useOrganizationStore((state) => state.trips);
 	const loadOrganization = useOrganizationStore((state) => state.load);
@@ -151,12 +152,17 @@ const DiveForm = ({
 			<p className="mt-1 text-xs text-muted-foreground">New names become reusable tags when the dive is saved.</p>
 		</div>
 
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
           <div>
             <label htmlFor="depth" className={labelClassName}>Max depth ({depthLabel})</label>
             <input type="number" step="0.1" id="depth" {...register('depth', { valueAsNumber: true })} className={fieldClassName} />
             <FieldError message={errors.depth?.message} />
           </div>
+		  <div>
+			<label htmlFor="meanDepth" className={labelClassName}>Mean depth ({depthLabel})</label>
+			<input type="number" step="0.1" id="meanDepth" placeholder="Calculated from profile" {...register('meanDepth', { setValueAs: optionalNumberInput })} className={fieldClassName} />
+			<FieldError message={errors.meanDepth?.message} />
+		  </div>
           <div>
             <label htmlFor="duration" className={labelClassName}>Duration (min)</label>
             <input type="number" id="duration" {...register('duration', { valueAsNumber: true })} className={fieldClassName} />
@@ -164,7 +170,7 @@ const DiveForm = ({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
           <div>
             <label htmlFor="buddy" className={labelClassName}>Buddy</label>
             <input type="text" id="buddy" {...register('buddy')} className={fieldClassName} />
@@ -182,6 +188,17 @@ const DiveForm = ({
             </select>
             <FieldError message={errors.diveType?.message} />
           </div>
+		  <div>
+			<label htmlFor="diveMode" className={labelClassName}>Dive mode</label>
+			<select id="diveMode" {...register('diveMode')} className={fieldClassName}>
+			  <option value="">Not recorded</option>
+			  <option value="OC">Open circuit</option>
+			  <option value="freedive">Freedive</option>
+			  <option value="CCR">Closed-circuit rebreather</option>
+			  <option value="pSCR">Passive semi-closed rebreather</option>
+			</select>
+			<FieldError message={errors.diveMode?.message} />
+		  </div>
         </div>
 
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
@@ -367,6 +384,24 @@ const DiveForm = ({
             <EquipmentForm equipment={equipment} onChange={setEquipment} />
           </CollapsibleContent>
         </Collapsible>
+
+		<Collapsible open={isComputerOpen} onOpenChange={setIsComputerOpen}>
+		  <CollapsibleTrigger asChild>
+			<Button type="button" variant="outline" className="w-full justify-between">
+			  Dive computer identity (optional)
+			  {isComputerOpen ? <ChevronDown /> : <ChevronRight />}
+			</Button>
+		  </CollapsibleTrigger>
+		  <CollapsibleContent className="mt-4 rounded-lg border border-border bg-muted/30 p-5">
+			<div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+			  <div><label htmlFor="computerVendor" className={labelClassName}>Vendor</label><input id="computerVendor" {...register('computerVendor')} className={fieldClassName} /><FieldError message={errors.computerVendor?.message} /></div>
+			  <div><label htmlFor="computerModel" className={labelClassName}>Model</label><input id="computerModel" {...register('computerModel')} className={fieldClassName} /><FieldError message={errors.computerModel?.message} /></div>
+			  <div><label htmlFor="computerDeviceId" className={labelClassName}>Device ID</label><input id="computerDeviceId" {...register('computerDeviceId')} className={fieldClassName} /><FieldError message={errors.computerDeviceId?.message} /></div>
+			  <div><label htmlFor="computerSerial" className={labelClassName}>Serial number</label><input id="computerSerial" {...register('computerSerial')} className={fieldClassName} /><FieldError message={errors.computerSerial?.message} /></div>
+			  <div><label htmlFor="computerFirmware" className={labelClassName}>Firmware</label><input id="computerFirmware" {...register('computerFirmware')} className={fieldClassName} /><FieldError message={errors.computerFirmware?.message} /></div>
+			</div>
+		  </CollapsibleContent>
+		</Collapsible>
 
         {saveError && (
           <div role="alert" className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/50 dark:text-red-300">

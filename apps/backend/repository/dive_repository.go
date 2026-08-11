@@ -32,25 +32,29 @@ func jsonbParam(payload []byte) interface{} {
 }
 
 // marshalDiveJSON serializes the JSONB-backed fields of a dive.
-func marshalDiveJSON(dive *models.Dive) (samples, equipment, conditions, safetyStops interface{}, err error) {
+func marshalDiveJSON(dive *models.Dive) (samples, equipment, conditions, safetyStops, computer interface{}, err error) {
 	samplesJSON, err := utils.MarshalJSON(dive.Samples)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, err
 	}
 	equipmentJSON, err := utils.MarshalJSON(dive.Equipment)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, err
 	}
 	conditionsJSON, err := utils.MarshalJSON(dive.Conditions)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, err
 	}
 	safetyStopsJSON, err := utils.MarshalJSON(dive.SafetyStops)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, err
+	}
+	computerJSON, err := utils.MarshalJSON(dive.Computer)
+	if err != nil {
+		return nil, nil, nil, nil, nil, err
 	}
 	return jsonbParam(samplesJSON), jsonbParam(equipmentJSON),
-		jsonbParam(conditionsJSON), jsonbParam(safetyStopsJSON), nil
+		jsonbParam(conditionsJSON), jsonbParam(safetyStopsJSON), jsonbParam(computerJSON), nil
 }
 
 // GetDivesByUserID retrieves all dives for a user
@@ -59,7 +63,7 @@ func (r *DiveRepository) GetDivesByUserID(ctx context.Context, userID int) ([]mo
 		SELECT 
 			d.id, d.user_id, d.dive_site_id, d.dive_number, d.trip_id, d.dive_datetime, d.max_depth, d.duration,
 			d.buddy, d.water_temperature, d.visibility, d.notes, d.samples, d.equipment,
-			d.conditions, d.dive_type, d.rating, d.safety_stops, d.created_at, d.updated_at,
+			d.conditions, d.dive_type, d.dive_mode, d.mean_depth, d.computer_metadata, d.rating, d.safety_stops, d.created_at, d.updated_at,
 			COALESCE(ds.latitude, d.latitude, 0.0) as latitude,
 			COALESCE(ds.longitude, d.longitude, 0.0) as longitude,
 			COALESCE(ds.name, d.location, 'Unknown Location') as location,
@@ -94,8 +98,20 @@ func (r *DiveRepository) GetDivesByUserID(ctx context.Context, userID int) ([]mo
 		utils.LogError(ctx, "Error iterating over dives", err, utils.UserID(userID))
 		return nil, utils.ErrDatabaseError
 	}
+	calculateSurfaceIntervals(dives)
 
 	return dives, nil
+}
+
+func calculateSurfaceIntervals(dives []models.Dive) {
+	for index := len(dives) - 2; index >= 0; index-- {
+		previous := dives[index+1]
+		previousEnd := previous.DateTime.Time.Add(time.Duration(previous.Duration) * time.Minute)
+		minutes := int(dives[index].DateTime.Time.Sub(previousEnd).Minutes())
+		if minutes >= 0 {
+			dives[index].SurfaceInterval = &minutes
+		}
+	}
 }
 
 // CreateDive creates a new dive
@@ -103,25 +119,25 @@ func (r *DiveRepository) CreateDive(ctx context.Context, dive *models.Dive) erro
 	if err := r.prepareDiveOrganization(dive); err != nil {
 		return err
 	}
-	samplesParam, equipmentParam, conditionsParam, safetyStopsParam, err := marshalDiveJSON(dive)
+	samplesParam, equipmentParam, conditionsParam, safetyStopsParam, computerParam, err := marshalDiveJSON(dive)
 	if err != nil {
 		utils.LogError(ctx, "Error marshaling dive JSON fields", err, utils.UserID(dive.UserID))
 		return utils.ErrProcessingFailed
 	}
 
 	query := `
-		INSERT INTO dives (user_id, dive_site_id, dive_number, trip_id, dive_datetime, max_depth, duration, buddy, latitude, longitude, location, water_temperature, visibility, notes, samples, equipment, conditions, dive_type, rating, safety_stops, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
+		INSERT INTO dives (user_id, dive_site_id, dive_number, trip_id, dive_datetime, max_depth, mean_depth, duration, buddy, latitude, longitude, location, water_temperature, visibility, notes, samples, equipment, conditions, dive_type, dive_mode, computer_metadata, rating, safety_stops, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)
 		RETURNING id, created_at, updated_at
 	`
 
 	now := time.Now()
 	err = r.db.QueryRow(
 		query,
-		dive.UserID, dive.DiveSiteID, dive.DiveNumber, dive.TripID, dive.DateTime, dive.MaxDepth, dive.Duration,
+		dive.UserID, dive.DiveSiteID, dive.DiveNumber, dive.TripID, dive.DateTime, dive.MaxDepth, dive.MeanDepth, dive.Duration,
 		dive.Buddy, dive.Latitude, dive.Longitude, dive.Location,
 		dive.WaterTemp, dive.Visibility, dive.Notes, samplesParam, equipmentParam,
-		conditionsParam, dive.DiveType, dive.Rating, safetyStopsParam,
+		conditionsParam, dive.DiveType, dive.DiveMode, computerParam, dive.Rating, safetyStopsParam,
 		now, now,
 	).Scan(&dive.ID, &dive.CreatedAt, &dive.UpdatedAt)
 
@@ -142,26 +158,26 @@ func (r *DiveRepository) UpdateDive(ctx context.Context, diveID, userID int, div
 	if err := r.prepareDiveOrganization(dive); err != nil {
 		return err
 	}
-	samplesParam, equipmentParam, conditionsParam, safetyStopsParam, err := marshalDiveJSON(dive)
+	samplesParam, equipmentParam, conditionsParam, safetyStopsParam, computerParam, err := marshalDiveJSON(dive)
 	if err != nil {
 		return utils.ErrProcessingFailed
 	}
 
 	query := `
 		UPDATE dives
-		SET dive_site_id = $1, dive_number = $2, trip_id = $3, dive_datetime = $4, max_depth = $5, duration = $6, buddy = $7,
-		    latitude = $8, longitude = $9, location = $10, water_temperature = $11, visibility = $12, notes = $13, samples = $14, equipment = $15,
-		    conditions = $16, dive_type = $17, rating = $18, safety_stops = $19, updated_at = $20
-		WHERE id = $21 AND user_id = $22
+		SET dive_site_id = $1, dive_number = $2, trip_id = $3, dive_datetime = $4, max_depth = $5, mean_depth = $6, duration = $7, buddy = $8,
+		    latitude = $9, longitude = $10, location = $11, water_temperature = $12, visibility = $13, notes = $14, samples = $15, equipment = $16,
+		    conditions = $17, dive_type = $18, dive_mode = $19, computer_metadata = $20, rating = $21, safety_stops = $22, updated_at = $23
+		WHERE id = $24 AND user_id = $25
 		RETURNING id, user_id, created_at, updated_at
 	`
 	now := time.Now()
 
 	err = r.db.QueryRow(
 		query,
-		dive.DiveSiteID, dive.DiveNumber, dive.TripID, dive.DateTime, dive.MaxDepth, dive.Duration, dive.Buddy,
+		dive.DiveSiteID, dive.DiveNumber, dive.TripID, dive.DateTime, dive.MaxDepth, dive.MeanDepth, dive.Duration, dive.Buddy,
 		dive.Latitude, dive.Longitude, dive.Location, dive.WaterTemp, dive.Visibility, dive.Notes, samplesParam, equipmentParam,
-		conditionsParam, dive.DiveType, dive.Rating, safetyStopsParam, now,
+		conditionsParam, dive.DiveType, dive.DiveMode, computerParam, dive.Rating, safetyStopsParam, now,
 		diveID, userID,
 	).Scan(
 		&dive.ID, &dive.UserID, &dive.CreatedAt, &dive.UpdatedAt,
@@ -282,6 +298,7 @@ func (r *DiveRepository) scanDive(rows *sql.Rows) (*models.Dive, error) {
 	var equipmentJSON []byte
 	var conditionsJSON []byte
 	var safetyStopsJSON []byte
+	var computerJSON []byte
 	var tripName, tripLocation, tripStart, tripEnd, tripNotes sql.NullString
 	var tags []string
 
@@ -289,7 +306,7 @@ func (r *DiveRepository) scanDive(rows *sql.Rows) (*models.Dive, error) {
 		&dive.ID, &dive.UserID, &dive.DiveSiteID, &dive.DiveNumber, &dive.TripID, &dive.DateTime, &dive.MaxDepth,
 		&dive.Duration, &dive.Buddy, &dive.WaterTemp, &dive.Visibility,
 		&dive.Notes, &samplesJSON, &equipmentJSON,
-		&conditionsJSON, &dive.DiveType, &dive.Rating, &safetyStopsJSON,
+		&conditionsJSON, &dive.DiveType, &dive.DiveMode, &dive.MeanDepth, &computerJSON, &dive.Rating, &safetyStopsJSON,
 		&dive.CreatedAt, &dive.UpdatedAt,
 		&dive.Latitude, &dive.Longitude, &dive.Location,
 		&tripName, &tripLocation, &tripStart, &tripEnd, &tripNotes, pq.Array(&tags),
@@ -303,6 +320,7 @@ func (r *DiveRepository) scanDive(rows *sql.Rows) (*models.Dive, error) {
 	utils.UnmarshalJSON(equipmentJSON, &dive.Equipment)
 	utils.UnmarshalJSON(conditionsJSON, &dive.Conditions)
 	utils.UnmarshalJSON(safetyStopsJSON, &dive.SafetyStops)
+	utils.UnmarshalJSON(computerJSON, &dive.Computer)
 	dive.Tags = tags
 	if dive.TripID != nil && tripName.Valid {
 		dive.Trip = &models.Trip{ID: *dive.TripID, UserID: dive.UserID, Name: tripName.String}

@@ -90,3 +90,7 @@ export const divesByTrip = (dives: readonly Dive[]) => mostUsed(summarize(dives,
 export const divesByGas = (dives: readonly Dive[]) => mostUsed(summarize(dives, (dive) =>
   getDiveGasNames(dive).map((gas) => ({ key: gas.toLocaleLowerCase(), label: gas, filters: { gas } })),
 ));
+
+export const divesByMode = (dives: readonly Dive[]) => mostUsed(summarize(dives, (dive) => dive.diveMode ? [{
+	key: dive.diveMode, label: dive.diveMode, filters: { diveMode: dive.diveMode },
+}] : []));
