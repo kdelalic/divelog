@@ -14,6 +14,7 @@ import useDiveStore from "./store/diveStore";
 import useSettingsStore from "./store/settingsStore";
 import useOrganizationStore from "./store/organizationStore";
 import Statistics from "./pages/Statistics";
+import PrintableLogbook from "./pages/PrintableLogbook";
 import './App.css'
 
 const router = createBrowserRouter([
@@ -51,6 +52,10 @@ const router = createBrowserRouter([
       }
     ],
   },
+	{
+		path: "/print",
+		element: <PrintableLogbook />,
+	},
 ]);
 
 function App() {

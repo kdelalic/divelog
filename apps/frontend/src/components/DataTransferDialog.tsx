@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { AlertCircle, CheckCircle2, DatabaseBackup, Download, FileSpreadsheet, Upload } from 'lucide-react';
+import { AlertCircle, CheckCircle2, DatabaseBackup, Download, FileCode2, FileSpreadsheet, Printer, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -25,6 +25,7 @@ import {
   type BackupDiveSite,
   type DiveLogBackup,
 } from '@/lib/dataTransfer';
+import { divesToSubsurfaceXml } from '@/lib/subsurfaceXmlExport';
 
 interface DataTransferDialogProps {
   open: boolean;
@@ -69,7 +70,7 @@ const DataTransferDialog = ({
 	restoreOrganization,
 }: DataTransferDialogProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [csvScope, setCsvScope] = useState<'all' | 'filtered'>(
+  const [exportScope, setExportScope] = useState<'all' | 'filtered'>(
     hasActiveFilters ? 'filtered' : 'all',
   );
   const [backup, setBackup] = useState<DiveLogBackup | null>(null);
@@ -90,8 +91,8 @@ const DataTransferDialog = ({
     () => planDiveSiteRestore(backup?.data.diveSites ?? [], existingDiveSites),
     [backup, existingDiveSites],
   );
-  const effectiveCsvScope = csvScope === 'filtered' && hasActiveFilters ? 'filtered' : 'all';
-  const selectedCsvDives = effectiveCsvScope === 'filtered' ? filteredDives : dives;
+  const effectiveExportScope = exportScope === 'filtered' && hasActiveFilters ? 'filtered' : 'all';
+  const selectedExportDives = effectiveExportScope === 'filtered' ? filteredDives : dives;
   const hasRestoreWork = Boolean(
     backup && (
       (restoreDivesEnabled && divePlan.dives.length > 0)
@@ -128,12 +129,28 @@ const DataTransferDialog = ({
   const handleDownloadCsv = () => {
     resetMessages();
     downloadTextFile(
-      divesToCsv(selectedCsvDives),
+      divesToCsv(selectedExportDives),
       datedExportFilename('dives', 'csv'),
       'text/csv;charset=utf-8',
     );
-    setSuccess(`Downloaded ${selectedCsvDives.length} dive${selectedCsvDives.length === 1 ? '' : 's'} as CSV.`);
+    setSuccess(`Downloaded ${selectedExportDives.length} dive${selectedExportDives.length === 1 ? '' : 's'} as CSV.`);
   };
+
+	const handleDownloadSubsurfaceXml = () => {
+		resetMessages();
+		downloadTextFile(
+			divesToSubsurfaceXml(selectedExportDives),
+			`subsurface-logbook-${new Date().toISOString().slice(0, 10)}.xml`,
+			'application/xml;charset=utf-8',
+		);
+		setSuccess(`Downloaded ${selectedExportDives.length} dive${selectedExportDives.length === 1 ? '' : 's'} as native Subsurface XML.`);
+	};
+
+	const handlePrint = () => {
+		resetMessages();
+		const search = effectiveExportScope === 'filtered' ? window.location.search : '';
+		window.open(`/print${search}`, '_blank', 'noopener,noreferrer');
+	};
 
   const handleRestoreFile = async (file: File) => {
     resetMessages();
@@ -205,7 +222,7 @@ const DataTransferDialog = ({
             Backup &amp; Export
           </DialogTitle>
           <DialogDescription>
-            Keep a complete, restorable copy of your logbook or export dives for a spreadsheet.
+            Keep a complete, restorable copy, exchange data with Subsurface, or create a printable PDF logbook.
           </DialogDescription>
         </DialogHeader>
 
@@ -222,7 +239,15 @@ const DataTransferDialog = ({
           </div>
         )}
 
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="rounded-lg border border-border p-4">
+		  <label className="block text-sm font-medium text-foreground" htmlFor="export-scope">Dives to export</label>
+		  <select id="export-scope" value={effectiveExportScope} onChange={(event) => setExportScope(event.target.value as 'all' | 'filtered')} className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground">
+			<option value="all">All dives ({dives.length})</option>
+			{hasActiveFilters && <option value="filtered">Filtered results ({filteredDives.length})</option>}
+		  </select>
+		</div>
+
+		<div className="grid gap-4 md:grid-cols-2">
           <section className="rounded-lg border border-border p-4">
             <h3 className="font-semibold text-foreground">Complete JSON backup</h3>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -244,24 +269,10 @@ const DataTransferDialog = ({
             <p className="mt-1 text-sm text-muted-foreground">
               Exports metric source values, with profile and equipment data in JSON columns.
             </p>
-            <label className="mt-3 block text-sm font-medium text-foreground" htmlFor="csv-scope">
-              Dives to export
-            </label>
-            <select
-              id="csv-scope"
-              value={effectiveCsvScope}
-              onChange={(event) => setCsvScope(event.target.value as 'all' | 'filtered')}
-              className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground"
-            >
-              <option value="all">All dives ({dives.length})</option>
-              {hasActiveFilters && (
-                <option value="filtered">Filtered results ({filteredDives.length})</option>
-              )}
-            </select>
             <Button
               type="button"
               variant="outline"
-              className="mt-3 w-full"
+			  className="mt-4 w-full"
               onClick={handleDownloadCsv}
               disabled={isWorking}
             >
@@ -269,6 +280,22 @@ const DataTransferDialog = ({
               Download CSV
             </Button>
           </section>
+
+		  <section className="rounded-lg border border-border p-4">
+			<h3 className="font-semibold text-foreground">Native Subsurface XML</h3>
+			<p className="mt-1 text-sm text-muted-foreground">Exports sites, trips, profiles, cylinders, gases, tags, and computer identity for interchange.</p>
+			<Button type="button" variant="outline" className="mt-4 w-full" onClick={handleDownloadSubsurfaceXml} disabled={isWorking}>
+			  <FileCode2 className="mr-2 h-4 w-4" /> Download XML
+			</Button>
+		  </section>
+
+		  <section className="rounded-lg border border-border p-4">
+			<h3 className="font-semibold text-foreground">Printable / PDF logbook</h3>
+			<p className="mt-1 text-sm text-muted-foreground">Opens a print-ready logbook with a profile for each dive. Use “Save as PDF” in the browser.</p>
+			<Button type="button" variant="outline" className="mt-4 w-full" onClick={handlePrint} disabled={isWorking || selectedExportDives.length === 0}>
+			  <Printer className="mr-2 h-4 w-4" /> Open print view
+			</Button>
+		  </section>
         </div>
 
         <section className="rounded-lg border border-border p-4">

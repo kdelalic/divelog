@@ -111,3 +111,33 @@ textarea {
 .dark .leaflet-container a.leaflet-popup-close-button {
   color: oklch(0.708 0 0);
 }
+
+.print-logbook { margin: 0 auto; max-width: 900px; padding: 32px; color: #111827; background: white; }
+.print-controls { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 32px; }
+.print-controls h1 { font-size: 2rem; font-weight: 700; }
+.print-controls p, .print-empty { color: #4b5563; }
+.print-dive { break-after: page; border: 1px solid #d1d5db; border-radius: 12px; padding: 28px; margin-bottom: 28px; }
+.print-dive:last-child { break-after: auto; }
+.print-dive-header { display: flex; justify-content: space-between; gap: 24px; border-bottom: 2px solid #1d4ed8; padding-bottom: 14px; }
+.print-dive-header h2 { font-size: 1.6rem; font-weight: 700; }
+.print-kicker { color: #1d4ed8; font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+.print-rating { color: #b45309; letter-spacing: .08em; white-space: nowrap; }
+.print-facts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: 20px 0; }
+.print-facts div { border-radius: 8px; background: #f3f4f6; padding: 10px; }
+.print-facts dt { color: #6b7280; font-size: .7rem; text-transform: uppercase; }
+.print-facts dd { font-weight: 600; margin-top: 2px; }
+.print-profile { display: block; width: 100%; height: 150px; color: #1d4ed8; background: linear-gradient(#eff6ff, #fff); border: 1px solid #bfdbfe; border-radius: 8px; }
+.print-profile-empty { height: 90px; display: flex; align-items: center; justify-content: center; color: #6b7280; background: #f9fafb; border: 1px dashed #d1d5db; border-radius: 8px; }
+.print-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 20px; }
+.print-columns h3, .print-notes h3 { font-weight: 700; margin-bottom: 6px; }
+.print-columns p { font-size: .85rem; margin: 3px 0; }
+.print-notes { margin-top: 20px; border-top: 1px solid #d1d5db; padding-top: 14px; }
+.print-notes p { white-space: pre-wrap; }
+
+@media print {
+  @page { margin: 12mm; }
+  body { background: white !important; }
+  .print-logbook { max-width: none; padding: 0; }
+  .print-controls { display: none; }
+  .print-dive { border: 0; border-radius: 0; margin: 0; padding: 0; min-height: 250mm; }
+}
