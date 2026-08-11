@@ -420,6 +420,30 @@ export interface BulkDiveUpdateInput {
   clearRating?: boolean;
 }
 
+export interface BulkOperation {
+  id: string;
+  operationType: 'timestamp_shift';
+  affectedCount: number;
+  createdAt: string;
+  undoneAt?: string;
+}
+
+type ApiBulkOperation = {
+  id: string;
+  operation_type: 'timestamp_shift';
+  affected_count: number;
+  created_at: string;
+  undone_at?: string;
+};
+
+const deserializeBulkOperation = (operation: ApiBulkOperation): BulkOperation => ({
+  id: operation.id,
+  operationType: operation.operation_type,
+  affectedCount: operation.affected_count,
+  createdAt: operation.created_at,
+  undoneAt: operation.undone_at,
+});
+
 const organizationRequest = async <T>(path: string, init?: RequestInit): Promise<ApiResponse<T>> => {
   try {
     const separator = path.includes('?') ? '&' : '?';
@@ -485,6 +509,26 @@ export const organizationApi = {
     return organizationRequest('/dives/bulk-delete', {
       method: 'POST', body: JSON.stringify({ dive_ids: diveIds }),
     });
+  },
+  async shiftDiveTimes(diveIds: number[], offsetMinutes: number): Promise<ApiResponse<BulkOperation>> {
+    const response = await organizationRequest<ApiBulkOperation>('/dives/shift-times', {
+      method: 'POST', body: JSON.stringify({ dive_ids: diveIds, offset_minutes: offsetMinutes }),
+    });
+    return response.data
+      ? { data: deserializeBulkOperation(response.data) }
+      : { error: response.error, status: response.status };
+  },
+  async latestUndoableOperation(): Promise<ApiResponse<BulkOperation | undefined>> {
+    const response = await organizationRequest<ApiBulkOperation | undefined>('/dives/bulk-operations/latest');
+    return response.data
+      ? { data: deserializeBulkOperation(response.data) }
+      : { error: response.error, status: response.status };
+  },
+  async undoBulkOperation(operationId: string): Promise<ApiResponse<BulkOperation>> {
+    const response = await organizationRequest<ApiBulkOperation>(`/dives/bulk-operations/${operationId}/undo`, { method: 'POST' });
+    return response.data
+      ? { data: deserializeBulkOperation(response.data) }
+      : { error: response.error, status: response.status };
   },
   async createTrip(trip: TripInput): Promise<ApiResponse<Trip>> {
     const response = await organizationRequest<ApiTrip>('/trips', { method: 'POST', body: JSON.stringify(serializeTrip(trip)) });

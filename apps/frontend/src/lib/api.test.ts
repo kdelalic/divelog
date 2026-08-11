@@ -288,4 +288,18 @@ describe('organizationApi bulk operations', () => {
     });
     expect(init.method).toBe('PATCH');
   });
+
+  it('shifts timestamps and normalizes the durable undo operation', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      id: '0123456789abcdef0123456789abcdef',
+      operation_type: 'timestamp_shift', affected_count: 3, created_at: '2026-08-10T12:00:00Z',
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await organizationApi.shiftDiveTimes([1, 2, 3], -480);
+
+    expect(result.data).toMatchObject({ operationType: 'timestamp_shift', affectedCount: 3 });
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(init.body as string)).toEqual({ dive_ids: [1, 2, 3], offset_minutes: -480 });
+  });
 });

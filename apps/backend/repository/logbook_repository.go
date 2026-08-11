@@ -2,12 +2,16 @@ package repository
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
 	"divelog-backend/models"
 	"divelog-backend/utils"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/lib/pq"
 )
@@ -15,6 +19,175 @@ import (
 // LogbookRepository owns reusable tags, trips, and numbering operations.
 type LogbookRepository struct {
 	db *sql.DB
+}
+
+type timestampState struct {
+	ID       int              `json:"id"`
+	DateTime models.LocalTime `json:"datetime"`
+}
+
+func newOperationID() (string, error) {
+	value := make([]byte, 16)
+	if _, err := rand.Read(value); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(value), nil
+}
+
+func hasTimestampConflict(ctx context.Context, tx *sql.Tx, userID int, diveIDs []int, offsetMinutes int) (bool, error) {
+	var conflict bool
+	err := tx.QueryRowContext(ctx, `
+		SELECT EXISTS(
+			SELECT 1 FROM dives selected
+			JOIN dives existing ON existing.user_id = selected.user_id
+			 AND existing.dive_site_id IS NOT DISTINCT FROM selected.dive_site_id
+			 AND existing.dive_datetime = selected.dive_datetime + ($3 * INTERVAL '1 minute')
+			WHERE selected.user_id = $1 AND selected.id = ANY($2) AND NOT (existing.id = ANY($2))
+		)`, userID, pq.Array(diveIDs), offsetMinutes).Scan(&conflict)
+	if err != nil {
+		return false, utils.ErrDatabaseError
+	}
+	return conflict, nil
+}
+
+func (r *LogbookRepository) ShiftDiveTimes(ctx context.Context, userID int, request models.ShiftDiveTimesRequest) (*models.BulkOperation, error) {
+	tx, err := r.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
+	if err != nil {
+		return nil, utils.ErrDatabaseError
+	}
+	defer tx.Rollback()
+	if err := ensureOwnedDives(ctx, tx, userID, request.DiveIDs); err != nil {
+		return nil, err
+	}
+	conflict, err := hasTimestampConflict(ctx, tx, userID, request.DiveIDs, request.OffsetMinutes)
+	if err != nil {
+		return nil, err
+	}
+	if conflict {
+		return nil, utils.ErrTimestampConflict
+	}
+
+	rows, err := tx.QueryContext(ctx, `SELECT id, dive_datetime FROM dives WHERE user_id = $1 AND id = ANY($2) ORDER BY id`, userID, pq.Array(request.DiveIDs))
+	if err != nil {
+		return nil, utils.ErrDatabaseError
+	}
+	states := make([]timestampState, 0, len(request.DiveIDs))
+	for rows.Next() {
+		var state timestampState
+		if err := rows.Scan(&state.ID, &state.DateTime); err != nil {
+			rows.Close()
+			return nil, utils.ErrDatabaseError
+		}
+		states = append(states, state)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, utils.ErrDatabaseError
+	}
+	beforeState, err := json.Marshal(states)
+	if err != nil {
+		return nil, utils.ErrProcessingFailed
+	}
+	operationID, err := newOperationID()
+	if err != nil {
+		return nil, utils.ErrProcessingFailed
+	}
+	operation := &models.BulkOperation{ID: operationID, OperationType: "timestamp_shift", AffectedCount: len(states), CreatedAt: time.Now()}
+	if _, err := tx.ExecContext(ctx, `
+		INSERT INTO bulk_operations (id, user_id, operation_type, before_state, affected_count, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6)`, operation.ID, userID, operation.OperationType, beforeState, operation.AffectedCount, operation.CreatedAt); err != nil {
+		return nil, utils.ErrDatabaseError
+	}
+	if _, err := tx.ExecContext(ctx, `
+		UPDATE dives SET dive_datetime = dive_datetime + ($1 * INTERVAL '1 minute'), updated_at = NOW()
+		WHERE user_id = $2 AND id = ANY($3)`, request.OffsetMinutes, userID, pq.Array(request.DiveIDs)); err != nil {
+		return nil, utils.ErrDatabaseError
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, utils.ErrDatabaseError
+	}
+	return operation, nil
+}
+
+func (r *LogbookRepository) LatestUndoableOperation(ctx context.Context, userID int) (*models.BulkOperation, error) {
+	operation := &models.BulkOperation{}
+	err := r.db.QueryRowContext(ctx, `
+		SELECT id, operation_type, affected_count, created_at, undone_at
+		FROM bulk_operations WHERE user_id = $1 AND operation_type = 'timestamp_shift' AND undone_at IS NULL
+		ORDER BY created_at DESC LIMIT 1`, userID).Scan(
+		&operation.ID, &operation.OperationType, &operation.AffectedCount, &operation.CreatedAt, &operation.UndoneAt,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, utils.ErrDatabaseError
+	}
+	return operation, nil
+}
+
+func (r *LogbookRepository) UndoBulkOperation(ctx context.Context, userID int, operationID string) (*models.BulkOperation, error) {
+	tx, err := r.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
+	if err != nil {
+		return nil, utils.ErrDatabaseError
+	}
+	defer tx.Rollback()
+	operation := &models.BulkOperation{ID: operationID}
+	var beforeState []byte
+	err = tx.QueryRowContext(ctx, `
+		SELECT operation_type, affected_count, created_at, undone_at, before_state
+		FROM bulk_operations WHERE id = $1 AND user_id = $2 FOR UPDATE`, operationID, userID).Scan(
+		&operation.OperationType, &operation.AffectedCount, &operation.CreatedAt, &operation.UndoneAt, &beforeState,
+	)
+	if err == sql.ErrNoRows {
+		return nil, utils.ErrBulkOperationNotFound
+	}
+	if err != nil {
+		return nil, utils.ErrDatabaseError
+	}
+	if operation.UndoneAt != nil {
+		return nil, utils.ErrBulkOperationUndone
+	}
+	if operation.OperationType != "timestamp_shift" {
+		return nil, utils.ErrInvalidInput
+	}
+	var states []timestampState
+	if err := json.Unmarshal(beforeState, &states); err != nil {
+		return nil, utils.ErrProcessingFailed
+	}
+	ids := make([]int, 0, len(states))
+	for _, state := range states {
+		ids = append(ids, state.ID)
+	}
+	if err := ensureOwnedDives(ctx, tx, userID, ids); err != nil {
+		return nil, err
+	}
+	for _, state := range states {
+		var conflict bool
+		if err := tx.QueryRowContext(ctx, `
+			SELECT EXISTS(SELECT 1 FROM dives target JOIN dives existing
+			  ON existing.user_id = target.user_id
+			 AND existing.dive_site_id IS NOT DISTINCT FROM target.dive_site_id
+			 AND existing.dive_datetime = $1
+			 WHERE target.id = $2 AND target.user_id = $3 AND NOT (existing.id = ANY($4)))`,
+			state.DateTime, state.ID, userID, pq.Array(ids)).Scan(&conflict); err != nil {
+			return nil, utils.ErrDatabaseError
+		}
+		if conflict {
+			return nil, utils.ErrTimestampConflict
+		}
+		if _, err := tx.ExecContext(ctx, `UPDATE dives SET dive_datetime = $1, updated_at = NOW() WHERE id = $2 AND user_id = $3`, state.DateTime, state.ID, userID); err != nil {
+			return nil, utils.ErrDatabaseError
+		}
+	}
+	now := time.Now()
+	if _, err := tx.ExecContext(ctx, `UPDATE bulk_operations SET undone_at = $1 WHERE id = $2 AND user_id = $3`, now, operationID, userID); err != nil {
+		return nil, utils.ErrDatabaseError
+	}
+	operation.UndoneAt = &now
+	if err := tx.Commit(); err != nil {
+		return nil, utils.ErrDatabaseError
+	}
+	return operation, nil
 }
 
 func ensureOwnedDives(ctx context.Context, tx *sql.Tx, userID int, diveIDs []int) error {

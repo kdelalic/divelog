@@ -19,6 +19,9 @@ type LogbookRepository interface {
 	RenumberDives(context.Context, int, models.RenumberDivesRequest) (int64, error)
 	BulkUpdateDives(context.Context, int, models.BulkDiveUpdateRequest) (int64, error)
 	BulkDeleteDives(context.Context, int, []int) (int64, error)
+	ShiftDiveTimes(context.Context, int, models.ShiftDiveTimesRequest) (*models.BulkOperation, error)
+	LatestUndoableOperation(context.Context, int) (*models.BulkOperation, error)
+	UndoBulkOperation(context.Context, int, string) (*models.BulkOperation, error)
 }
 
 type LogbookService struct {
@@ -67,4 +70,13 @@ func (s *LogbookService) BulkUpdateDives(ctx context.Context, userID int, reques
 }
 func (s *LogbookService) BulkDeleteDives(ctx context.Context, userID int, request models.BulkDiveDeleteRequest) (int64, error) {
 	return s.repository.BulkDeleteDives(ctx, userID, request.DiveIDs)
+}
+func (s *LogbookService) ShiftDiveTimes(ctx context.Context, userID int, request models.ShiftDiveTimesRequest) (*models.BulkOperation, error) {
+	return s.repository.ShiftDiveTimes(ctx, userID, request)
+}
+func (s *LogbookService) LatestUndoableOperation(ctx context.Context, userID int) (*models.BulkOperation, error) {
+	return s.repository.LatestUndoableOperation(ctx, userID)
+}
+func (s *LogbookService) UndoBulkOperation(ctx context.Context, userID int, operationID string) (*models.BulkOperation, error) {
+	return s.repository.UndoBulkOperation(ctx, userID, operationID)
 }

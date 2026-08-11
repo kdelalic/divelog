@@ -115,6 +115,16 @@ CREATE TABLE IF NOT EXISTS dive_tags (
     PRIMARY KEY (dive_id, tag_id)
 );
 
+CREATE TABLE IF NOT EXISTS bulk_operations (
+    id VARCHAR(32) PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    operation_type VARCHAR(50) NOT NULL,
+    before_state JSONB NOT NULL,
+    affected_count INTEGER NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    undone_at TIMESTAMP WITH TIME ZONE
+);
+
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_dives_user_id ON dives(user_id);
 CREATE INDEX IF NOT EXISTS idx_dives_datetime ON dives(dive_datetime);
@@ -126,6 +136,7 @@ CREATE INDEX IF NOT EXISTS idx_dives_rating ON dives(rating);
 CREATE INDEX IF NOT EXISTS idx_dives_trip_id ON dives(trip_id);
 CREATE INDEX IF NOT EXISTS idx_dives_user_number ON dives(user_id, dive_number);
 CREATE INDEX IF NOT EXISTS idx_dive_tags_tag_id ON dive_tags(tag_id);
+CREATE INDEX IF NOT EXISTS idx_bulk_operations_user_created ON bulk_operations(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_user_settings_user_id ON user_settings(user_id);
 
 -- Insert a default user for development

@@ -1,6 +1,20 @@
 // Helper functions for working with datetime strings
 import type { UserSettings } from './settings';
 
+// Dive timestamps represent wall-clock time at the site. Shift their calendar
+// fields without applying the browser's timezone or emitting a trailing Z.
+export const shiftDiveDateTime = (datetime: string, offsetMinutes: number): string => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/.exec(datetime);
+  if (!match) return datetime;
+  const [, year, month, day, hour, minute, second = '00'] = match;
+  const shifted = new Date(Date.UTC(
+    Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute) + offsetMinutes, Number(second),
+  ));
+  const part = (value: number) => String(value).padStart(2, '0');
+  return `${shifted.getUTCFullYear()}-${part(shifted.getUTCMonth() + 1)}-${part(shifted.getUTCDate())}` +
+    `T${part(shifted.getUTCHours())}:${part(shifted.getUTCMinutes())}:${part(shifted.getUTCSeconds())}`;
+};
+
 export const formatDiveDate = (datetime: string, settings?: UserSettings): string => {
   const date = new Date(datetime);
   const dateFormat = settings?.preferences?.dateFormat || 'ISO';

@@ -5,6 +5,7 @@ import (
 	"divelog-backend/models"
 	"divelog-backend/utils"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -233,12 +234,68 @@ func (h *LogbookHandler) BulkDeleteDives(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"deleted_count": count})
 }
 
+func (h *LogbookHandler) ShiftDiveTimes(c *gin.Context) {
+	userID, ok := middleware.RequireUserID(c)
+	if !ok {
+		return
+	}
+	var request models.ShiftDiveTimesRequest
+	if !middleware.BindAndValidateJSON(c, &request) {
+		return
+	}
+	operation, err := h.service.ShiftDiveTimes(c.Request.Context(), userID, request)
+	if err != nil {
+		respondLogbookError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, operation)
+}
+
+func (h *LogbookHandler) LatestUndoableOperation(c *gin.Context) {
+	userID, ok := middleware.RequireUserID(c)
+	if !ok {
+		return
+	}
+	operation, err := h.service.LatestUndoableOperation(c.Request.Context(), userID)
+	if err != nil {
+		respondLogbookError(c, err)
+		return
+	}
+	if operation == nil {
+		c.Status(http.StatusNoContent)
+		return
+	}
+	c.JSON(http.StatusOK, operation)
+}
+
+func (h *LogbookHandler) UndoBulkOperation(c *gin.Context) {
+	userID, ok := middleware.RequireUserID(c)
+	if !ok {
+		return
+	}
+	operationID := strings.TrimSpace(c.Param("id"))
+	if len(operationID) != 32 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid operation ID"})
+		return
+	}
+	operation, err := h.service.UndoBulkOperation(c.Request.Context(), userID, operationID)
+	if err != nil {
+		respondLogbookError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, operation)
+}
+
 func respondLogbookError(c *gin.Context, err error) {
 	switch err {
 	case utils.ErrTagNotFound, utils.ErrTripNotFound, utils.ErrDiveNotFound:
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 	case utils.ErrOrganizationConflict:
 		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+	case utils.ErrTimestampConflict, utils.ErrBulkOperationUndone:
+		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+	case utils.ErrBulkOperationNotFound:
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 	case utils.ErrInvalidInput:
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 	default:

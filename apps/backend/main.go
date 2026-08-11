@@ -129,6 +129,9 @@ func main() {
 			organizationRoutes.POST("/dives/renumber", logbookHandler.RenumberDives)
 			organizationRoutes.PATCH("/dives/bulk", logbookHandler.BulkUpdateDives)
 			organizationRoutes.POST("/dives/bulk-delete", logbookHandler.BulkDeleteDives)
+			organizationRoutes.POST("/dives/shift-times", logbookHandler.ShiftDiveTimes)
+			organizationRoutes.GET("/dives/bulk-operations/latest", logbookHandler.LatestUndoableOperation)
+			organizationRoutes.POST("/dives/bulk-operations/:id/undo", logbookHandler.UndoBulkOperation)
 		}
 
 		// Dive site endpoints (no user validation needed for these)

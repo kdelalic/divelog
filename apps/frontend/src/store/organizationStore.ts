@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { TagSummary, Trip } from '@/lib/dives';
-import { organizationApi, type BulkDiveUpdateInput, type TripInput } from '@/lib/api';
+import { organizationApi, type BulkDiveUpdateInput, type BulkOperation, type TripInput } from '@/lib/api';
 import useDiveStore from './diveStore';
 
 interface OrganizationState {
@@ -8,6 +8,7 @@ interface OrganizationState {
   trips: Trip[];
   isLoading: boolean;
   error: string | null;
+	latestShiftOperation: BulkOperation | null;
   load: () => Promise<void>;
   createTag: (name: string) => Promise<boolean>;
   updateTag: (id: number, name: string) => Promise<boolean>;
@@ -22,6 +23,8 @@ interface OrganizationState {
   }) => Promise<number | null>;
   bulkUpdateDives: (request: BulkDiveUpdateInput) => Promise<boolean>;
   bulkDeleteDives: (diveIds: number[]) => Promise<boolean>;
+	shiftDiveTimes: (diveIds: number[], offsetMinutes: number) => Promise<boolean>;
+	undoLatestTimeShift: () => Promise<boolean>;
 }
 
 const useOrganizationStore = create<OrganizationState>()((set, get) => {
@@ -44,14 +47,17 @@ const useOrganizationStore = create<OrganizationState>()((set, get) => {
     trips: [],
     isLoading: false,
     error: null,
+		latestShiftOperation: null,
     load: async () => {
       set({ isLoading: true, error: null });
-      const [tags, trips] = await Promise.all([organizationApi.fetchTags(), organizationApi.fetchTrips()]);
-      if (tags.error || trips.error) {
-        set({ isLoading: false, error: tags.error ?? trips.error ?? 'Could not load logbook organization' });
+      const [tags, trips, latestOperation] = await Promise.all([
+				organizationApi.fetchTags(), organizationApi.fetchTrips(), organizationApi.latestUndoableOperation(),
+			]);
+			if (tags.error || trips.error || latestOperation.error) {
+				set({ isLoading: false, error: tags.error ?? trips.error ?? latestOperation.error ?? 'Could not load logbook organization' });
         return;
       }
-      set({ tags: tags.data ?? [], trips: trips.data ?? [], isLoading: false, error: null });
+			set({ tags: tags.data ?? [], trips: trips.data ?? [], latestShiftOperation: latestOperation.data ?? null, isLoading: false, error: null });
     },
     createTag: (name) => run(() => organizationApi.createTag(name)),
     updateTag: (id, name) => run(() => organizationApi.updateTag(id, name)),
@@ -73,6 +79,28 @@ const useOrganizationStore = create<OrganizationState>()((set, get) => {
     },
     bulkUpdateDives: (request) => run(() => organizationApi.bulkUpdateDives(request)),
     bulkDeleteDives: (diveIds) => run(() => organizationApi.bulkDeleteDives(diveIds)),
+		shiftDiveTimes: async (diveIds, offsetMinutes) => {
+			set({ isLoading: true, error: null });
+			const result = await organizationApi.shiftDiveTimes(diveIds, offsetMinutes);
+			if (result.error) {
+				set({ isLoading: false, error: result.error });
+				return false;
+			}
+			await refresh();
+			return true;
+		},
+		undoLatestTimeShift: async () => {
+			const operation = get().latestShiftOperation;
+			if (!operation) return false;
+			set({ isLoading: true, error: null });
+			const result = await organizationApi.undoBulkOperation(operation.id);
+			if (result.error) {
+				set({ isLoading: false, error: result.error });
+				return false;
+			}
+			await refresh();
+			return true;
+		},
   };
 });
 

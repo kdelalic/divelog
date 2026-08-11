@@ -104,6 +104,12 @@ func TestBulkDiveUpdateRequiresAChange(t *testing.T) {
 	assert.Empty(t, (&BulkDiveDeleteRequest{DiveIDs: []int{1, 2}}).Validate())
 }
 
+func TestShiftDiveTimesRequestValidate(t *testing.T) {
+	assert.Empty(t, (&ShiftDiveTimesRequest{DiveIDs: []int{1, 2}, OffsetMinutes: -480}).Validate())
+	assert.Contains(t, (&ShiftDiveTimesRequest{DiveIDs: []int{1}, OffsetMinutes: 0}).Validate(), "offset_minutes")
+	assert.Contains(t, (&ShiftDiveTimesRequest{DiveIDs: []int{1}, OffsetMinutes: 10081}).Validate(), "offset_minutes")
+}
+
 func TestDiveSiteRequestValidate(t *testing.T) {
 	request := DiveSiteRequest{Name: "", Latitude: 91, Longitude: -181}
 

@@ -4,6 +4,7 @@ import (
 	"divelog-backend/utils"
 	"fmt"
 	"strings"
+	"time"
 )
 
 type TagRequest struct {
@@ -82,6 +83,19 @@ type BulkDiveDeleteRequest struct {
 	DiveIDs []int `json:"dive_ids"`
 }
 
+type ShiftDiveTimesRequest struct {
+	DiveIDs       []int `json:"dive_ids"`
+	OffsetMinutes int   `json:"offset_minutes"`
+}
+
+type BulkOperation struct {
+	ID            string     `json:"id"`
+	OperationType string     `json:"operation_type"`
+	AffectedCount int        `json:"affected_count"`
+	CreatedAt     time.Time  `json:"created_at"`
+	UndoneAt      *time.Time `json:"undone_at,omitempty"`
+}
+
 func validateDiveIDs(errors utils.ValidationErrors, diveIDs []int) {
 	if len(diveIDs) == 0 {
 		errors.Add("dive_ids", "must contain at least one dive")
@@ -153,6 +167,15 @@ func (request *BulkDiveUpdateRequest) Validate() utils.ValidationErrors {
 func (request *BulkDiveDeleteRequest) Validate() utils.ValidationErrors {
 	errors := utils.ValidationErrors{}
 	validateDiveIDs(errors, request.DiveIDs)
+	return errors
+}
+
+func (request *ShiftDiveTimesRequest) Validate() utils.ValidationErrors {
+	errors := utils.ValidationErrors{}
+	validateDiveIDs(errors, request.DiveIDs)
+	if request.OffsetMinutes == 0 || request.OffsetMinutes < -10080 || request.OffsetMinutes > 10080 {
+		errors.Add("offset_minutes", "must be between -10080 and 10080 and cannot be zero")
+	}
 	return errors
 }
 

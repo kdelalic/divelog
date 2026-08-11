@@ -40,6 +40,7 @@ import useOrganizationStore from "@/store/organizationStore";
 import LogbookOrganizationDialog from "@/components/LogbookOrganizationDialog";
 import BulkDiveEditDialog from "@/components/BulkDiveEditDialog";
 import type { BulkDiveUpdateInput } from "@/lib/api";
+import ShiftDiveTimesDialog from "@/components/ShiftDiveTimesDialog";
 
 const DiveLog = () => {
   const dives = useDiveStore((state) => state.dives);
@@ -54,6 +55,10 @@ const DiveLog = () => {
 	const loadOrganization = useOrganizationStore((state) => state.load);
 	const bulkUpdateDives = useOrganizationStore((state) => state.bulkUpdateDives);
 	const bulkDeleteDives = useOrganizationStore((state) => state.bulkDeleteDives);
+	const shiftDiveTimes = useOrganizationStore((state) => state.shiftDiveTimes);
+	const undoLatestTimeShift = useOrganizationStore((state) => state.undoLatestTimeShift);
+	const latestShiftOperation = useOrganizationStore((state) => state.latestShiftOperation);
+	const organizationError = useOrganizationStore((state) => state.error);
   const stats = calculateDiveStatistics(dives);
   const [searchParams, setSearchParams] = useSearchParams();
   const filterQuery = searchParams.toString();
@@ -78,6 +83,8 @@ const DiveLog = () => {
 	const [collapsedTrips, setCollapsedTrips] = useState<Set<string>>(new Set());
 	const [selectedDiveIds, setSelectedDiveIds] = useState<Set<number>>(new Set());
 	const [showBulkEdit, setShowBulkEdit] = useState(false);
+	const [showTimeShift, setShowTimeShift] = useState(false);
+	const [undoingShift, setUndoingShift] = useState(false);
 	const tripGroups = useMemo(() => {
 		const groups = new Map<string, { key: string; label: string; detail?: string; dives: Dive[] }>();
 		for (const dive of filteredDives) {
@@ -92,6 +99,7 @@ const DiveLog = () => {
 	}, [filteredDives]);
 	const visibleDiveIds = useMemo(() => filteredDives.map((dive) => dive.id), [filteredDives]);
 	const allVisibleSelected = visibleDiveIds.length > 0 && visibleDiveIds.every((id) => selectedDiveIds.has(id));
+	const selectedDives = useMemo(() => dives.filter((dive) => selectedDiveIds.has(dive.id)), [dives, selectedDiveIds]);
 
   // The matching backend route only exists outside release mode
   const isDevBuild = import.meta.env.DEV;
@@ -238,6 +246,18 @@ const DiveLog = () => {
 		if (await bulkDeleteDives(ids)) setSelectedDiveIds(new Set());
 	};
 
+	const handleTimeShift = async (offsetMinutes: number) => {
+		const success = await shiftDiveTimes([...selectedDiveIds], offsetMinutes);
+		if (success) setSelectedDiveIds(new Set());
+		return success;
+	};
+
+	const handleUndoTimeShift = async () => {
+		setUndoingShift(true);
+		await undoLatestTimeShift();
+		setUndoingShift(false);
+	};
+
   return (
     <div className="space-y-8">
       {/* Hero Section */}
@@ -318,6 +338,16 @@ const DiveLog = () => {
       </div>
 
       {/* Table Section */}
+	  {latestShiftOperation && (
+		<div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-blue-200 bg-blue-50 px-5 py-4 text-blue-950 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-100">
+			<div>
+				<p className="font-semibold">Timestamps shifted for {latestShiftOperation.affectedCount} dive{latestShiftOperation.affectedCount === 1 ? '' : 's'}</p>
+				<p className="text-sm opacity-80">The original timestamps are stored and can be restored.</p>
+			</div>
+			<Button variant="outline" size="sm" onClick={handleUndoTimeShift} disabled={undoingShift}>{undoingShift ? 'Undoing…' : 'Undo timestamp shift'}</Button>
+		</div>
+	  )}
+	  {organizationError && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{organizationError}</p>}
       <div id="table" className="overflow-hidden rounded-xl bg-card text-card-foreground shadow-sm ring-1 ring-border">
         <div className="border-b border-border bg-muted/30 px-8 py-6">
           <h3 className="text-xl font-semibold text-foreground">All Dives</h3>
@@ -476,6 +506,7 @@ const DiveLog = () => {
 		<div className="sticky bottom-4 z-30 mx-auto flex w-fit items-center gap-3 rounded-xl border border-border bg-card px-5 py-3 shadow-xl">
 			<span className="text-sm font-semibold">{selectedDiveIds.size} selected</span>
 			<Button size="sm" onClick={() => setShowBulkEdit(true)}>Edit selected</Button>
+			<Button size="sm" variant="outline" onClick={() => setShowTimeShift(true)}>Shift times</Button>
 			<Button size="sm" variant="outline" className="text-red-600 dark:text-red-400" onClick={handleBulkDelete}>Delete</Button>
 			<Button size="sm" variant="ghost" onClick={() => setSelectedDiveIds(new Set())}>Clear</Button>
 		</div>
@@ -495,6 +526,13 @@ const DiveLog = () => {
 		diveIds={[...selectedDiveIds]}
 		trips={trips}
 		onApply={handleBulkUpdate}
+	  />
+	  <ShiftDiveTimesDialog
+		open={showTimeShift}
+		onOpenChange={setShowTimeShift}
+		dives={selectedDives}
+		settings={settings}
+		onApply={handleTimeShift}
 	  />
 
       <Dialog open={showImport} onOpenChange={setShowImport}>

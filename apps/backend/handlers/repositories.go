@@ -44,4 +44,7 @@ type logbookService interface {
 	RenumberDives(context.Context, int, models.RenumberDivesRequest) (int64, error)
 	BulkUpdateDives(context.Context, int, models.BulkDiveUpdateRequest) (int64, error)
 	BulkDeleteDives(context.Context, int, models.BulkDiveDeleteRequest) (int64, error)
+	ShiftDiveTimes(context.Context, int, models.ShiftDiveTimesRequest) (*models.BulkOperation, error)
+	LatestUndoableOperation(context.Context, int) (*models.BulkOperation, error)
+	UndoBulkOperation(context.Context, int, string) (*models.BulkOperation, error)
 }

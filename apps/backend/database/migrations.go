@@ -46,6 +46,17 @@ func RunMigrations(ctx context.Context, db *sql.DB) error {
 		);
 		CREATE INDEX IF NOT EXISTS idx_dive_tags_tag_id ON dive_tags(tag_id);
 
+		CREATE TABLE IF NOT EXISTS bulk_operations (
+			id VARCHAR(32) PRIMARY KEY,
+			user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			operation_type VARCHAR(50) NOT NULL,
+			before_state JSONB NOT NULL,
+			affected_count INTEGER NOT NULL,
+			created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+			undone_at TIMESTAMP WITH TIME ZONE
+		);
+		CREATE INDEX IF NOT EXISTS idx_bulk_operations_user_created ON bulk_operations(user_id, created_at DESC);
+
 		WITH numbered AS (
 			SELECT d.id,
 			       COALESCE((SELECT MAX(existing.dive_number) FROM dives existing WHERE existing.user_id = d.user_id), 0)
