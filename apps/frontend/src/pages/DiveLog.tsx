@@ -59,7 +59,6 @@ const DiveLog = () => {
 	const undoLatestTimeShift = useOrganizationStore((state) => state.undoLatestTimeShift);
 	const latestShiftOperation = useOrganizationStore((state) => state.latestShiftOperation);
 	const organizationError = useOrganizationStore((state) => state.error);
-  const stats = calculateDiveStatistics(dives);
   const [searchParams, setSearchParams] = useSearchParams();
   const filterQuery = searchParams.toString();
   const filters = useMemo(
@@ -70,6 +69,7 @@ const DiveLog = () => {
     () => sortDivesNewestFirst(filterDives(dives, filters, settings.units.depth)),
     [dives, filters, settings.units.depth],
   );
+	const stats = useMemo(() => calculateDiveStatistics(filteredDives), [filteredDives]);
   const hasActiveFilters = countActiveDiveFilters(filters) > 0;
   const [selectedDive, setSelectedDive] = useState<Dive | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -330,10 +330,10 @@ const DiveLog = () => {
       {/* Charts Section */}
       <div className="grid lg:grid-cols-5 gap-8">
         <div className="lg:col-span-3">
-          <DiveChart dives={dives} />
+          <DiveChart dives={filteredDives} />
         </div>
         <div className="lg:col-span-2">
-          <RecentDives dives={dives} />
+          <RecentDives dives={filteredDives} />
         </div>
       </div>
 

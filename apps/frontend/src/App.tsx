@@ -13,6 +13,7 @@ import DiveSites from "./pages/DiveSites";
 import useDiveStore from "./store/diveStore";
 import useSettingsStore from "./store/settingsStore";
 import useOrganizationStore from "./store/organizationStore";
+import Statistics from "./pages/Statistics";
 import './App.css'
 
 const router = createBrowserRouter([
@@ -43,6 +44,10 @@ const router = createBrowserRouter([
       {
         path: "dive-sites",
         element: <DiveSites />,
+		},
+		{
+			path: "statistics",
+			element: <Statistics />,
       }
     ],
   },

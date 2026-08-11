@@ -36,6 +36,12 @@ const Layout = () => {
               >
                 Dive Sites
               </Link>
+			  <Link
+				to="/statistics"
+				className="cursor-pointer rounded-lg px-4 py-2 text-base font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground lg:text-lg"
+			  >
+				Statistics
+			  </Link>
               <Link 
                 to="/settings" 
                 className="cursor-pointer rounded-lg px-4 py-2 text-base font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground lg:text-lg"

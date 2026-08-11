@@ -1,4 +1,4 @@
-import type { Dive } from './dives';
+import { getDiveGasNames, type Dive } from './dives';
 import type { DepthUnit } from './settings';
 
 export const DIVE_TYPES = [
@@ -18,10 +18,13 @@ export interface DiveFilters {
   endDate: string;
   minDepth: string;
   maxDepth: string;
+	minDuration: string;
+	maxDuration: string;
   diveType: DiveTypeFilter;
   minRating: RatingFilter;
 	tag: string;
 	tripId: string;
+	gas: string;
 }
 
 export const EMPTY_DIVE_FILTERS: DiveFilters = {
@@ -30,10 +33,13 @@ export const EMPTY_DIVE_FILTERS: DiveFilters = {
   endDate: '',
   minDepth: '',
   maxDepth: '',
+	minDuration: '',
+	maxDuration: '',
   diveType: '',
   minRating: '',
 	tag: '',
 	tripId: '',
+	gas: '',
 };
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -65,6 +71,8 @@ export const diveFiltersFromSearchParams = (params: URLSearchParams): DiveFilter
     endDate: readDate(params.get('to')),
     minDepth: readNonNegativeNumber(params.get('minDepth')),
     maxDepth: readNonNegativeNumber(params.get('maxDepth')),
+		minDuration: readNonNegativeNumber(params.get('minDuration')),
+		maxDuration: readNonNegativeNumber(params.get('maxDuration')),
     diveType: DIVE_TYPES.includes(diveType as (typeof DIVE_TYPES)[number])
       ? diveType as DiveTypeFilter
       : '',
@@ -73,6 +81,7 @@ export const diveFiltersFromSearchParams = (params: URLSearchParams): DiveFilter
       : '',
 		tag: params.get('tag')?.trim() ?? '',
 		tripId: /^\d+$/.test(params.get('trip') ?? '') ? params.get('trip') ?? '' : '',
+		gas: params.get('gas')?.trim() ?? '',
   };
 };
 
@@ -85,10 +94,13 @@ export const diveFiltersToSearchParams = (filters: DiveFilters): URLSearchParams
     ['to', filters.endDate],
     ['minDepth', filters.minDepth],
     ['maxDepth', filters.maxDepth],
+		['minDuration', filters.minDuration],
+		['maxDuration', filters.maxDuration],
     ['type', filters.diveType],
     ['rating', filters.minRating],
 		['tag', filters.tag],
 		['trip', filters.tripId],
+		['gas', filters.gas],
   ];
 
   for (const [key, value] of entries) {
@@ -117,9 +129,12 @@ export const filterDives = (
   const minDepth = depthInMeters(filters.minDepth, depthUnit);
   const maxDepth = depthInMeters(filters.maxDepth, depthUnit);
   const minRating = filters.minRating === '' ? undefined : Number(filters.minRating);
+	const minDuration = filters.minDuration === '' ? undefined : Number(filters.minDuration);
+	const maxDuration = filters.maxDuration === '' ? undefined : Number(filters.maxDuration);
 
   return dives.filter((dive) => {
-		const searchableText = [dive.location, dive.buddy, dive.notes, dive.trip?.name, ...(dive.tags ?? [])]
+		const gasNames = getDiveGasNames(dive);
+		const searchableText = [dive.location, dive.buddy, dive.notes, dive.trip?.name, ...(dive.tags ?? []), ...gasNames]
       .filter((value): value is string => Boolean(value))
       .join(' ')
       .toLocaleLowerCase();
@@ -131,10 +146,13 @@ export const filterDives = (
       && (filters.endDate === '' || diveDate <= filters.endDate)
       && (minDepth === undefined || dive.depth >= minDepth)
       && (maxDepth === undefined || dive.depth <= maxDepth)
+			&& (minDuration === undefined || dive.duration >= minDuration)
+			&& (maxDuration === undefined || dive.duration <= maxDuration)
       && (filters.diveType === '' || dive.diveType === filters.diveType)
       && (minRating === undefined || (dive.rating ?? 0) >= minRating)
 			&& (filters.tag === '' || (dive.tags ?? []).some((tag) => tag.toLocaleLowerCase() === filters.tag.toLocaleLowerCase()))
 			&& (filters.tripId === '' || String(dive.trip?.id ?? '') === filters.tripId)
+			&& (filters.gas === '' || gasNames.some((gas) => gas.toLocaleLowerCase() === filters.gas.toLocaleLowerCase()))
     );
   });
 };

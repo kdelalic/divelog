@@ -140,3 +140,11 @@ export const getGasMixColor = (gasMix: GasMix): string => {
     return '#6B7280'; // Gray for air
   };
 };
+
+export const getDiveGasNames = (dive: Pick<Dive, 'equipment'>): string[] => [
+  ...new Set((dive.equipment?.tanks ?? []).map((tank) => tank.gas_mix.name ?? (
+    tank.gas_mix.helium
+      ? `Trimix ${tank.gas_mix.oxygen}/${tank.gas_mix.helium}`
+      : tank.gas_mix.oxygen === 21 ? 'Air' : `EANx${tank.gas_mix.oxygen}`
+  ))),
+];

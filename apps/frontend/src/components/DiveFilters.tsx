@@ -65,6 +65,8 @@ const DiveFilters = ({
       key: 'maxDepth',
       label: `Depth ≤ ${filters.maxDepth}${depthUnit === 'meters' ? 'm' : 'ft'}`,
     },
+		filters.minDuration && { key: 'minDuration', label: `Duration ≥ ${filters.minDuration} min` },
+		filters.maxDuration && { key: 'maxDuration', label: `Duration ≤ ${filters.maxDuration} min` },
     filters.diveType && {
       key: 'diveType',
       label: DIVE_TYPE_LABELS[filters.diveType],
@@ -75,6 +77,7 @@ const DiveFilters = ({
     },
 		filters.tag && { key: 'tag', label: `Tag: ${filters.tag}` },
 		filters.tripId && { key: 'tripId', label: `Trip: ${trips.find((trip) => String(trip.id) === filters.tripId)?.name ?? filters.tripId}` },
+		filters.gas && { key: 'gas', label: `Gas: ${filters.gas}` },
   ].filter((filter): filter is { key: keyof DiveFilterValues; label: string } => Boolean(filter));
 
   return (
@@ -108,7 +111,7 @@ const DiveFilters = ({
         </div>
       </div>
 
-		<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
+		<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
         <div className="space-y-2">
           <Label htmlFor="filter-start-date">From</Label>
           <Input
@@ -164,6 +167,14 @@ const DiveFilters = ({
           />
         </div>
         <div className="space-y-2">
+			<Label htmlFor="filter-min-duration">Min duration (min)</Label>
+			<Input id="filter-min-duration" type="number" min="0" placeholder="Any" value={filters.minDuration} onChange={(event) => update('minDuration', event.target.value)} className="border-input bg-background" />
+		</div>
+		<div className="space-y-2">
+			<Label htmlFor="filter-max-duration">Max duration (min)</Label>
+			<Input id="filter-max-duration" type="number" min="0" placeholder="Any" value={filters.maxDuration} onChange={(event) => update('maxDuration', event.target.value)} className="border-input bg-background" />
+		</div>
+		<div className="space-y-2">
           <Label htmlFor="filter-dive-type">Dive type</Label>
           <Select
             value={filters.diveType || 'all'}
@@ -214,6 +225,10 @@ const DiveFilters = ({
 						{tags.map((tag) => <SelectItem key={tag} value={tag}>{tag}</SelectItem>)}
 					</SelectContent>
 				</Select>
+			</div>
+			<div className="space-y-2">
+				<Label htmlFor="filter-gas">Gas</Label>
+				<Input id="filter-gas" value={filters.gas} onChange={(event) => update('gas', event.target.value)} placeholder="Air, EANx32…" className="border-input bg-background" />
 			</div>
 			<div className="space-y-2">
 				<Label htmlFor="filter-trip">Trip</Label>

@@ -81,6 +81,15 @@ describe('filterDives', () => {
     }), 'meters').map(({ id }) => id)).toEqual([1]);
   });
 
+	it('filters by duration and recorded gas mix', () => {
+		const gasDive = dive({
+			id: 4,
+			duration: 62,
+			equipment: { tanks: [{ size: 12, working_pressure: 232, start_pressure: 200, end_pressure: 60, gas_mix: { oxygen: 32, name: 'EANx32' } }] },
+		});
+		expect(filterDives([...dives, gasDive], filters({ minDuration: '60', maxDuration: '70', gas: 'eanx32' }), 'meters').map(({ id }) => id)).toEqual([4]);
+	});
+
   it('does not treat an unrated dive as meeting a rating filter', () => {
     expect(filterDives(dives, filters({ minRating: '1' }), 'meters').map(({ id }) => id)).toEqual([1, 2]);
   });
@@ -97,12 +106,13 @@ describe('filter URL state', () => {
     const params = diveFiltersToSearchParams(filters({
       query: 'kelp forest',
       minDepth: '10',
+			minDuration: '30',
       diveType: 'recreational',
 			tag: 'wreck',
 			tripId: '9',
     }));
 
-		expect(params.toString()).toBe('q=kelp+forest&minDepth=10&type=recreational&tag=wreck&trip=9');
+		expect(params.toString()).toBe('q=kelp+forest&minDepth=10&minDuration=30&type=recreational&tag=wreck&trip=9');
   });
 
   it('preserves spaces while the user is typing a multi-word search', () => {
