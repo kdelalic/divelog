@@ -262,10 +262,14 @@ function parseSubsurfaceCSVRow(row: SubsurfaceCSVRow): Dive | null {
     // Parse rating
     const ratingStr = row.rating?.trim();
     const rating = ratingStr && !isNaN(parseFloat(ratingStr)) ? parseFloat(ratingStr) : undefined;
+		const parsedDiveNumber = Number(row['dive number']);
+		const tags = row.tags?.split(',').map((tag) => tag.trim()).filter(Boolean);
     
     // Create dive object
     const dive: Dive = {
       id: 0, // Will be assigned by the store
+			diveNumber: Number.isInteger(parsedDiveNumber) && parsedDiveNumber > 0 ? parsedDiveNumber : undefined,
+			tags: tags?.length ? tags : undefined,
       datetime,
       location,
       depth,

@@ -1,23 +1,27 @@
 import * as z from 'zod';
 import type { Dive } from './dives';
+import type { Trip } from './dives';
 import type { UserSettings } from './settings';
 import type { DiveSite } from './api';
 
 export const BACKUP_FORMAT = 'subsurface-web-backup' as const;
-export const BACKUP_VERSION = 1 as const;
+export const BACKUP_VERSION = 2 as const;
 export const MAX_BACKUP_BYTES = 50 * 1024 * 1024;
 
 export type BackupDive = Omit<Dive, 'id'>;
 export type BackupDiveSite = Pick<DiveSite, 'name' | 'latitude' | 'longitude' | 'description'>;
+export type BackupTrip = Omit<Trip, 'id' | 'diveCount'>;
 
 export interface DiveLogBackup {
   format: typeof BACKUP_FORMAT;
-  version: typeof BACKUP_VERSION;
+	version: 1 | typeof BACKUP_VERSION;
   createdAt: string;
   data: {
     dives: BackupDive[];
     diveSites: BackupDiveSite[];
     settings: UserSettings;
+		trips: BackupTrip[];
+		tags: string[];
   };
 }
 
@@ -129,6 +133,17 @@ const backupDiveSchema = z.object({
     depth: finiteNumber.positive().max(100),
     duration: z.number().int().min(1).max(180),
   })).optional(),
+	diveNumber: z.number().int().min(1).max(10000000).optional(),
+	tags: z.array(z.string().trim().min(1).max(100)).optional(),
+	trip: z.object({
+		id: z.number().int().nonnegative().default(0),
+		name: z.string().trim().min(1).max(255),
+		location: optionalText(255),
+		startDate: optionalText(10),
+		endDate: optionalText(10),
+		notes: optionalText(10000),
+		diveCount: z.number().int().nonnegative().optional(),
+	}).optional(),
 });
 
 const settingsSchema = z.object({
@@ -159,7 +174,7 @@ const settingsSchema = z.object({
 
 const backupSchema = z.object({
   format: z.literal(BACKUP_FORMAT),
-  version: z.literal(BACKUP_VERSION),
+	version: z.union([z.literal(1), z.literal(BACKUP_VERSION)]),
   createdAt: z.string().datetime(),
   data: z.object({
     dives: z.array(backupDiveSchema),
@@ -170,6 +185,14 @@ const backupSchema = z.object({
       description: optionalText(10000),
     })),
     settings: settingsSchema,
+		trips: z.array(z.object({
+			name: z.string().trim().min(1).max(255),
+			location: optionalText(255),
+			startDate: optionalText(10),
+			endDate: optionalText(10),
+			notes: optionalText(10000),
+		})).default([]),
+		tags: z.array(z.string().trim().min(1).max(100)).default([]),
   }),
 });
 
@@ -185,6 +208,8 @@ export const createDiveLogBackup = (
   diveSites: DiveSite[],
   settings: UserSettings,
   createdAt = new Date(),
+	trips: Trip[] = [],
+	tags: string[] = [],
 ): DiveLogBackup => ({
   format: BACKUP_FORMAT,
   version: BACKUP_VERSION,
@@ -205,6 +230,9 @@ export const createDiveLogBackup = (
       rating: dive.rating,
       notes: dive.notes,
       safetyStops: dive.safetyStops,
+			diveNumber: dive.diveNumber,
+			tags: dive.tags,
+			trip: dive.trip ? { ...dive.trip, id: 0, diveCount: undefined } : undefined,
     })),
     diveSites: diveSites.map(({ name, latitude, longitude, description }) => ({
       name,
@@ -213,6 +241,8 @@ export const createDiveLogBackup = (
       ...(description === undefined ? {} : { description }),
     })),
     settings: structuredClone(settings),
+		trips: trips.map(({ name, location, startDate, endDate, notes }) => ({ name, location, startDate, endDate, notes })),
+		tags: [...tags],
   },
 });
 
@@ -322,6 +352,7 @@ const csvCell = (value: unknown): string => {
 
 const CSV_COLUMNS: Array<{ header: string; value: (dive: Dive) => unknown }> = [
   { header: 'datetime', value: (dive) => dive.datetime },
+	{ header: 'dive_number', value: (dive) => dive.diveNumber },
   { header: 'location', value: (dive) => dive.location },
   { header: 'latitude', value: (dive) => dive.lat },
   { header: 'longitude', value: (dive) => dive.lng },
@@ -331,6 +362,11 @@ const CSV_COLUMNS: Array<{ header: string; value: (dive: Dive) => unknown }> = [
   { header: 'dive_type', value: (dive) => dive.diveType },
   { header: 'rating', value: (dive) => dive.rating },
   { header: 'notes', value: (dive) => dive.notes },
+	{ header: 'tags', value: (dive) => dive.tags?.join(', ') },
+	{ header: 'trip_name', value: (dive) => dive.trip?.name },
+	{ header: 'trip_location', value: (dive) => dive.trip?.location },
+	{ header: 'trip_start_date', value: (dive) => dive.trip?.startDate },
+	{ header: 'trip_end_date', value: (dive) => dive.trip?.endDate },
   { header: 'water_temp_surface_c', value: (dive) => dive.conditions?.waterTemp?.surface },
   { header: 'water_temp_bottom_c', value: (dive) => dive.conditions?.waterTemp?.bottom },
   { header: 'air_temp_c', value: (dive) => dive.conditions?.airTemp },

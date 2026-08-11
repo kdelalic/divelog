@@ -257,6 +257,7 @@ const parseUDDFDive = (
 
   return {
     id,
+		diveNumber: beforeDive?.divenumber && Number(beforeDive.divenumber) > 0 ? Number(beforeDive.divenumber) : undefined,
     datetime,
     location,
     depth: Math.round(depth * 10) / 10, // Round to 1 decimal place

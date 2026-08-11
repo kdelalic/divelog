@@ -28,7 +28,7 @@ const filters = (overrides: Partial<DiveFilters> = {}): DiveFilters => ({
 
 describe('filterDives', () => {
   const dives = [
-    dive({ id: 1, buddy: 'Sam Rivera', notes: 'Kelp forest', rating: 5, diveType: 'recreational' }),
+		dive({ id: 1, buddy: 'Sam Rivera', notes: 'Kelp forest', rating: 5, diveType: 'recreational', tags: ['Wreck'], trip: { id: 9, name: 'Monterey weekend' } }),
     dive({
       id: 2,
       datetime: '2024-01-10T14:00:00',
@@ -84,6 +84,12 @@ describe('filterDives', () => {
   it('does not treat an unrated dive as meeting a rating filter', () => {
     expect(filterDives(dives, filters({ minRating: '1' }), 'meters').map(({ id }) => id)).toEqual([1, 2]);
   });
+
+	it('searches and filters by reusable tag and trip', () => {
+		expect(filterDives(dives, filters({ query: 'monterey weekend' }), 'meters').map(({ id }) => id)).toEqual([1]);
+		expect(filterDives(dives, filters({ tag: 'wreck', tripId: '9' }), 'meters').map(({ id }) => id)).toEqual([1]);
+		expect(filterDives(dives, filters({ tag: 'drift' }), 'meters')).toEqual([]);
+	});
 });
 
 describe('filter URL state', () => {
@@ -92,9 +98,11 @@ describe('filter URL state', () => {
       query: 'kelp forest',
       minDepth: '10',
       diveType: 'recreational',
+			tag: 'wreck',
+			tripId: '9',
     }));
 
-    expect(params.toString()).toBe('q=kelp+forest&minDepth=10&type=recreational');
+		expect(params.toString()).toBe('q=kelp+forest&minDepth=10&type=recreational&tag=wreck&trip=9');
   });
 
   it('preserves spaces while the user is typing a multi-word search', () => {

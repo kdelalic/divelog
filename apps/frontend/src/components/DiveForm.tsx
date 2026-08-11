@@ -16,6 +16,7 @@ import {
 } from '@/lib/diveForm';
 import type { UserSettings } from '@/lib/settings';
 import { unitLabels } from '@/lib/settings';
+import useOrganizationStore from '@/store/organizationStore';
 
 interface DiveFormProps {
   heading: string;
@@ -49,6 +50,9 @@ const DiveForm = ({
   const [isEquipmentOpen, setIsEquipmentOpen] = useState(Boolean(initialDive?.equipment));
   const [isConditionsOpen, setIsConditionsOpen] = useState(Boolean(initialDive?.conditions));
   const [isStopsOpen, setIsStopsOpen] = useState(Boolean(initialDive?.safetyStops?.length));
+	const tags = useOrganizationStore((state) => state.tags);
+	const trips = useOrganizationStore((state) => state.trips);
+	const loadOrganization = useOrganizationStore((state) => state.load);
 
   const {
     control,
@@ -70,8 +74,12 @@ const DiveForm = ({
     reset(diveToFormValues(initialDive, settings));
   }, [initialDive, reset, settings]);
 
+	useEffect(() => {
+		if (tags.length === 0 || trips.length === 0) void loadOrganization();
+	}, [loadOrganization, tags.length, trips.length]);
+
   const submit = handleSubmit(async (values) => {
-    await onSubmit(diveFormValuesToDive(values, settings, equipment, initialDive));
+		await onSubmit(diveFormValuesToDive(values, settings, equipment, initialDive, trips));
   });
 
   const depthLabel = unitLabels.depth[settings.units.depth];
@@ -103,6 +111,45 @@ const DiveForm = ({
           <input type="text" id="location" {...register('location')} className={fieldClassName} />
           <FieldError message={errors.location?.message} />
         </div>
+
+		<div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+			<div>
+				<label htmlFor="diveNumber" className={labelClassName}>Dive number</label>
+				<input
+					type="number"
+					id="diveNumber"
+					min="1"
+					placeholder="Assigned automatically"
+					{...register('diveNumber', { setValueAs: optionalNumberInput })}
+					className={fieldClassName}
+				/>
+				<FieldError message={errors.diveNumber?.message} />
+			</div>
+			<div>
+				<label htmlFor="tripId" className={labelClassName}>Trip</label>
+				<select id="tripId" {...register('tripId')} className={fieldClassName}>
+					<option value="">No trip</option>
+					{trips.map((trip) => <option key={trip.id} value={trip.id}>{trip.name}</option>)}
+				</select>
+			</div>
+		</div>
+
+		<div>
+			<label htmlFor="tags" className={labelClassName}>Tags</label>
+			<input
+				type="text"
+				id="tags"
+				list="known-dive-tags"
+				{...register('tags')}
+				className={fieldClassName}
+				placeholder="wreck, training, night (comma-separated)"
+			/>
+			<datalist id="known-dive-tags">
+				{tags.map((tag) => <option key={tag.id} value={tag.name} />)}
+			</datalist>
+			<FieldError message={errors.tags?.message} />
+			<p className="mt-1 text-xs text-muted-foreground">New names become reusable tags when the dive is saved.</p>
+		</div>
 
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
           <div>

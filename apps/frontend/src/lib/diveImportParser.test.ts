@@ -41,7 +41,7 @@ describe('parseDiveImportFile real export fixtures', () => {
 
     expect(result.format).toBe('subsurface-csv');
     expect(result.dives).toHaveLength(41);
-    expect(result.dives[40]).toMatchObject({ location: 'La Jolla Cove', depth: 7.41, duration: 77 });
+		expect(result.dives[40]).toMatchObject({ diveNumber: 41, location: 'La Jolla Cove', depth: 7.41, duration: 77 });
   });
 
   it('imports the Subsurface dive-computer profile CSV export', async () => {
@@ -54,6 +54,7 @@ describe('parseDiveImportFile real export fixtures', () => {
     expect(result.dives.reduce((count, dive) => count + (dive.samples?.length ?? 0), 0)).toBe(7105);
     expect(result.dives[40]).toMatchObject({
       id: 41,
+			diveNumber: 41,
       datetime: '2026-07-03T12:08:43',
       depth: 7.35,
       duration: 77,
@@ -74,6 +75,7 @@ describe('parseDiveImportFile real export fixtures', () => {
       expect(result.dives.flatMap(dive => dive.equipment?.tanks ?? []).every(tank => tank.size > 0)).toBe(true);
       expect(result.dives[40]).toMatchObject({
         id: 41,
+			diveNumber: 41,
         location: 'La Jolla Cove',
         depth: 7.41,
         duration: 77,

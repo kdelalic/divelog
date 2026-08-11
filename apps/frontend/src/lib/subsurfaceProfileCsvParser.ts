@@ -76,6 +76,7 @@ export const parseSubsurfaceProfileCSV = (csvText: string): Dive[] => {
     }, 0);
     return {
       id: group.number,
+			diveNumber: group.number > 0 ? group.number : undefined,
       datetime: `${group.date}T${group.time}`,
       location: 'Unknown Location',
       depth: Math.round(maxDepth * 100) / 100,

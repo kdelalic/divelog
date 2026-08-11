@@ -20,6 +20,8 @@ export interface DiveFilters {
   maxDepth: string;
   diveType: DiveTypeFilter;
   minRating: RatingFilter;
+	tag: string;
+	tripId: string;
 }
 
 export const EMPTY_DIVE_FILTERS: DiveFilters = {
@@ -30,6 +32,8 @@ export const EMPTY_DIVE_FILTERS: DiveFilters = {
   maxDepth: '',
   diveType: '',
   minRating: '',
+	tag: '',
+	tripId: '',
 };
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -67,6 +71,8 @@ export const diveFiltersFromSearchParams = (params: URLSearchParams): DiveFilter
     minRating: ['1', '2', '3', '4', '5'].includes(minRating ?? '')
       ? minRating as RatingFilter
       : '',
+		tag: params.get('tag')?.trim() ?? '',
+		tripId: /^\d+$/.test(params.get('trip') ?? '') ? params.get('trip') ?? '' : '',
   };
 };
 
@@ -81,6 +87,8 @@ export const diveFiltersToSearchParams = (filters: DiveFilters): URLSearchParams
     ['maxDepth', filters.maxDepth],
     ['type', filters.diveType],
     ['rating', filters.minRating],
+		['tag', filters.tag],
+		['trip', filters.tripId],
   ];
 
   for (const [key, value] of entries) {
@@ -111,7 +119,7 @@ export const filterDives = (
   const minRating = filters.minRating === '' ? undefined : Number(filters.minRating);
 
   return dives.filter((dive) => {
-    const searchableText = [dive.location, dive.buddy, dive.notes]
+		const searchableText = [dive.location, dive.buddy, dive.notes, dive.trip?.name, ...(dive.tags ?? [])]
       .filter((value): value is string => Boolean(value))
       .join(' ')
       .toLocaleLowerCase();
@@ -125,6 +133,8 @@ export const filterDives = (
       && (maxDepth === undefined || dive.depth <= maxDepth)
       && (filters.diveType === '' || dive.diveType === filters.diveType)
       && (minRating === undefined || (dive.rating ?? 0) >= minRating)
+			&& (filters.tag === '' || (dive.tags ?? []).some((tag) => tag.toLocaleLowerCase() === filters.tag.toLocaleLowerCase()))
+			&& (filters.tripId === '' || String(dive.trip?.id ?? '') === filters.tripId)
     );
   });
 };

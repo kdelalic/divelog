@@ -58,6 +58,8 @@ describe('parseSubsurfaceCSV', () => {
     expect(dive.notes).toBe('Great dive');
     expect(dive.rating).toBe(4);
     expect(dive.diveType).toBe('recreational');
+		expect(dive.diveNumber).toBe(1);
+		expect(dive.tags).toEqual(['reef']);
   });
 
   // The suite runs in UTC+14, so appending a 'Z' as the old code did would roll

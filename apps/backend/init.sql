@@ -52,10 +52,35 @@ CREATE TABLE IF NOT EXISTS dive_sites (
 );
 
 -- Create dives table
+CREATE TABLE IF NOT EXISTS trips (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    location VARCHAR(255),
+    start_date DATE,
+    end_date DATE,
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    CHECK (end_date IS NULL OR start_date IS NULL OR end_date >= start_date)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_trips_user_name ON trips(user_id, lower(name));
+
+CREATE TABLE IF NOT EXISTS tags (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_tags_user_name ON tags(user_id, lower(name));
+
 CREATE TABLE IF NOT EXISTS dives (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
     dive_site_id INTEGER REFERENCES dive_sites(id) ON DELETE SET NULL,
+	dive_number INTEGER,
+	trip_id INTEGER REFERENCES trips(id) ON DELETE SET NULL,
     
     dive_datetime TIMESTAMP NOT NULL,
     max_depth DECIMAL(5, 2) NOT NULL, -- stored in meters
@@ -84,6 +109,12 @@ CREATE TABLE IF NOT EXISTS dives (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS dive_tags (
+    dive_id INTEGER NOT NULL REFERENCES dives(id) ON DELETE CASCADE,
+    tag_id INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+    PRIMARY KEY (dive_id, tag_id)
+);
+
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_dives_user_id ON dives(user_id);
 CREATE INDEX IF NOT EXISTS idx_dives_datetime ON dives(dive_datetime);
@@ -92,6 +123,9 @@ CREATE INDEX IF NOT EXISTS idx_dives_equipment ON dives USING GIN (equipment); -
 CREATE INDEX IF NOT EXISTS idx_dives_conditions ON dives USING GIN (conditions); -- for JSONB queries
 CREATE INDEX IF NOT EXISTS idx_dives_dive_type ON dives(dive_type);
 CREATE INDEX IF NOT EXISTS idx_dives_rating ON dives(rating);
+CREATE INDEX IF NOT EXISTS idx_dives_trip_id ON dives(trip_id);
+CREATE INDEX IF NOT EXISTS idx_dives_user_number ON dives(user_id, dive_number);
+CREATE INDEX IF NOT EXISTS idx_dive_tags_tag_id ON dive_tags(tag_id);
 CREATE INDEX IF NOT EXISTS idx_user_settings_user_id ON user_settings(user_id);
 
 -- Insert a default user for development

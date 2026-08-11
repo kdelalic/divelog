@@ -66,15 +66,15 @@ analytics, and higher-fidelity Subsurface imports.
 
 ### Tags, Trips, and Numbering
 
-- [ ] Add reusable tags to dives
-- [ ] Add trip records with name, location, dates, and notes
-- [ ] Assign and remove dives from trips
-- [ ] Group and collapse the dive list by trip
-- [ ] Merge and split trips
-- [ ] Store user-visible dive numbers independently from database IDs
-- [ ] Renumber all dives or a selected range
-- [ ] Extend filters to include tags and trips
-- [ ] Preserve tags, trips, and dive numbers during import and backup/restore
+- [x] Add reusable tags to dives
+- [x] Add trip records with name, location, dates, and notes
+- [x] Assign and remove dives from trips
+- [x] Group and collapse the dive list by trip
+- [x] Merge and split trips
+- [x] Store user-visible dive numbers independently from database IDs
+- [x] Renumber all dives or a selected date range
+- [x] Extend filters to include tags and trips
+- [x] Preserve tags, trips, and dive numbers during import and backup/restore
 
 ### Bulk Logbook Operations
 
@@ -225,11 +225,11 @@ Subsurface parity unless the upstream product adds an equivalent capability.
 
 ## Next Sprint
 
-1. Define the trip, tag, and user-visible dive-number data model.
-2. Implement tag management and trip CRUD.
-3. Add trip grouping, tags, and dive numbers to the dive log.
-4. Extend filtering, imports, and backups for the new fields.
-5. Add multi-select as the foundation for bulk editing.
+1. Add multi-select to the dive list.
+2. Add bulk editing for common dive fields.
+3. Add bulk tag and trip assignment.
+4. Add timestamp shifting for selected dives.
+5. Design undo for destructive bulk operations.
 
 ## Reference
 

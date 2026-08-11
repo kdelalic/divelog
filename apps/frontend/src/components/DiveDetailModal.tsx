@@ -66,7 +66,7 @@ const DiveDetailModal = ({ dive, isOpen, onClose }: DiveDetailModalProps) => {
             {dive.location}
           </DialogTitle>
           <DialogDescription>
-            Dive #{dive.id} • {formatDiveDateTimeLong(dive.datetime, settings)}
+			Dive #{dive.diveNumber ?? '—'} • {formatDiveDateTimeLong(dive.datetime, settings)}
           </DialogDescription>
         </DialogHeader>
 
@@ -109,6 +109,8 @@ const DiveDetailModal = ({ dive, isOpen, onClose }: DiveDetailModalProps) => {
                     value={hasCoordinates ? `${dive.lat.toFixed(4)}, ${dive.lng.toFixed(4)}` : 'Not recorded'}
                   />
                   <DetailRow label="Dive type" value={titleCase(dive.diveType)} />
+				  <DetailRow label="Trip" value={dive.trip?.name ?? 'Not assigned'} />
+				  <DetailRow label="Tags" value={dive.tags?.length ? dive.tags.join(', ') : 'None'} />
                 </CardContent>
               </Card>
 

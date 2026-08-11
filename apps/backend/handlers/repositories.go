@@ -29,3 +29,17 @@ type settingsRepository interface {
 	GetByUserID(context.Context, int) (*models.UserSettings, error)
 	Update(context.Context, *models.UserSettings) error
 }
+
+type logbookService interface {
+	GetTags(context.Context, int) ([]models.TagSummary, error)
+	CreateTag(context.Context, int, models.TagRequest) (*models.TagSummary, error)
+	UpdateTag(context.Context, int, int, models.TagRequest) (*models.TagSummary, error)
+	DeleteTag(context.Context, int, int) error
+	GetTrips(context.Context, int) ([]models.Trip, error)
+	CreateTrip(context.Context, int, models.TripRequest) (*models.Trip, error)
+	UpdateTrip(context.Context, int, int, models.TripRequest) (*models.Trip, error)
+	DeleteTrip(context.Context, int, int) error
+	MergeTrips(context.Context, int, int, models.MergeTripsRequest) error
+	SplitTrip(context.Context, int, int, models.SplitTripRequest) (*models.Trip, error)
+	RenumberDives(context.Context, int, models.RenumberDivesRequest) (int64, error)
+}

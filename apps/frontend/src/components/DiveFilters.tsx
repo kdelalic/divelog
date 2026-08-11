@@ -15,6 +15,7 @@ import {
   type DiveFilters as DiveFilterValues,
 } from '@/lib/diveFilters';
 import type { DepthUnit } from '@/lib/settings';
+import type { Trip } from '@/lib/dives';
 
 interface DiveFiltersProps {
   filters: DiveFilterValues;
@@ -23,6 +24,8 @@ interface DiveFiltersProps {
   totalCount: number;
   onChange: (filters: DiveFilterValues) => void;
   onClear: () => void;
+	tags: string[];
+	trips: Trip[];
 }
 
 const DIVE_TYPE_LABELS: Record<(typeof DIVE_TYPES)[number], string> = {
@@ -40,6 +43,8 @@ const DiveFilters = ({
   totalCount,
   onChange,
   onClear,
+	tags,
+	trips,
 }: DiveFiltersProps) => {
   const activeCount = countActiveDiveFilters(filters);
   const update = <Key extends keyof DiveFilterValues>(key: Key, value: DiveFilterValues[Key]) => {
@@ -68,6 +73,8 @@ const DiveFilters = ({
       key: 'minRating',
       label: `${filters.minRating}+ stars`,
     },
+		filters.tag && { key: 'tag', label: `Tag: ${filters.tag}` },
+		filters.tripId && { key: 'tripId', label: `Trip: ${trips.find((trip) => String(trip.id) === filters.tripId)?.name ?? filters.tripId}` },
   ].filter((filter): filter is { key: keyof DiveFilterValues; label: string } => Boolean(filter));
 
   return (
@@ -101,7 +108,7 @@ const DiveFilters = ({
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
+		<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
         <div className="space-y-2">
           <Label htmlFor="filter-start-date">From</Label>
           <Input
@@ -198,6 +205,26 @@ const DiveFilters = ({
             </SelectContent>
           </Select>
         </div>
+			<div className="space-y-2">
+				<Label htmlFor="filter-tag">Tag</Label>
+				<Select value={filters.tag || 'all'} onValueChange={(value) => update('tag', value === 'all' ? '' : value)}>
+					<SelectTrigger id="filter-tag" className="border-input bg-background"><SelectValue placeholder="All tags" /></SelectTrigger>
+					<SelectContent>
+						<SelectItem value="all">All tags</SelectItem>
+						{tags.map((tag) => <SelectItem key={tag} value={tag}>{tag}</SelectItem>)}
+					</SelectContent>
+				</Select>
+			</div>
+			<div className="space-y-2">
+				<Label htmlFor="filter-trip">Trip</Label>
+				<Select value={filters.tripId || 'all'} onValueChange={(value) => update('tripId', value === 'all' ? '' : value)}>
+					<SelectTrigger id="filter-trip" className="border-input bg-background"><SelectValue placeholder="All trips" /></SelectTrigger>
+					<SelectContent>
+						<SelectItem value="all">All trips</SelectItem>
+						{trips.map((trip) => <SelectItem key={trip.id} value={String(trip.id)}>{trip.name}</SelectItem>)}
+					</SelectContent>
+				</Select>
+			</div>
       </div>
 
       {activeCount > 0 && (

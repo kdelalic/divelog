@@ -1,5 +1,5 @@
 import { XMLParser } from 'fast-xml-parser';
-import type { Dive, DiveSample, Equipment, Tank } from './dives';
+import type { Dive, DiveSample, Equipment, Tank, Trip } from './dives';
 
 export interface ImportedDiveSite {
   name: string;
@@ -207,6 +207,7 @@ const parseNativeDive = (
   dive: XmlNode,
   index: number,
   siteById: Map<string, ImportedDiveSite>,
+	trip?: Omit<Trip, 'id'>,
 ): Dive | undefined => {
   const date = attribute(dive, 'date');
   const time = attribute(dive, 'time') || '00:00:00';
@@ -230,9 +231,14 @@ const parseNativeDive = (
   const airTemperature = measurement(attribute(temperatureNode, 'air'));
   const rating = measurement(attribute(dive, 'rating'));
   const notes = asString(dive.notes)?.trim() || undefined;
+	const diveNumber = measurement(attribute(dive, 'number'));
+	const tags = attribute(dive, 'tags')?.split(',').map((tag) => tag.trim()).filter(Boolean);
 
   return {
-    id: measurement(attribute(dive, 'number')) ?? index + 1,
+		id: diveNumber ?? index + 1,
+		diveNumber: diveNumber === undefined ? undefined : Math.round(diveNumber),
+		tags: tags?.length ? tags : undefined,
+		trip: trip ? { id: 0, ...trip } : undefined,
     datetime: `${date}T${time}`,
     location: site?.name ?? 'Unknown Location',
     depth: Math.round(maxDepth * 100) / 100,
@@ -271,12 +277,27 @@ export const parseSubsurfaceXML = (xmlText: string): Dive[] => {
     if (id && sites[index]) siteById.set(id, sites[index]);
   });
 
-  const divesContainer = asNode(root.dives);
-  const dives = asArray(divesContainer?.dive)
-    .map(asNode)
-    .filter((dive): dive is XmlNode => dive !== undefined)
-    .map((dive, index) => parseNativeDive(dive, index, siteById))
-    .filter((dive): dive is Dive => dive !== undefined);
+	const divesContainer = asNode(root.dives);
+	const standaloneDives = asArray(divesContainer?.dive)
+		.map(asNode)
+		.filter((dive): dive is XmlNode => dive !== undefined)
+		.map((dive, index) => parseNativeDive(dive, index, siteById));
+	const tripDives = asArray(divesContainer?.trip)
+		.map(asNode)
+		.filter((trip): trip is XmlNode => trip !== undefined)
+		.flatMap((trip, tripIndex) => {
+			const rawDives = asArray(trip.dive).map(asNode).filter((dive): dive is XmlNode => dive !== undefined);
+			const dates = rawDives.map((dive) => attribute(dive, 'date')).filter((date): date is string => Boolean(date)).sort();
+			const metadata: Omit<Trip, 'id'> = {
+				name: attribute(trip, 'name')?.trim() || `Imported trip ${tripIndex + 1}`,
+				location: attribute(trip, 'location')?.trim() || undefined,
+				startDate: attribute(trip, 'startdate') || dates[0],
+				endDate: attribute(trip, 'enddate') || dates[dates.length - 1],
+				notes: asString(trip.notes)?.trim() || undefined,
+			};
+			return rawDives.map((dive, index) => parseNativeDive(dive, standaloneDives.length + index, siteById, metadata));
+		});
+	const dives = [...standaloneDives, ...tripDives].filter((dive): dive is Dive => dive !== undefined);
 
   if (dives.length === 0) {
     throw new SubsurfaceXMLParseError('No valid dives found in Subsurface XML file');

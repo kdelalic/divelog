@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"divelog-backend/config"
 	"divelog-backend/database"
 	"divelog-backend/handlers"
@@ -30,6 +31,10 @@ func main() {
 		log.Fatal("Database initialization failed:", err)
 	}
 	defer database.CloseDB()
+	if err := database.RunMigrations(context.Background(), database.DB); err != nil {
+		utils.LogError(nil, "Failed to migrate database", err)
+		log.Fatal("Database migration failed:", err)
+	}
 
 	// Set Gin mode
 	if cfg.GinMode == "release" {
@@ -40,6 +45,7 @@ func main() {
 	diveRepo := repository.NewDiveRepository(database.DB)
 	diveSiteRepo := repository.NewDiveSiteRepository(database.DB)
 	settingsRepo := repository.NewSettingsRepository(database.DB)
+	logbookRepo := repository.NewLogbookRepository(database.DB)
 	transactor := repository.NewSQLTransactor(database.DB)
 
 	// Create services and handlers
@@ -48,6 +54,7 @@ func main() {
 	diveHandler := handlers.NewDiveHandler(diveService)
 	diveSiteHandler := handlers.NewDiveSiteHandler(diveSiteService)
 	settingsHandler := handlers.NewSettingsHandler(settingsRepo)
+	logbookHandler := handlers.NewLogbookHandler(services.NewLogbookService(logbookRepo))
 
 	// Create Gin router
 	r := gin.Default()
@@ -104,6 +111,22 @@ func main() {
 			if cfg.GinMode != "release" {
 				diveRoutes.DELETE("", diveHandler.DeleteAllDives)
 			}
+		}
+
+		organizationRoutes := api.Group("")
+		organizationRoutes.Use(middleware.UserIDMiddleware())
+		{
+			organizationRoutes.GET("/tags", logbookHandler.GetTags)
+			organizationRoutes.POST("/tags", logbookHandler.CreateTag)
+			organizationRoutes.PUT("/tags/:id", logbookHandler.UpdateTag)
+			organizationRoutes.DELETE("/tags/:id", logbookHandler.DeleteTag)
+			organizationRoutes.GET("/trips", logbookHandler.GetTrips)
+			organizationRoutes.POST("/trips", logbookHandler.CreateTrip)
+			organizationRoutes.PUT("/trips/:id", logbookHandler.UpdateTrip)
+			organizationRoutes.DELETE("/trips/:id", logbookHandler.DeleteTrip)
+			organizationRoutes.POST("/trips/:id/merge", logbookHandler.MergeTrips)
+			organizationRoutes.POST("/trips/:id/split", logbookHandler.SplitTrip)
+			organizationRoutes.POST("/dives/renumber", logbookHandler.RenumberDives)
 		}
 
 		// Dive site endpoints (no user validation needed for these)

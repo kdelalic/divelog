@@ -3,6 +3,8 @@ package models
 import (
 	"divelog-backend/utils"
 	"fmt"
+	"strings"
+	"time"
 )
 
 const (
@@ -36,6 +38,28 @@ func (dr *DiveRequest) Validate() utils.ValidationErrors {
 	utils.OptionalOneOf(errors, "dive_type", dr.DiveType,
 		"recreational", "training", "technical", "work", "research")
 	optionalIntRange(errors, "rating", dr.Rating, 1, 5)
+	optionalIntRange(errors, "dive_number", dr.DiveNumber, 1, 10000000)
+	if dr.TripID != nil && *dr.TripID <= 0 {
+		errors.Add("trip_id", "must be a positive integer")
+	}
+	if dr.TripID != nil && dr.Trip != nil {
+		errors.Add("trip", "cannot be supplied together with trip_id")
+	}
+	if dr.Trip != nil {
+		errors.Merge("trip", dr.Trip.Validate())
+	}
+	seenTags := map[string]bool{}
+	for i, tag := range dr.Tags {
+		trimmed := strings.TrimSpace(tag)
+		if trimmed == "" || len([]rune(trimmed)) > 100 {
+			errors.Add(fmt.Sprintf("tags[%d]", i), "must be between 1 and 100 characters")
+		}
+		normalized := strings.ToLower(trimmed)
+		if seenTags[normalized] {
+			errors.Add(fmt.Sprintf("tags[%d]", i), "must not duplicate another tag")
+		}
+		seenTags[normalized] = true
+	}
 
 	for i, sample := range dr.Samples {
 		prefix := fmt.Sprintf("samples[%d]", i)
@@ -62,6 +86,32 @@ func (dr *DiveRequest) Validate() utils.ValidationErrors {
 	}
 
 	return errors
+}
+
+// Validate applies trip constraints, including a coherent optional date range.
+func (tr *TripRequest) Validate() utils.ValidationErrors {
+	errors := utils.ValidationErrors{}
+	utils.RequireString(errors, "name", tr.Name, 255)
+	utils.OptionalString(errors, "location", tr.Location, 255)
+	utils.OptionalString(errors, "notes", tr.Notes, maxTextLength)
+	start := validateDateOnly(errors, "start_date", tr.StartDate)
+	end := validateDateOnly(errors, "end_date", tr.EndDate)
+	if !start.IsZero() && !end.IsZero() && end.Before(start) {
+		errors.Add("end_date", "must be on or after start_date")
+	}
+	return errors
+}
+
+func validateDateOnly(errors utils.ValidationErrors, field string, value *string) time.Time {
+	if value == nil || strings.TrimSpace(*value) == "" {
+		return time.Time{}
+	}
+	parsed, err := time.Parse("2006-01-02", *value)
+	if err != nil {
+		errors.Add(field, "must use YYYY-MM-DD format")
+		return time.Time{}
+	}
+	return parsed
 }
 
 // Validate applies API and database constraints to a dive-site request.

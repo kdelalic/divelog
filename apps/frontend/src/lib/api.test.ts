@@ -43,6 +43,18 @@ describe('serializeDive', () => {
     expect(payload).not.toHaveProperty('safetyStops');
   });
 
+	it('serializes dive numbers, reusable tags, and existing or imported trips', () => {
+		expect(serializeDive(dive({
+			diveNumber: 42,
+			tags: ['wreck', 'night'],
+			trip: { id: 7, name: 'Red Sea' },
+		}))).toMatchObject({ dive_number: 42, tags: ['wreck', 'night'], trip_id: 7 });
+
+		expect(serializeDive(dive({
+			trip: { id: 0, name: 'Imported trip', startDate: '2026-06-01' },
+		}))).toMatchObject({ trip: { name: 'Imported trip', start_date: '2026-06-01' } });
+	});
+
   it('flattens conditions to the API field names', () => {
     const payload = serializeDive(
       dive({
@@ -156,6 +168,9 @@ describe('deserializeDive', () => {
         sea_state: 2,
         surge: 'light',
       },
+			dive_number: 42,
+			tags: ['wreck'],
+			trip: { id: 7, name: 'Red Sea', start_date: '2026-05-01' },
     });
 
     expect(result).toMatchObject({
@@ -170,6 +185,9 @@ describe('deserializeDive', () => {
         seaState: 2,
         surge: 'light',
       },
+			diveNumber: 42,
+			tags: ['wreck'],
+			trip: { id: 7, name: 'Red Sea', startDate: '2026-05-01' },
     });
     expect(result).not.toHaveProperty('dive_type');
     expect(result).not.toHaveProperty('safety_stops');

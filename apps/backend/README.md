@@ -67,7 +67,13 @@ DATABASE_URL='postgres://dev:devpass@localhost:5432/subsurface?sslmode=disable' 
 - `GET /health`
 - `GET|POST /api/v1/dives?user_id=1`
 - `POST /api/v1/dives/batch?user_id=1`
+- `POST /api/v1/dives/renumber?user_id=1`
 - `PUT|DELETE /api/v1/dives/:id?user_id=1`
+- `GET|POST /api/v1/tags?user_id=1`
+- `PUT|DELETE /api/v1/tags/:id?user_id=1`
+- `GET|POST /api/v1/trips?user_id=1`
+- `PUT|DELETE /api/v1/trips/:id?user_id=1`
+- `POST /api/v1/trips/:id/merge|split?user_id=1`
 - `GET|POST /api/v1/dive-sites`
 - `GET|PUT /api/v1/settings?user_id=1`
 

@@ -51,6 +51,9 @@ bun dev
 
 Open the Vite URL shown in the terminal, normally `http://localhost:5173`.
 
+To point the frontend at a backend on another origin, set `VITE_API_ORIGIN`
+(for example, `VITE_API_ORIGIN=http://localhost:8081 bun dev`).
+
 ### 3. Stop local services
 
 Stop the frontend and backend with `Ctrl+C`, then stop PostgreSQL:
@@ -94,6 +97,7 @@ bun run build
 - Lossless JSON backup/restore and spreadsheet CSV export for all or filtered dives
 - Interactive dive-profile charts
 - Dive-site management and Leaflet maps
+- Reusable tags, trip grouping/management, and independent dive numbering
 - Equipment and gas-mix tracking
 - User unit and display preferences
 - Light, dark, and system themes with a persisted device preference

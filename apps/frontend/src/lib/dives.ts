@@ -55,8 +55,27 @@ export interface DiveConditions {
   surge?: 'none' | 'light' | 'moderate' | 'heavy';
 }
 
-export interface Dive {
+export interface Trip {
   id: number;
+  name: string;
+  location?: string;
+  startDate?: string;
+  endDate?: string;
+  notes?: string;
+  diveCount?: number;
+}
+
+export interface TagSummary {
+  id: number;
+  name: string;
+  diveCount: number;
+}
+
+export interface Dive {
+	id: number;
+	diveNumber?: number;
+	tags?: string[];
+	trip?: Trip;
   datetime: string; // ISO 8601 datetime string
   location: string;
   depth: number;

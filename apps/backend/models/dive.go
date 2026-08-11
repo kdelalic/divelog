@@ -119,11 +119,44 @@ type SafetyStop struct {
 	Duration int     `json:"duration"` // Safety stop duration in minutes
 }
 
+// Trip groups dives that belong to the same journey or diving event.
+type Trip struct {
+	ID        int     `json:"id" db:"id"`
+	UserID    int     `json:"user_id" db:"user_id"`
+	Name      string  `json:"name" db:"name"`
+	Location  *string `json:"location,omitempty" db:"location"`
+	StartDate *string `json:"start_date,omitempty" db:"start_date"`
+	EndDate   *string `json:"end_date,omitempty" db:"end_date"`
+	Notes     *string `json:"notes,omitempty" db:"notes"`
+	DiveCount int     `json:"dive_count,omitempty" db:"dive_count"`
+}
+
+// TripRequest is the writable portion of a trip. It is also embedded in
+// imported dives so a batch restore can recreate a trip before assigning it.
+type TripRequest struct {
+	Name      string  `json:"name"`
+	Location  *string `json:"location,omitempty"`
+	StartDate *string `json:"start_date,omitempty"`
+	EndDate   *string `json:"end_date,omitempty"`
+	Notes     *string `json:"notes,omitempty"`
+}
+
+// TagSummary describes a reusable tag and how many dives currently use it.
+type TagSummary struct {
+	ID        int    `json:"id"`
+	Name      string `json:"name"`
+	DiveCount int    `json:"dive_count"`
+}
+
 // Dive represents a dive record
 type Dive struct {
 	ID          int             `json:"id" db:"id"`
 	UserID      int             `json:"user_id" db:"user_id"`
 	DiveSiteID  *int            `json:"dive_site_id,omitempty" db:"dive_site_id"`
+	DiveNumber  *int            `json:"dive_number,omitempty" db:"dive_number"`
+	TripID      *int            `json:"trip_id,omitempty" db:"trip_id"`
+	Trip        *Trip           `json:"trip,omitempty"`
+	Tags        []string        `json:"tags,omitempty"`
 	DateTime    LocalTime       `json:"datetime" db:"dive_datetime"`
 	MaxDepth    float64         `json:"depth" db:"max_depth"`
 	Duration    int             `json:"duration" db:"duration"`
@@ -162,11 +195,15 @@ type DiveRequest struct {
 	DiveType    *string         `json:"dive_type,omitempty"`
 	Rating      *int            `json:"rating,omitempty"`
 	SafetyStops []SafetyStop    `json:"safety_stops,omitempty"`
+	DiveNumber  *int            `json:"dive_number,omitempty"`
+	TripID      *int            `json:"trip_id,omitempty"`
+	Trip        *TripRequest    `json:"trip,omitempty"`
+	Tags        []string        `json:"tags,omitempty"`
 }
 
 // ToDive converts a DiveRequest to Dive
 func (dr *DiveRequest) ToDive(userID int) *Dive {
-	return &Dive{
+	dive := &Dive{
 		UserID:      userID,
 		DateTime:    LocalTime{utils.ParseDateTime(dr.DateTime)},
 		Location:    dr.Location,
@@ -184,7 +221,17 @@ func (dr *DiveRequest) ToDive(userID int) *Dive {
 		DiveType:    dr.DiveType,
 		Rating:      dr.Rating,
 		SafetyStops: dr.SafetyStops,
+		DiveNumber:  dr.DiveNumber,
+		TripID:      dr.TripID,
+		Tags:        dr.Tags,
 	}
+	if dr.Trip != nil {
+		dive.Trip = &Trip{
+			Name: dr.Trip.Name, Location: dr.Trip.Location, StartDate: dr.Trip.StartDate,
+			EndDate: dr.Trip.EndDate, Notes: dr.Trip.Notes,
+		}
+	}
+	return dive
 }
 
 // DiveSite represents a dive site

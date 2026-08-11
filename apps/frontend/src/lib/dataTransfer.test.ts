@@ -61,15 +61,19 @@ const asBackupDive = (value: Dive) =>
   createDiveLogBackup([value], [], defaultSettings).data.dives[0];
 
 describe('dive-log backups', () => {
-  it('round-trips all user-owned data without server IDs or timestamps', () => {
+	it('round-trips all user-owned data without server IDs or timestamps', () => {
+		const trip = { id: 8, name: 'Red Sea', location: 'Egypt', startDate: '2026-05-01', endDate: '2026-05-07', diveCount: 1 };
+		const backedUpDive = dive({ diveNumber: 42, tags: ['wreck', 'nitrox'], trip });
     const backup = createDiveLogBackup(
-      [dive()],
+			[backedUpDive],
       [site],
       defaultSettings,
       new Date('2026-08-08T12:00:00Z'),
+			[trip],
+			['wreck', 'nitrox', 'unused'],
     );
     const parsed = parseDiveLogBackup(serializeDiveLogBackup(backup));
-    const expectedDive = asBackupDive(dive());
+		const expectedDive = asBackupDive(backedUpDive);
 
     expect(parsed.format).toBe(BACKUP_FORMAT);
     expect(parsed.version).toBe(BACKUP_VERSION);
@@ -83,7 +87,21 @@ describe('dive-log backups', () => {
     }]);
     expect(parsed.data.diveSites[0]).not.toHaveProperty('created_at');
     expect(parsed.data.settings).toEqual(defaultSettings);
+		expect(parsed.data.dives[0]).toMatchObject({ diveNumber: 42, tags: ['wreck', 'nitrox'], trip: { id: 0, name: 'Red Sea' } });
+		expect(parsed.data.trips).toEqual([{ name: 'Red Sea', location: 'Egypt', startDate: '2026-05-01', endDate: '2026-05-07' }]);
+		expect(parsed.data.tags).toEqual(['wreck', 'nitrox', 'unused']);
   });
+
+	it('accepts version 1 backups and supplies empty organization collections', () => {
+		const legacy = createDiveLogBackup([dive()], [site], defaultSettings);
+		legacy.version = 1;
+		const data = legacy.data as Partial<typeof legacy.data>;
+		delete data.trips;
+		delete data.tags;
+		const parsed = parseDiveLogBackup(JSON.stringify(legacy));
+		expect(parsed.data.trips).toEqual([]);
+		expect(parsed.data.tags).toEqual([]);
+	});
 
   it('rejects malformed JSON with a useful error', () => {
     expect(() => parseDiveLogBackup('{bad')).toThrow(BackupParseError);
@@ -165,6 +183,7 @@ describe('CSV export', () => {
     expect(csv).toContain('12.5');
     expect(csv).toContain('"{""tanks""');
     expect(csv).toContain('"[{""time"":0');
+		expect(divesToCsv([dive({ diveNumber: 42, tags: ['wreck'], trip: { id: 3, name: 'Red Sea' } })])).toContain('Red Sea');
   });
 
   it('quotes commas, quotes, and line breaks', () => {

@@ -9,7 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import type { Dive } from '@/lib/dives';
+import type { Dive, Trip } from '@/lib/dives';
 import type { UserSettings } from '@/lib/settings';
 import type { DiveSite } from '@/lib/api';
 import {
@@ -37,6 +37,9 @@ interface DataTransferDialogProps {
   restoreDives: (dives: BackupDive[]) => Promise<void>;
   restoreDiveSites: (diveSites: BackupDiveSite[]) => Promise<void>;
   restoreSettings: (settings: UserSettings) => Promise<void>;
+	trips: Trip[];
+	tags: string[];
+	restoreOrganization: (trips: DiveLogBackup['data']['trips'], tags: string[]) => Promise<void>;
 }
 
 const downloadTextFile = (contents: string, filename: string, mimeType: string) => {
@@ -61,6 +64,9 @@ const DataTransferDialog = ({
   restoreDives,
   restoreDiveSites,
   restoreSettings,
+	trips,
+	tags,
+	restoreOrganization,
 }: DataTransferDialogProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [csvScope, setCsvScope] = useState<'all' | 'filtered'>(
@@ -71,6 +77,7 @@ const DataTransferDialog = ({
   const [restoreDivesEnabled, setRestoreDivesEnabled] = useState(true);
   const [restoreSitesEnabled, setRestoreSitesEnabled] = useState(true);
   const [restoreSettingsEnabled, setRestoreSettingsEnabled] = useState(true);
+	const [restoreOrganizationEnabled, setRestoreOrganizationEnabled] = useState(true);
   const [isWorking, setIsWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -90,6 +97,7 @@ const DataTransferDialog = ({
       (restoreDivesEnabled && divePlan.dives.length > 0)
       || (restoreSitesEnabled && sitePlan.diveSites.length > 0)
       || restoreSettingsEnabled
+			|| (restoreOrganizationEnabled && (backup.data.trips.length > 0 || backup.data.tags.length > 0))
     ),
   );
 
@@ -103,7 +111,7 @@ const DataTransferDialog = ({
     setIsWorking(true);
     try {
       const diveSites = await loadDiveSites();
-      const exportBackup = createDiveLogBackup(dives, diveSites, settings);
+			const exportBackup = createDiveLogBackup(dives, diveSites, settings, new Date(), trips, tags);
       downloadTextFile(
         serializeDiveLogBackup(exportBackup),
         datedExportFilename('backup', 'json'),
@@ -148,6 +156,7 @@ const DataTransferDialog = ({
       setRestoreDivesEnabled(true);
       setRestoreSitesEnabled(true);
       setRestoreSettingsEnabled(true);
+			setRestoreOrganizationEnabled(true);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'The backup could not be read.');
     } finally {
@@ -160,6 +169,9 @@ const DataTransferDialog = ({
     resetMessages();
     setIsWorking(true);
     try {
+			if (restoreOrganizationEnabled) {
+				await restoreOrganization(backup.data.trips, backup.data.tags);
+			}
       if (restoreSitesEnabled && sitePlan.diveSites.length > 0) {
         await restoreDiveSites(sitePlan.diveSites);
       }
@@ -174,6 +186,7 @@ const DataTransferDialog = ({
       if (restoreDivesEnabled) restored.push(`${divePlan.dives.length} dive${divePlan.dives.length === 1 ? '' : 's'}`);
       if (restoreSitesEnabled) restored.push(`${sitePlan.diveSites.length} site${sitePlan.diveSites.length === 1 ? '' : 's'}`);
       if (restoreSettingsEnabled) restored.push('settings');
+			if (restoreOrganizationEnabled) restored.push(`${backup.data.trips.length} trips and ${backup.data.tags.length} tags`);
       setSuccess(`Restore complete: ${restored.join(', ')}.`);
       setBackup(null);
     } catch (caught) {
@@ -213,7 +226,7 @@ const DataTransferDialog = ({
           <section className="rounded-lg border border-border p-4">
             <h3 className="font-semibold text-foreground">Complete JSON backup</h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              Includes all dives, profile samples, equipment, conditions, dive sites, and settings.
+			  Includes dives, profiles, equipment, dive sites, trips, tags, numbering, and settings.
             </p>
             <Button
               type="button"
@@ -295,6 +308,18 @@ const DataTransferDialog = ({
               </p>
               <div className="mt-3 space-y-2 text-sm">
                 <label className="flex items-start gap-2">
+				  <input
+					type="checkbox"
+					className="mt-0.5"
+					checked={restoreOrganizationEnabled}
+					onChange={(event) => setRestoreOrganizationEnabled(event.target.checked)}
+				  />
+				  <span>
+					Restore {backup.data.trips.length} trip{backup.data.trips.length === 1 ? '' : 's'} and{' '}
+					{backup.data.tags.length} reusable tag{backup.data.tags.length === 1 ? '' : 's'}
+				  </span>
+				</label>
+				<label className="flex items-start gap-2">
                   <input
                     type="checkbox"
                     className="mt-0.5"

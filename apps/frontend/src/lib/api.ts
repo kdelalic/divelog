@@ -1,5 +1,5 @@
 import type { UserSettings } from './settings';
-import type { Dive } from './dives';
+import type { Dive, TagSummary, Trip } from './dives';
 
 export interface DiveSite {
   id: number;
@@ -11,7 +11,8 @@ export interface DiveSite {
   updated_at: string;
 }
 
-const API_BASE_URL = 'http://localhost:8080/api/v1';
+const API_ORIGIN = import.meta.env.VITE_API_ORIGIN ?? 'http://localhost:8080';
+const API_BASE_URL = `${API_ORIGIN}/api/v1`;
 const DEFAULT_USER_ID = 1; // Development user ID
 
 export interface ApiResponse<T> {
@@ -86,7 +87,7 @@ export const settingsApi = {
   // Check if backend is available
   async healthCheck(): Promise<boolean> {
     try {
-      const response = await fetch(`http://localhost:8080/health`, {
+			const response = await fetch(`${API_ORIGIN}/health`, {
         method: 'GET',
         signal: AbortSignal.timeout(3000), // 3 second timeout
       });
@@ -102,11 +103,20 @@ export const settingsApi = {
 // Sending a Dive verbatim silently drops conditions, dive type and safety stops,
 // since Go ignores unknown JSON keys.
 export const serializeDive = (dive: Omit<Dive, 'id'>) => {
-  const { conditions, diveType, safetyStops, ...rest } = dive;
+  const { conditions, diveType, safetyStops, diveNumber, trip, ...rest } = dive;
 
   return {
     ...rest,
     dive_type: diveType,
+		dive_number: diveNumber,
+		trip_id: trip && trip.id > 0 ? trip.id : undefined,
+		trip: trip && trip.id > 0 ? undefined : trip && {
+			name: trip.name,
+			location: trip.location,
+			start_date: trip.startDate,
+			end_date: trip.endDate,
+			notes: trip.notes,
+		},
     safety_stops: safetyStops,
     water_temperature: conditions?.waterTemp?.bottom ?? conditions?.waterTemp?.surface,
     // The API models visibility as a whole number of meters
@@ -172,17 +182,29 @@ interface ApiDiveConditions {
   surge?: 'none' | 'light' | 'moderate' | 'heavy';
 }
 
-type ApiDive = Omit<Dive, 'conditions' | 'diveType' | 'safetyStops'> & {
+type ApiDive = Omit<Dive, 'conditions' | 'diveType' | 'safetyStops' | 'diveNumber' | 'trip'> & {
   conditions?: ApiDiveConditions;
   dive_type?: Dive['diveType'];
   safety_stops?: Dive['safetyStops'];
+	dive_number?: number;
+	trip_id?: number;
+	trip?: {
+		id: number;
+		name: string;
+		location?: string;
+		start_date?: string;
+		end_date?: string;
+		notes?: string;
+		dive_count?: number;
+	};
 };
 
 // Normalize the Go API's snake_case response fields into the client model.
 // Without this read-side mapping, enhanced data appears to save successfully
 // and then vanishes from the UI on the next backend reload.
 export const deserializeDive = (apiDive: ApiDive): Dive => {
-  const { conditions, dive_type, safety_stops, ...rest } = apiDive;
+  const { conditions, dive_type, safety_stops, dive_number, trip_id: _tripId, trip, ...rest } = apiDive;
+	void _tripId;
   const waterTemp = conditions?.water_temp_surface !== undefined || conditions?.water_temp_bottom !== undefined
     ? {
         surface: conditions.water_temp_surface,
@@ -199,6 +221,16 @@ export const deserializeDive = (apiDive: ApiDive): Dive => {
   return {
     ...rest,
     diveType: dive_type,
+		diveNumber: dive_number,
+		trip: trip && {
+			id: trip.id,
+			name: trip.name,
+			location: trip.location,
+			startDate: trip.start_date,
+			endDate: trip.end_date,
+			notes: trip.notes,
+			diveCount: trip.dive_count,
+		},
     safetyStops: safety_stops,
     conditions: conditions
       ? {
@@ -213,6 +245,26 @@ export const deserializeDive = (apiDive: ApiDive): Dive => {
       : undefined,
   };
 };
+
+type ApiTrip = {
+  id: number;
+  name: string;
+  location?: string;
+  start_date?: string;
+  end_date?: string;
+  notes?: string;
+  dive_count?: number;
+};
+
+const deserializeTrip = (trip: ApiTrip): Trip => ({
+  id: trip.id,
+  name: trip.name,
+  location: trip.location,
+  startDate: trip.start_date,
+  endDate: trip.end_date,
+  notes: trip.notes,
+  diveCount: trip.dive_count,
+});
 
 // API utility functions for dives
 export const divesApi = {
@@ -349,6 +401,89 @@ export const divesApi = {
       console.error('Failed to delete all dives:', error);
       return { error: error instanceof Error ? error.message : 'Unknown error' };
     }
+  },
+};
+
+export type TripInput = Omit<Trip, 'id' | 'diveCount'>;
+
+const organizationRequest = async <T>(path: string, init?: RequestInit): Promise<ApiResponse<T>> => {
+  try {
+    const separator = path.includes('?') ? '&' : '?';
+    const response = await fetch(`${API_BASE_URL}${path}${separator}user_id=${DEFAULT_USER_ID}`, {
+      ...init,
+      headers: { 'Content-Type': 'application/json', ...init?.headers },
+    });
+    if (!response.ok) return { error: await readApiError(response), status: response.status };
+    if (response.status === 204) return { data: undefined as T };
+    return { data: await response.json() as T };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+};
+
+const serializeTrip = (trip: TripInput) => ({
+  name: trip.name,
+  location: trip.location,
+  start_date: trip.startDate,
+  end_date: trip.endDate,
+  notes: trip.notes,
+});
+
+export const organizationApi = {
+  async fetchTags(): Promise<ApiResponse<TagSummary[]>> {
+    const response = await organizationRequest<Array<{ id: number; name: string; dive_count: number }>>('/tags');
+		return response.data
+			? { data: response.data.map((tag) => ({ id: tag.id, name: tag.name, diveCount: tag.dive_count })) }
+			: { error: response.error, status: response.status };
+  },
+  createTag(name: string): Promise<ApiResponse<TagSummary>> {
+    return organizationRequest('/tags', { method: 'POST', body: JSON.stringify({ name }) });
+  },
+  updateTag(id: number, name: string): Promise<ApiResponse<TagSummary>> {
+    return organizationRequest(`/tags/${id}`, { method: 'PUT', body: JSON.stringify({ name }) });
+  },
+  deleteTag(id: number): Promise<ApiResponse<void>> {
+    return organizationRequest(`/tags/${id}`, { method: 'DELETE' });
+  },
+  async fetchTrips(): Promise<ApiResponse<Trip[]>> {
+    const response = await organizationRequest<ApiTrip[]>('/trips');
+    return response.data ? { data: response.data.map(deserializeTrip) } : response;
+  },
+  async createTrip(trip: TripInput): Promise<ApiResponse<Trip>> {
+    const response = await organizationRequest<ApiTrip>('/trips', { method: 'POST', body: JSON.stringify(serializeTrip(trip)) });
+    return response.data ? { data: deserializeTrip(response.data) } : response;
+  },
+  async updateTrip(id: number, trip: TripInput): Promise<ApiResponse<Trip>> {
+    const response = await organizationRequest<ApiTrip>(`/trips/${id}`, { method: 'PUT', body: JSON.stringify(serializeTrip(trip)) });
+    return response.data ? { data: deserializeTrip(response.data) } : response;
+  },
+  deleteTrip(id: number): Promise<ApiResponse<void>> {
+    return organizationRequest(`/trips/${id}`, { method: 'DELETE' });
+  },
+  mergeTrips(targetId: number, sourceTripIds: number[]): Promise<ApiResponse<{ message: string }>> {
+    return organizationRequest(`/trips/${targetId}/merge`, {
+      method: 'POST', body: JSON.stringify({ source_trip_ids: sourceTripIds }),
+    });
+  },
+  async splitTrip(sourceId: number, diveIds: number[], trip: TripInput): Promise<ApiResponse<Trip>> {
+    const response = await organizationRequest<ApiTrip>(`/trips/${sourceId}/split`, {
+      method: 'POST', body: JSON.stringify({ dive_ids: diveIds, trip: serializeTrip(trip) }),
+    });
+    return response.data ? { data: deserializeTrip(response.data) } : response;
+  },
+  renumberDives(request: {
+    scope: 'all' | 'range'; startNumber: number; increment: number; fromDate?: string; toDate?: string;
+  }): Promise<ApiResponse<{ renumbered_count: number }>> {
+    return organizationRequest('/dives/renumber', {
+      method: 'POST',
+      body: JSON.stringify({
+        scope: request.scope,
+        start_number: request.startNumber,
+        increment: request.increment,
+        from_date: request.fromDate,
+        to_date: request.toDate,
+      }),
+    });
   },
 };
 

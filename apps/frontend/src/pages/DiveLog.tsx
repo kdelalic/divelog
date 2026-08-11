@@ -1,5 +1,6 @@
 import { Link, useSearchParams } from "react-router-dom";
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import useDiveStore from "../store/diveStore";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,10 +32,12 @@ import type { Dive } from "@/lib/dives";
 import useSettingsStore from "@/store/settingsStore";
 import { formatDepth } from "@/lib/unitConversions";
 import { formatDiveDateTime } from "@/lib/dateHelpers";
-import { diveSitesApi } from "@/lib/api";
+import { diveSitesApi, organizationApi } from "@/lib/api";
 import type { ImportedDiveSite } from "@/lib/subsurfaceXmlParser";
-import type { BackupDive, BackupDiveSite } from "@/lib/dataTransfer";
+import type { BackupDive, BackupDiveSite, BackupTrip } from "@/lib/dataTransfer";
 import type { UserSettings } from "@/lib/settings";
+import useOrganizationStore from "@/store/organizationStore";
+import LogbookOrganizationDialog from "@/components/LogbookOrganizationDialog";
 
 const DiveLog = () => {
   const dives = useDiveStore((state) => state.dives);
@@ -44,6 +47,9 @@ const DiveLog = () => {
   const clearError = useDiveStore((state) => state.error);
   const settings = useSettingsStore((state) => state.settings);
   const updateSettings = useSettingsStore((state) => state.updateSettings);
+	const tags = useOrganizationStore((state) => state.tags);
+	const trips = useOrganizationStore((state) => state.trips);
+	const loadOrganization = useOrganizationStore((state) => state.load);
   const stats = calculateDiveStatistics(dives);
   const [searchParams, setSearchParams] = useSearchParams();
   const filterQuery = searchParams.toString();
@@ -63,6 +69,21 @@ const DiveLog = () => {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
   const [clearFailed, setClearFailed] = useState(false);
+	const [showOrganization, setShowOrganization] = useState(false);
+	const [groupByTrip, setGroupByTrip] = useState(true);
+	const [collapsedTrips, setCollapsedTrips] = useState<Set<string>>(new Set());
+	const tripGroups = useMemo(() => {
+		const groups = new Map<string, { key: string; label: string; detail?: string; dives: Dive[] }>();
+		for (const dive of filteredDives) {
+			const key = dive.trip ? String(dive.trip.id) : 'unassigned';
+			const label = dive.trip?.name ?? 'No trip';
+			const detail = dive.trip ? [dive.trip.location, dive.trip.startDate && dive.trip.endDate ? `${dive.trip.startDate} – ${dive.trip.endDate}` : dive.trip.startDate].filter(Boolean).join(' · ') : undefined;
+			const group = groups.get(key) ?? { key, label, detail, dives: [] };
+			group.dives.push(dive);
+			groups.set(key, group);
+		}
+		return [...groups.values()];
+	}, [filteredDives]);
 
   // The matching backend route only exists outside release mode
   const isDevBuild = import.meta.env.DEV;
@@ -136,6 +157,18 @@ const DiveLog = () => {
     if (settingsError) throw new Error(`Could not restore settings: ${settingsError}`);
   };
 
+	const handleRestoreOrganization = async (backupTrips: BackupTrip[], backupTags: string[]) => {
+		for (const tag of backupTags) {
+			const result = await organizationApi.createTag(tag);
+			if (result.error && result.status !== 409) throw new Error(`Could not restore tag “${tag}”: ${result.error}`);
+		}
+		for (const trip of backupTrips) {
+			const result = await organizationApi.createTrip(trip);
+			if (result.error && result.status !== 409) throw new Error(`Could not restore trip “${trip.name}”: ${result.error}`);
+		}
+		await loadOrganization();
+	};
+
   const handleClearAllDives = async () => {
     setIsClearing(true);
     setClearFailed(false);
@@ -196,6 +229,14 @@ const DiveLog = () => {
                 </Button>
               )}
               <Button
+				variant="outline"
+				size="lg"
+				onClick={() => setShowOrganization(true)}
+				className="border-input bg-background px-8 py-4 text-base font-medium text-foreground shadow-sm hover:bg-muted"
+			  >
+				Organize
+			  </Button>
+			  <Button
                 variant="outline"
                 size="lg"
                 onClick={() => setShowDataTransfer(true)}
@@ -249,11 +290,20 @@ const DiveLog = () => {
           totalCount={dives.length}
           onChange={handleFiltersChange}
           onClear={handleClearFilters}
+			tags={tags.map((tag) => tag.name)}
+			trips={trips}
         />
+		<div className="flex items-center justify-end border-t border-border px-8 py-3">
+			<label className="flex items-center gap-2 text-sm text-muted-foreground">
+				<input type="checkbox" checked={groupByTrip} onChange={(event) => setGroupByTrip(event.target.checked)} />
+				Group by trip
+			</label>
+		</div>
         <div className="overflow-x-auto border-t border-border">
           <table className="min-w-full divide-y divide-border">
             <thead className="bg-muted/50">
               <tr>
+				<th scope="col" className="px-5 py-4 text-left text-sm font-semibold uppercase tracking-wider text-foreground">#</th>
                 <th scope="col" className="w-1/6 px-8 py-4 text-left text-sm font-semibold uppercase tracking-wider text-foreground">Date</th>
                 <th scope="col" className="w-2/6 px-8 py-4 text-left text-sm font-semibold uppercase tracking-wider text-foreground">Location</th>
                 <th scope="col" className="w-1/6 px-8 py-4 text-left text-sm font-semibold uppercase tracking-wider text-foreground">
@@ -267,16 +317,32 @@ const DiveLog = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-border bg-card">
-              {filteredDives.map((dive) => (
-                <tr
-                  key={dive.id}
+			  {(groupByTrip ? tripGroups : [{ key: 'all', label: '', detail: undefined, dives: filteredDives }]).map((group) => (
+				<Fragment key={group.key}>
+				{groupByTrip && (
+					<tr className="bg-muted/50">
+						<td colSpan={7} className="px-5 py-3">
+							<button type="button" className="flex w-full items-center gap-2 text-left" onClick={() => setCollapsedTrips((current) => { const next = new Set(current); if (next.has(group.key)) next.delete(group.key); else next.add(group.key); return next; })}>
+								{collapsedTrips.has(group.key) ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+								<span className="font-semibold text-foreground">{group.label}</span>
+								<span className="text-sm text-muted-foreground">{group.dives.length} dive{group.dives.length === 1 ? '' : 's'}{group.detail ? ` · ${group.detail}` : ''}</span>
+							</button>
+						</td>
+					</tr>
+				)}
+				{!collapsedTrips.has(group.key) && group.dives.map((dive) => (
+				<tr key={dive.id}
                   className="cursor-pointer transition-colors duration-150 hover:bg-muted/50"
                   onClick={() => handleRowClick(dive)}
                 >
+				  <td className="whitespace-nowrap px-5 py-5 text-sm font-semibold text-foreground">{dive.diveNumber ?? '—'}</td>
                   <td className="whitespace-nowrap px-8 py-5 text-sm font-medium text-foreground lg:text-base">
                     {formatDiveDateTime(dive.datetime, settings)}
                   </td>
-                  <td className="whitespace-nowrap px-8 py-5 text-sm font-medium text-muted-foreground lg:text-base">{dive.location}</td>
+				  <td className="px-8 py-5 text-sm font-medium text-muted-foreground lg:text-base">
+					<div>{dive.location}</div>
+					{Boolean(dive.tags?.length) && <div className="mt-1 flex flex-wrap gap-1">{dive.tags?.map((tag) => <span key={tag} className="rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-700 dark:bg-blue-950/60 dark:text-blue-300">{tag}</span>)}</div>}
+				  </td>
                   <td className="whitespace-nowrap px-8 py-5 text-sm font-semibold text-blue-600 dark:text-blue-400 lg:text-base">
                     {formatDepth(dive.depth, settings.units.depth, 0)}
                   </td>
@@ -309,10 +375,12 @@ const DiveLog = () => {
                     </div>
                   </td>
                 </tr>
-              ))}
+				))}
+				</Fragment>
+			  ))}
               {filteredDives.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-8 py-14 text-center">
+				  <td colSpan={7} className="px-8 py-14 text-center">
                     <p className="font-semibold text-foreground">
                       {hasActiveFilters ? 'No dives match these filters' : 'No dives logged yet'}
                     </p>
@@ -346,6 +414,8 @@ const DiveLog = () => {
         onClose={handleCloseModal}
       />
 
+	  <LogbookOrganizationDialog open={showOrganization} onOpenChange={setShowOrganization} dives={dives} />
+
       <Dialog open={showImport} onOpenChange={setShowImport}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
@@ -366,6 +436,9 @@ const DiveLog = () => {
         restoreDives={handleRestoreDives}
         restoreDiveSites={handleRestoreSites}
         restoreSettings={handleRestoreSettings}
+		trips={trips}
+		tags={tags.map((tag) => tag.name)}
+		restoreOrganization={handleRestoreOrganization}
       />
 
       <Dialog open={showClearConfirm} onOpenChange={handleClearDialogChange}>

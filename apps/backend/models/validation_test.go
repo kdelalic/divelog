@@ -62,6 +62,27 @@ func TestDiveRequestValidateReportsNestedFields(t *testing.T) {
 	assert.Contains(t, errors, "safety_stops[0].duration")
 }
 
+func TestDiveRequestValidateOrganizationFields(t *testing.T) {
+	request := validDiveRequestForValidation()
+	zero := 0
+	request.DiveNumber = &zero
+	request.TripID = &zero
+	request.Trip = &TripRequest{Name: "Same time"}
+	request.Tags = []string{"Wreck", "wreck"}
+
+	errors := request.Validate()
+	assert.Contains(t, errors, "dive_number")
+	assert.Contains(t, errors, "trip_id")
+	assert.Contains(t, errors, "trip")
+	assert.Contains(t, errors, "tags[1]")
+}
+
+func TestTripRequestValidateDateRange(t *testing.T) {
+	start, end := "2026-08-10", "2026-08-01"
+	request := TripRequest{Name: "Trip", StartDate: &start, EndDate: &end}
+	assert.Contains(t, request.Validate(), "end_date")
+}
+
 func TestDiveSiteRequestValidate(t *testing.T) {
 	request := DiveSiteRequest{Name: "", Latitude: 91, Longitude: -181}
 

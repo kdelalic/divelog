@@ -12,6 +12,7 @@ import Settings from "./pages/Settings";
 import DiveSites from "./pages/DiveSites";
 import useDiveStore from "./store/diveStore";
 import useSettingsStore from "./store/settingsStore";
+import useOrganizationStore from "./store/organizationStore";
 import './App.css'
 
 const router = createBrowserRouter([
@@ -52,6 +53,7 @@ function App() {
   const loadSettings = useSettingsStore(state => state.loadFromBackend);
   const setDiveOnlineStatus = useDiveStore(state => state.setOnlineStatus);
   const setSettingsOnlineStatus = useSettingsStore(state => state.setOnlineStatus);
+	const loadOrganization = useOrganizationStore(state => state.load);
 
   useEffect(() => {
     // Clear any existing localStorage data to force backend sync
@@ -61,6 +63,7 @@ function App() {
     // Load initial data from backend
     loadDives();
     loadSettings();
+		loadOrganization();
 
     // Listen for online/offline events
     const handleOnline = () => {
@@ -81,7 +84,7 @@ function App() {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, [loadDives, loadSettings, setDiveOnlineStatus, setSettingsOnlineStatus]);
+  }, [loadDives, loadSettings, loadOrganization, setDiveOnlineStatus, setSettingsOnlineStatus]);
 
   return (
     <RouterProvider router={router} />

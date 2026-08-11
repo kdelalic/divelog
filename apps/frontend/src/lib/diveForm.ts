@@ -1,6 +1,6 @@
 import * as z from 'zod';
 import type { DefaultValues } from 'react-hook-form';
-import type { Dive, DiveConditions, Equipment } from './dives';
+import type { Dive, DiveConditions, Equipment, Trip } from './dives';
 import type { UserSettings } from './settings';
 import { convertDepth, convertTemperature } from './unitConversions';
 
@@ -20,6 +20,9 @@ export const createDiveFormSchema = (settings: UserSettings) => {
     location: z.string().trim().min(1, 'Location is required').max(255),
     depth: z.number().finite().positive('Depth must be greater than zero').max(maxDepth),
     duration: z.number().int().min(1, 'Duration must be at least one minute').max(1440),
+		diveNumber: z.number().int().min(1).max(10000000).optional(),
+		tags: z.string().max(1000).optional(),
+		tripId: z.string().optional(),
     buddy: z.string().max(255).optional(),
     lat: z.number().finite().min(-90).max(90),
     lng: z.number().finite().min(-180).max(180),
@@ -71,7 +74,7 @@ export const diveToFormValues = (
   settings: UserSettings,
 ): DefaultValues<DiveFormValues> => {
   if (!dive) {
-    return { safetyStops: [] };
+    return { safetyStops: [], tags: '', tripId: '' };
   }
 
   const [date, timePart = ''] = dive.datetime.split('T');
@@ -88,6 +91,9 @@ export const diveToFormValues = (
     location: dive.location,
     depth: convertStoredDepth(dive.depth),
     duration: dive.duration,
+		diveNumber: dive.diveNumber,
+		tags: dive.tags?.join(', ') ?? '',
+		tripId: dive.trip ? String(dive.trip.id) : '',
     buddy: dive.buddy ?? '',
     lat: dive.lat,
     lng: dive.lng,
@@ -117,6 +123,7 @@ export const diveFormValuesToDive = (
   settings: UserSettings,
   equipment?: Equipment,
   existingDive?: Dive,
+	trips: Trip[] = [],
 ): Omit<Dive, 'id'> => {
   const convertEnteredDepth = (value: number) => convertDepth(value, settings.units.depth, 'meters');
   const convertEnteredTemperature = (value: number | undefined) =>
@@ -148,6 +155,15 @@ export const diveFormValuesToDive = (
     location: values.location.trim(),
     depth: convertEnteredDepth(values.depth),
     duration: values.duration,
+		diveNumber: values.diveNumber,
+		tags: [...new Map((values.tags ?? '').split(',')
+			.map((tag) => tag.trim())
+			.filter(Boolean)
+			.map((tag) => [tag.toLocaleLowerCase(), tag])).values()],
+		trip: values.tripId
+			? trips.find((trip) => trip.id === Number(values.tripId))
+				?? (existingDive?.trip?.id === Number(values.tripId) ? existingDive.trip : undefined)
+			: undefined,
     buddy: cleanOptionalString(values.buddy),
     lat: values.lat,
     lng: values.lng,
